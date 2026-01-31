@@ -5,6 +5,14 @@
 **Status**: Draft  
 **Input**: User description: "I want to build an application that allows users to organize their gmail inboxes..."
 
+## Clarifications
+
+### Session 2026-01-31
+- Q: Which TUI framework should be used to support the future web app goal? → A: **Ink (React-based)**.
+- Q: How should Workflows be persisted locally? → A: **Local JSON File**.
+- Q: What is the email fetching and pagination strategy? → A: **Pagination (50 items default)**, with configurable page size via CLI.
+- Q: Which Gemini model should be used for the filtering MVP? → A: **gemini-3-flash**.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - View and Navigate Inbox (Priority: P1)
@@ -84,16 +92,19 @@ Users can save successful queries (and optional actions) as "Workflows" to quick
 - **FR-002**: System MUST fetch and display email metadata (Sender, Subject, Date, Snippet, Unread Status).
 - **FR-003**: System MUST fetch and render email body content (Text/HTML) in a separate panel.
 - **FR-004**: System MUST allow sorting the list by Date, Sender, Label, and Category.
-- **FR-005**: System MUST interpret natural language input to generate filtering criteria using the Gemini API (MVP), with an abstraction layer to support any OpenAI-compatible endpoint.
+- **FR-005**: System MUST interpret natural language input to generate filtering criteria using the Gemini API (specifically **gemini-3-flash**), with an abstraction layer to support any OpenAI-compatible endpoint.
 - **FR-006**: System MUST allow multi-selection of emails from the list.
 - **FR-007**: System MUST support "Archive", "Delete" (Trash), and "Label" actions.
 - **FR-008**: System MUST require explicit user confirmation before any destructive action (Archive, Delete) per the Constitution.
-- **FR-009**: The User Interface MUST be implemented as a Rich Terminal User Interface (TUI), with business logic decoupled to support a future local web application.
+- **FR-009**: The User Interface MUST be implemented as a Rich Terminal User Interface (TUI) using **Ink (React-based)**, with business logic decoupled to support a future local web application.
 
 - **FR-010**: System MUST allow saving current NL query and optional action as a "Workflow".
 - **FR-011**: System MUST persist the "Last Run Time" for each workflow to filter for new emails.
 - **FR-012**: System MUST allow re-ordering of saved workflows.
 - **FR-013**: System MUST prompt users on startup to execute saved workflows.
+- **FR-014**: Workflows MUST be persisted to a local JSON file (e.g., `~/.config/gmail-sweep/workflows.json`) to support user inspection and portability.
+- **FR-015**: System MUST support paginated email fetching with a default page size of 50.
+- **FR-016**: System MUST allow users to override the default page size via a command-line argument (e.g., `--limit 100`).
 
 ### Key Entities
 
@@ -101,6 +112,13 @@ Users can save successful queries (and optional actions) as "Workflows" to quick
 - **Email**: Represents a single message (ID, ThreadID, Subject, Sender, Date, Snippet, Body, Labels).
 - **Thread**: Group of related emails.
 - **FilterQuery**: The structured representation of the user's natural language input.
+
+### Constraints & Tradeoffs
+
+- **Tech Stack**: React/Ink chosen for TUI to maximize code reuse for future web frontend.
+- **Persistence**: Local JSON storage chosen for simplicity and transparency over database solutions.
+- **Data Volume**: Pagination limit (50 items) ensures low latency and respects Gmail API limits while remaining configurable.
+- **AI Intelligence**: **gemini-3-flash** selected for high-speed, cost-effective intent classification.
 
 ## Success Criteria *(mandatory)*
 
