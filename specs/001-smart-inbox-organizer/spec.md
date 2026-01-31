@@ -14,6 +14,12 @@
 - Q: Who is allowed to use the app? → A: Any authenticated user who connects their Gmail.
 - Q: When a natural-language query runs, should it search only the inbox or all mail (including archived)? → A: Inbox only.
 - Q: When inbox access fails, what should the user see? → A: Show an error message with retry guidance.
+- Q: Should the app retain email content after a session ends? → A: No retention.
+- Q: What level of access should the app request from Gmail? → A: Only what’s needed to read, label, archive, delete.
+- Q: What should be the target time for the inbox list to appear after opening the app? → A: Under 2 seconds.
+- Q: What uptime expectation should we target for the app? → A: No uptime expectation.
+- Q: How should the app behave if Gmail rate limits requests? → A: Pause and retry with backoff, show status.
+- Q: Should the initial MVP be TUI-only with a local web app as a post-MVP fast follow? → A: Yes, MVP is TUI-only; local web app is a post-MVP fast follow with the same feature set.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -83,6 +89,7 @@ As a user, I want to save a query (and optional actions) and be prompted to re-r
 - How does the system handle a natural-language query that is ambiguous or too broad?
 - What happens when filters conflict (e.g., sender plus date range yields no results)?
 - How does the system handle actions on emails that were already archived or deleted elsewhere?
+- How does the system handle Gmail rate limiting (pause, retry with backoff, and show status)?
 
 ## Requirements *(mandatory)*
 
@@ -106,16 +113,26 @@ As a user, I want to save a query (and optional actions) and be prompted to re-r
 - **FR-014**: The system MUST record the last time each saved query was run.
 - **FR-015**: When a saved query is re-run at session start, any associated action MUST require explicit user confirmation before being applied.
 - **FR-016**: When inbox access fails, the system MUST show a clear error message with retry guidance.
+- **FR-017**: The MVP MUST provide a text-based, command-line user interface for all core inbox organization features.
+- **FR-018**: A local-only web app with the same core feature set MUST be planned as a post-MVP fast follow.
 
 ### Assumptions
 
 - Users connect one Gmail inbox per session.
 - Labels and categories reflect the standard Gmail concepts available in a user's inbox.
 - Actions (label, archive, delete) are only applied to emails explicitly selected by the user or by an accepted saved workflow prompt.
+- The system does not retain email content after a session ends.
+- The app is user-initiated and has no uptime target or SLA.
+- The architecture supports both a TUI MVP and a local web app fast follow without changing core behaviors.
+
+### Out of Scope
+
+- Hosted web app or cloud-hosted deployment.
+- Mobile apps.
 
 ### Dependencies
 
-- Access to the user's Gmail inbox and permission to read, label, archive, and delete emails.
+- Access to the user's Gmail inbox with least-privilege permission to read, label, archive, and delete emails.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -133,3 +150,4 @@ As a user, I want to save a query (and optional actions) and be prompted to re-r
 - **SC-003**: Users can complete a bulk action (label, archive, delete) on a filtered list in under 2 minutes in at least 90% of test attempts.
 - **SC-004**: Saved queries correctly identify only emails received since the last session in 95% of test runs.
 - **SC-005**: User satisfaction for inbox organization tasks averages 4 out of 5 or higher in post-task surveys.
+- **SC-006**: The initial inbox list appears within 2 seconds in at least 90% of sessions.
