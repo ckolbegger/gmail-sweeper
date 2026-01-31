@@ -1,50 +1,48 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+SYNC IMPACT REPORT
+Version Change: New -> 1.0.0
+Modified Principles: All (Initial Ratification)
+Added Sections: All
+Templates Requiring Updates:
+- .specify/templates/tasks-template.md (✅ updated - Enforced Mandatory Tests)
+- .gemini/commands/speckit.tasks.toml (✅ updated - Enforced Mandatory Tests in Prompt)
+- .gemini/commands/speckit.implement.toml (✅ updated - Strengthened TDD Language)
+Follow-up TODOs: None
+-->
+# Gmail Sweep Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Safety & Security (NON-NEGOTIABLE)
+This tool interacts with private email data. All operations must be read-only by default. Destructive actions (archiving, deleting, modifying labels) MUST require explicit user confirmation (e.g., `--confirm` flag or interactive y/n prompt). No secrets or credentials shall ever be logged or exposed.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Strict Test-Driven Development (TDD)
+Test-First is mandatory. No production code is written without a failing test.
+1. **Unit Tests**: Mock external dependencies (Gmail API). Validate logic in isolation.
+2. **Integration Tests**: Verify interactions with real or simulated components (no mocks for the slice being tested).
+3. **Workflow**: Write Test -> Fail -> Write Code -> Pass -> Refactor.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Modular Architecture
+Code must be organized into logical modules with clear responsibilities. Separate business logic from CLI interaction and API communication. Adhere to the Single Responsibility Principle.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. CLI Excellence
+The interface must be simple, composable, and POSIX-compliant where possible.
+- Support standard input/output streams (text/JSON).
+- Clear help messages and error reporting.
+- Use standard exit codes (0 for success, non-zero for failure).
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
-
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
-
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
-
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
-
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### V. Simplicity & YAGNI
+Do not over-engineer. Implement only what is needed for the current feature. Avoid premature optimization. Keep the codebase clean and understandable.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+### Amendment Process
+This Constitution is the supreme law of the project.
+- **Changes**: Require a Pull Request with specific rationale.
+- **Approval**: Must be approved by project maintainers.
+- **Versioning**: Follows Semantic Versioning (Major for principle changes, Minor for clarifications).
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+### Compliance
+All code reviews and automated checks must verify compliance with these principles. Non-compliant code will be rejected.
+
+**Version**: 1.0.0 | **Ratified**: 2026-01-31 | **Last Amended**: 2026-01-31
