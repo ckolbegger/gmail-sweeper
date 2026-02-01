@@ -77,7 +77,7 @@ description: "Task list template for feature implementation"
     - it should return empty list if API returns no messages (boundary)
     - it should handle invalid/expired page tokens gracefully
 
-- [ ] T016 [P] [US1] Create `InboxList` component in `src/components/Inbox/InboxList.tsx`
+- [x] T016 [P] [US1] Create `InboxList` component in `src/components/Inbox/InboxList.tsx`
   - Tests:
     - it should render a list of emails
     - it should distinguish unread emails (bold/color)
