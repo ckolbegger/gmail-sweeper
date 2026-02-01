@@ -103,7 +103,7 @@
     - it should request only inbox messages
     - it should paginate until page limit or completion
     - it should handle rate-limit backoff
-- [ ] T015 [US1] Implement TUI inbox list view in `src/tui/inbox_list.ts`
+- [x] T015 [US1] Implement TUI inbox list view in `src/tui/inbox_list.ts`
   - Tests:
     - it should render a list of emails
     - it should highlight unread emails
