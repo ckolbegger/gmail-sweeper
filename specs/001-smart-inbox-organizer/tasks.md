@@ -95,7 +95,7 @@ description: "Task list template for feature implementation"
     - it should handle "no email selected" state
     - it should handle scrolling for long content
 
-- [ ] T018 [US1] Implement `useGmail` hook for data fetching in `src/hooks/useGmail.ts`
+- [x] T018 [US1] Implement `useGmail` hook for data fetching in `src/hooks/useGmail.ts`
   - Tests:
     - it should fetch data on mount
     - it should manage loading and error states
