@@ -1,57 +1,87 @@
-# Data Model
+# Data Model: Smart Inbox Organizer
+
+**Feature**: `001-smart-inbox-organizer`
 
 ## Core Entities
 
 ### Email
-Represents a single message in the inbox.
+Represents a single message retrieved from Gmail.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Unique Gmail Message ID |
-| `threadId` | `string` | ID of the thread this email belongs to |
-| `sender` | `string` | "From" header |
-| `subject` | `string` | Subject line |
-| `date` | `Date` | Date received |
-| `snippet` | `string` | Short preview text |
-| `body` | `string` | Full content |
-| `labels` | `string[]` | Gmail labels |
-| `isUnread` | `boolean` | Derived from labels |
-| `matchReason` | `string?` | Explanation of match (UI only) |
+```typescript
+interface Email {
+  id: string;           // Gmail Message ID
+  threadId: string;     // Gmail Thread ID
+  internalDate: number; // Timestamp
+  labelIds: string[];   // ["INBOX", "UNREAD", ...]
+  snippet: string;      // Short preview
+  payload: {
+    headers: EmailHeader[];
+    body: {
+        text?: string;
+        html?: string;
+    };
+  };
+  // Computed helpers
+  from: string;
+  subject: string;
+  isUnread: boolean;
+}
 
-### FilterCriteria
-The semantic definition of what we are looking for.
+interface EmailHeader {
+  name: string;
+  value: string;
+}
+```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `targetDescription` | `string` | The NL description (e.g. "Financial offers") |
-| `sensitivity` | `enum` | HIGH/MEDIUM/LOW |
+### Workflow
+A user-saved automation rule.
 
-### SavedWorkflow
-A persistent rule for filtering and acting on emails.
+```typescript
+interface Workflow {
+  id: string;           // UUID
+  name: string;         // User-friendly name e.g., "Newsletters"
+  query: string;        // Natural language query e.g., "Find newsletters"
+  filterCriteria?: FilterCriteria; // Cached structured criteria (optional optimization)
+  action?: WorkflowAction;
+  lastRunAt: number | null; // Timestamp
+  order: number;        // Sort order
+}
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `string` | Unique ID |
-| `name` | `string` | User display name |
-| `targetDescription` | `string` | The NL query |
-| `actionTemplate` | `ActionRequest?` | Optional default action |
-| `order` | `number` | Execution order |
-| `lastRunAt` | `Date?` | Time of last execution |
+interface WorkflowAction {
+  type: 'ARCHIVE' | 'DELETE' | 'LABEL';
+  labelId?: string; // If type is LABEL
+}
+```
 
-### MatchResult
-Result of evaluating an email.
+### FilterQuery (AI Output)
+The structured interpretation of a natural language query.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `emailId` | `string` | ID of the email evaluated |
-| `isMatch` | `boolean` | True if matched |
-| `reason` | `string` | Why it matched |
+```typescript
+interface FilterQuery {
+  originalQuery: string;
+  gmailSearchQuery: string; // The generated "q" parameter for Gmail API (e.g., "from:x subject:y")
+  explanation: string;      // Why this filter was chosen (for UI feedback)
+}
+```
 
-### ActionRequest
-Represents a user intent.
+## Persistence Schema (JSON)
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `emailIds` | `string[]` | Target emails |
-| `actionType` | `enum` | ARCHIVE, DELETE, LABEL |
-| `labelName` | `string?` | If action is LABEL |
+File: `~/.config/gmail-sweep/workflows.json`
+
+```json
+{
+  "version": 1,
+  "workflows": [
+    {
+      "id": "uuid-1",
+      "name": "Financials",
+      "query": "Bank statements",
+      "order": 0,
+      "lastRunAt": 1706659200000
+    }
+  ],
+  "preferences": {
+    "pageSize": 50
+  }
+}
+```

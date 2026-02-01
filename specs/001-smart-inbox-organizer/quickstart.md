@@ -1,45 +1,61 @@
 # Quickstart: Smart Inbox Organizer
 
 ## Prerequisites
-- Node.js 20+ (LTS)
-- npm or pnpm
-- Google Cloud Project with Gmail API enabled
-- `credentials.json` (OAuth Client ID)
-- Gemini API Key
 
-## Setup
+- **Node.js**: v20+
+- **Google Cloud Console Project**:
+    - Gmail API enabled
+    - OAuth2 Credentials (Client ID/Secret) downloaded to `credentials.json`
+- **Gemini API Key**: Exported as `GEMINI_API_KEY`
 
-1. **Install Dependencies**:
+## Installation
+
+1. Clone the repository.
+2. Install dependencies:
    ```bash
    npm install
    ```
 
-2. **Environment Variables**:
-   Create a `.env` file:
-   ```env
-   GEMINI_API_KEY="your-key-here"
-   OPENAI_API_KEY="optional-key"
-   ```
+## Configuration
 
-3. **Google Auth**:
-   Place your `credentials.json` in the project root.
+1. **Credentials**: Place your `credentials.json` (from Google Cloud Console) in the project root (added to `.gitignore`).
+2. **Env Vars**: Create a `.env` file:
+   ```bash
+   GEMINI_API_KEY=your_key_here
+   ```
 
 ## Running the App
 
-```bash
-# Launch the TUI
-npm start
+### Development Mode
+Runs the TUI with hot-reloading (via Ink):
 
-# Run in dev mode (watch)
+```bash
 npm run dev
 ```
 
-## Running Tests
+### Production Build
+Builds the TypeScript code and runs the CLI:
 
 ```bash
-# Run all tests
-npm test
-
-# Run with UI preview
-npm run test:ui
+npm run build
+npm start
 ```
+
+## First Run
+
+1. The app will open a browser window to authenticate with Google.
+2. Grant the requested permissions.
+3. The TUI will load your Inbox.
+
+## Usage Guide
+
+- **Navigation**: Up/Down arrows to move selection.
+- **View**: `Enter` to open an email. `Esc` to go back.
+- **Filter**: Press `/` to type a natural language query (e.g., "Show me bills").
+- **Actions**:
+    - `a`: Archive selected (requires confirmation)
+    - `d`: Delete selected (requires confirmation)
+    - `l`: Label selected
+- **Workflows**:
+    - `s`: Save current filter as Workflow.
+    - `w`: View saved workflows.

@@ -1,72 +1,80 @@
-import { z } from 'zod';
+/**
+ * Domain Interfaces for Smart Inbox Organizer
+ * 
+ * These interfaces decouple the UI (Ink/React) from the infrastructure
+ * (Gmail API, Gemini API, File System), allowing easier testing and
+ * future web migration.
+ */
 
-// Zod Schemas for Validation
-export const EmailSchema = z.object({
-  id: z.string(),
-  threadId: z.string(),
-  sender: z.string(),
-  subject: z.string(),
-  date: z.date(),
-  snippet: z.string(),
-  isUnread: z.boolean(),
-  labels: z.array(z.string()),
-  matchReason: z.string().optional(),
-});
+import type { Email, Workflow, FilterQuery } from '../data-model'; // Conceptual import
 
-export const FilterCriteriaSchema = z.object({
-  targetDescription: z.string(),
-  sensitivity: z.enum(['HIGH', 'MEDIUM', 'LOW']).default('MEDIUM'),
-});
-
-export const ActionRequestSchema = z.object({
-  emailIds: z.array(z.string()),
-  actionType: z.enum(['ARCHIVE', 'DELETE', 'LABEL']),
-  labelName: z.string().optional(),
-});
-
-export const SavedWorkflowSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  targetDescription: z.string(),
-  actionTemplate: ActionRequestSchema.omit({ emailIds: true }).optional(),
-  order: z.number(),
-  lastRunAt: z.date().optional(),
-});
-
-export const MatchResultSchema = z.object({
-  emailId: z.string(),
-  isMatch: z.boolean(),
-  reason: z.string(),
-});
-
-// Types inferred from Zod
-export type Email = z.infer<typeof EmailSchema>;
-export type FilterCriteria = z.infer<typeof FilterCriteriaSchema>;
-export type ActionRequest = z.infer<typeof ActionRequestSchema>;
-export type SavedWorkflow = z.infer<typeof SavedWorkflowSchema>;
-export type MatchResult = z.infer<typeof MatchResultSchema>;
-
-// Interfaces
-export interface GmailPort {
-  authenticate(): Promise<void>;
-  listEmails(maxResults?: number): Promise<Email[]>;
-  getEmailBody(emailId: string): Promise<string>;
-  batchArchive(emailIds: string[]): Promise<void>;
-  batchDelete(emailIds: string[]): Promise<void>;
-  batchAddLabel(emailIds: string[], label: string): Promise<void>;
-}
-
-export interface LLMPort {
+export interface IEmailService {
   /**
-   * Evaluates a batch of emails against the criteria.
-   * Returns a list of results corresponding to the input emails.
+   * Authenticate with the provider.
+   * @returns true if successful
    */
-  batchEvaluate(emails: Email[], criteria: FilterCriteria): Promise<MatchResult[]>;
+  authenticate(): Promise<boolean>;
+
+  /**
+   * Get a list of emails from the inbox.
+   * @param limit Max number of emails to fetch (default 50)
+   * @param pageToken Pagination token
+   * @param query Optional Gmail search query (e.g., from AI)
+   */
+  listEmails(limit: number, pageToken?: string, query?: string): Promise<{
+    emails: Email[];
+    nextPageToken?: string;
+  }>;
+
+  /**
+   * Get full details for a specific email.
+   */
+  getEmail(id: string): Promise<Email>;
+
+  /**
+   * Archive a list of emails.
+   * @requires Confirmation in UI layer before calling.
+   */
+  archiveEmails(ids: string[]): Promise<void>;
+
+  /**
+   * Trash (delete) a list of emails.
+   * @requires Confirmation in UI layer before calling.
+   */
+  deleteEmails(ids: string[]): Promise<void>;
+
+  /**
+   * Apply a label to a list of emails.
+   */
+  labelEmails(ids: string[], labelId: string): Promise<void>;
 }
 
-export interface WorkflowPort {
-  saveWorkflow(workflow: Omit<SavedWorkflow, 'id'>): Promise<SavedWorkflow>;
-  listWorkflows(): Promise<SavedWorkflow[]>;
-  updateWorkflow(workflow: SavedWorkflow): Promise<SavedWorkflow>;
+export interface IAIService {
+  /**
+   * Convert a natural language query into a structured filter.
+   * Uses Gemini 3 Flash.
+   */
+  generateFilter(prompt: string): Promise<FilterQuery>;
+}
+
+export interface IWorkflowService {
+  /**
+   * Load all saved workflows.
+   */
+  loadWorkflows(): Promise<Workflow[]>;
+
+  /**
+   * Save a new or updated workflow.
+   */
+  saveWorkflow(workflow: Workflow): Promise<void>;
+
+  /**
+   * Delete a workflow by ID.
+   */
   deleteWorkflow(id: string): Promise<void>;
+
+  /**
+   * Update the order of workflows.
+   */
+  reorderWorkflows(ids: string[]): Promise<void>;
 }
