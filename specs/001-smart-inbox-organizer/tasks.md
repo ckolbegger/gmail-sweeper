@@ -66,7 +66,7 @@ description: "Task list template for feature implementation"
 
 ### Implementation for User Story 1 (Strict TDD)
 
-- [ ] T015 [P] [US1] Implement `listEmails` in `src/services/gmail/gmailService.ts` (using Mock/Real switch)
+- [x] T015 [P] [US1] Implement `listEmails` in `src/services/gmail/gmailService.ts` (using Mock/Real switch)
   - Tests:
     - it should fetch emails with pagination tokens
     - it should respect maxResults parameter (boundary: 1 to 500)
