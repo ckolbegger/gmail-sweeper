@@ -106,7 +106,7 @@ description: "Task list template for feature implementation"
     - it should switch focus between list and detail panes
     - it should update detail view when list item changes
 
-- [ ] T020 [US1] Add CLI flag parsing for page size override (`--limit`)
+- [x] T020 [US1] Add CLI flag parsing for page size override (`--limit`)
 
 ### Integration Tests for User Story 1
 
