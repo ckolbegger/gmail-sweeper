@@ -70,7 +70,7 @@
     - it should return a list with required fields
     - it should honor sender/date/label/category filters
     - it should return an empty list when no matches
-- [ ] T009 [P] [US1] Integration test for filter workflow in `tests/integration/filter_workflow.test.ts`
+- [x] T009 [P] [US1] Integration test for filter workflow in `tests/integration/filter_workflow.test.ts`
   - Tests:
     - it should load inbox then apply filters end-to-end
     - it should update list and unread emphasis after filter
