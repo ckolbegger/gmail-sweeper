@@ -87,7 +87,7 @@ description: "Task list template for feature implementation"
     - it should support keyboard navigation (up/down arrows)
     - it should not scroll past top or bottom boundary (boundary)
 
-- [ ] T017 [P] [US1] Create `EmailDetail` component in `src/components/Inbox/EmailDetail.tsx`
+- [x] T017 [P] [US1] Create `EmailDetail` component in `src/components/Inbox/EmailDetail.tsx`
   - Tests:
     - it should render email subject, from, and date headers
     - it should render the email body content
