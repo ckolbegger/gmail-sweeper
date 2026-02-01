@@ -6,9 +6,13 @@ import { EmailDetail } from './components/Inbox/EmailDetail';
 import { MockEmailService } from '../tests/mocks/mockEmailService';
 import { Email } from './types';
 
-export default function App() {
+interface AppProps {
+    limit?: number;
+}
+
+export default function App({ limit = 10 }: AppProps) {
     const service = useMemo(() => new MockEmailService(), []);
-    const { emails, loading, error } = useGmail(service);
+    const { emails, loading, error } = useGmail(service, { maxResults: limit });
     const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
 
     useInput((_: string, key) => {

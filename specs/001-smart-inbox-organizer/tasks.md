@@ -101,7 +101,7 @@ description: "Task list template for feature implementation"
     - it should manage loading and error states
     - it should expose refresh/refetch capability
 
-- [ ] T019 [US1] Integrate List and Detail into `src/app.tsx` with navigation state
+- [x] T019 [US1] Integrate List and Detail into `src/app.tsx` with navigation state
   - Tests:
     - it should switch focus between list and detail panes
     - it should update detail view when list item changes

@@ -60,4 +60,12 @@ describe('App Integration', () => {
 
         expect(lastFrame()).toContain('body1');
     });
+
+    it('should respect limit prop', () => {
+        (useGmail as any).mockReturnValue({ emails: [], loading: false, error: null, refetch: vi.fn() });
+        render(<App limit={50} />);
+        expect(useGmail).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+            maxResults: 50
+        }));
+    });
 });
