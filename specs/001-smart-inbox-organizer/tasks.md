@@ -98,7 +98,7 @@
     - it should build filter criteria from inputs
     - it should ignore empty filter values
     - it should combine filters correctly
-- [ ] T014 [US1] Implement Gmail list adapter call in `src/adapters/gmail/list_emails.ts`
+- [x] T014 [US1] Implement Gmail list adapter call in `src/adapters/gmail/list_emails.ts`
   - Tests:
     - it should request only inbox messages
     - it should paginate until page limit or completion
