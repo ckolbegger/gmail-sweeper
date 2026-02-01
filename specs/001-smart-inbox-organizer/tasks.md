@@ -83,7 +83,7 @@
     - it should require message_id and received_at
     - it should default is_read to false when missing
     - it should reject invalid timestamps
-- [ ] T011 [P] [US1] Create Gmail adapter client in `src/adapters/gmail/client.ts`
+- [x] T011 [P] [US1] Create Gmail adapter client in `src/adapters/gmail/client.ts`
   - Tests:
     - it should initialize with least-privilege scopes
     - it should handle auth failures gracefully
