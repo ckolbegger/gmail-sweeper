@@ -1,36 +1,36 @@
 import { describe, expect, it } from 'vitest';
 
+import { createEmail, type Email } from '@/core/entities.js';
 import { runFilterWorkflow, type InboxFilterInput } from '@/services/filter_workflow.js';
-import { type EmailRecord } from '@/services/email_list_service.js';
 
-const EMAILS: EmailRecord[] = [
-  {
-    messageId: 'msg-1',
+const EMAILS: Email[] = [
+  createEmail({
+    message_id: 'msg-1',
     subject: 'Welcome to the app',
     sender: 'welcome@service.com',
-    receivedAt: Date.parse('2026-01-30T10:00:00Z'),
+    received_at: Date.parse('2026-01-30T10:00:00Z'),
     labels: ['INBOX', 'IMPORTANT'],
     category: 'primary',
-    isRead: false
-  },
-  {
-    messageId: 'msg-2',
+    is_read: false
+  }),
+  createEmail({
+    message_id: 'msg-2',
     subject: 'Sale now on',
     sender: 'promo@shop.com',
-    receivedAt: Date.parse('2026-01-25T09:00:00Z'),
+    received_at: Date.parse('2026-01-25T09:00:00Z'),
     labels: ['INBOX', 'PROMOTIONS'],
     category: 'promotions',
-    isRead: true
-  },
-  {
-    messageId: 'msg-3',
+    is_read: true
+  }),
+  createEmail({
+    message_id: 'msg-3',
     subject: 'Team update',
     sender: 'lead@work.com',
-    receivedAt: Date.parse('2026-01-28T18:30:00Z'),
+    received_at: Date.parse('2026-01-28T18:30:00Z'),
     labels: ['INBOX', 'WORK'],
     category: 'updates',
-    isRead: false
-  }
+    is_read: false
+  })
 ];
 
 describe('filter workflow integration', () => {

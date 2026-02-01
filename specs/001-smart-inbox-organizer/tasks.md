@@ -78,7 +78,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T010 [P] [US1] Create Email entity in `src/core/entities.ts`
+- [x] T010 [P] [US1] Create Email entity in `src/core/entities.ts`
   - Tests:
     - it should require message_id and received_at
     - it should default is_read to false when missing

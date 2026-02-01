@@ -1,12 +1,14 @@
-import type { EmailRecord } from '@/services/email_list_service.js';
+import type { Email } from '@/core/entities.js';
 
-export function renderInboxList(emails: EmailRecord[]): string[] {
+export function renderInboxList(emails: Email[]): string[] {
   if (emails.length === 0) {
     return ['(no messages)'];
   }
 
   return emails.map((email) => {
-    const subject = email.isRead ? email.subject : `**${email.subject}**`;
-    return `${subject} — ${email.sender}`;
+    const subjectValue = email.subject ?? '(no subject)';
+    const senderValue = email.sender ?? '(unknown sender)';
+    const subject = email.is_read ? subjectValue : `**${subjectValue}**`;
+    return `${subject} — ${senderValue}`;
   });
 }
