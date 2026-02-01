@@ -93,7 +93,7 @@
     - it should return emails sorted by received_at desc
     - it should apply sender/date/label/category filters
     - it should handle empty inbox
-- [ ] T013 [P] [US1] Implement filter builder in `src/services/filter_service.ts`
+- [x] T013 [P] [US1] Implement filter builder in `src/services/filter_service.ts`
   - Tests:
     - it should build filter criteria from inputs
     - it should ignore empty filter values
