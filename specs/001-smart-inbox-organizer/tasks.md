@@ -18,12 +18,12 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Initialize Node.js project with package.json per plan.md in /
-- [ ] T002 Configure TypeScript with tsconfig.json in /
-- [ ] T003 [P] Configure Vitest with vitest.config.ts in /
-- [ ] T004 [P] Configure ESLint and Prettier in /
-- [ ] T005 Create directory structure: src/core/, src/tui/, src/cli/, tests/ per plan.md
-- [ ] T006 [P] Add .gitignore for node_modules, dist, .env, *.db
+- [X] T001 Initialize Node.js project with package.json per plan.md in /
+- [X] T002 Configure TypeScript with tsconfig.json in /
+- [X] T003 [P] Configure Vitest with vitest.config.ts in /
+- [X] T004 [P] Configure ESLint and Prettier in /
+- [X] T005 Create directory structure: src/core/, src/tui/, src/cli/, tests/ per plan.md
+- [X] T006 [P] Add .gitignore for node_modules, dist, .env, *.db
 
 ---
 
@@ -35,23 +35,23 @@
 
 ### Core Models
 
-- [ ] T007 [P] Create Email interface in src/core/models/index.ts per data-model.md
-- [ ] T008 [P] Create EmailAddress interface in src/core/models/index.ts
-- [ ] T009 [P] Create Label and LabelType types in src/core/models/index.ts
-- [ ] T010 [P] Create Category type in src/core/models/index.ts
-- [ ] T011 [P] Create Config interface in src/core/models/index.ts
-- [ ] T012 Create core library barrel export in src/core/index.ts
+- [X] T007 [P] Create Email interface in src/core/models/index.ts per data-model.md
+- [X] T008 [P] Create EmailAddress interface in src/core/models/index.ts
+- [X] T009 [P] Create Label and LabelType types in src/core/models/index.ts
+- [X] T010 [P] Create Category type in src/core/models/index.ts
+- [X] T011 [P] Create Config interface in src/core/models/index.ts
+- [X] T012 Create core library barrel export in src/core/index.ts
 
 ### Error Classes
 
-- [ ] T013 [P] Create GmailSweepError base class in src/core/errors.ts
-- [ ] T014 [P] Create AuthenticationError class in src/core/errors.ts
-- [ ] T015 [P] Create GmailAPIError and RateLimitError classes in src/core/errors.ts
-- [ ] T016 [P] Create NotFoundError class in src/core/errors.ts
+- [X] T013 [P] Create GmailSweepError base class in src/core/errors.ts
+- [X] T014 [P] Create AuthenticationError class in src/core/errors.ts
+- [X] T015 [P] Create GmailAPIError and RateLimitError classes in src/core/errors.ts
+- [X] T016 [P] Create NotFoundError class in src/core/errors.ts
 
 ### Gmail Authentication
 
-- [ ] T017 Write unit test for OAuth2 auth flow in tests/unit/gmail/auth.test.ts
+- [X] T017 Write unit test for OAuth2 auth flow in tests/unit/gmail/auth.test.ts
   - Tests:
     - it should generate authorization URL with correct scopes
     - it should exchange authorization code for tokens
@@ -59,15 +59,15 @@
     - it should throw AuthenticationError on network failure
     - it should throw AuthenticationError on timeout
     - it should include offline access for refresh token
-- [ ] T018 Implement OAuth2 authentication in src/core/gmail/auth.ts using googleapis
-- [ ] T019 Write unit test for token refresh in tests/unit/gmail/auth.test.ts
+- [X] T018 Implement OAuth2 authentication in src/core/gmail/auth.ts using googleapis
+- [X] T019 Write unit test for token refresh in tests/unit/gmail/auth.test.ts
   - Tests:
     - it should refresh expired access token using refresh token
     - it should throw AuthenticationError when refresh token is invalid
     - it should return existing token if not expired
     - it should refresh token expiring within 5 minutes (boundary)
     - it should handle refresh during concurrent requests
-- [ ] T020 Implement token persistence in src/core/gmail/auth.ts (~/.config/gmail-sweep/token.json)
+- [X] T020 Implement token persistence in src/core/gmail/auth.ts (~/.config/gmail-sweep/token.json)
   - Tests:
     - it should save token to config directory
     - it should load token from config directory
@@ -78,7 +78,7 @@
 
 ### Gmail Client (List Messages)
 
-- [ ] T021 Write unit test for listMessages in tests/unit/gmail/client.test.ts
+- [X] T021 Write unit test for listMessages in tests/unit/gmail/client.test.ts
   - Tests:
     - it should return array of email metadata
     - it should handle empty inbox (boundary: 0 emails)
@@ -88,10 +88,10 @@
     - it should throw GmailAPIError on API failure
     - it should throw RateLimitError on 429 response
     - it should throw AuthenticationError on 401 response
-- [ ] T022 Implement GmailClient constructor in src/core/gmail/client.ts
-- [ ] T023 Implement GmailClient.authenticate() in src/core/gmail/client.ts
-- [ ] T024 Implement GmailClient.listMessages() with pagination in src/core/gmail/client.ts
-- [ ] T025 Implement retry with exponential backoff using p-retry in src/core/gmail/client.ts
+- [X] T022 Implement GmailClient constructor in src/core/gmail/client.ts
+- [X] T023 Implement GmailClient.authenticate() in src/core/gmail/client.ts
+- [X] T024 Implement GmailClient.listMessages() with pagination in src/core/gmail/client.ts
+- [X] T025 Implement retry with exponential backoff using p-retry in src/core/gmail/client.ts
   - Tests:
     - it should retry on 5xx errors up to 3 times
     - it should retry on RateLimitError with backoff
@@ -100,15 +100,15 @@
 
 ### Email Cache
 
-- [ ] T026 Write unit test for EmailCache in tests/unit/cache/db.test.ts
+- [X] T026 Write unit test for EmailCache in tests/unit/cache/db.test.ts
   - Tests:
     - it should create database file on initialize
     - it should create emails table with correct schema
     - it should create sync_state table
     - it should open existing database without data loss
     - it should handle database locked error
-- [ ] T027 Implement EmailCache constructor and initialize() in src/core/cache/db.ts
-- [ ] T028 Implement EmailCache.upsertEmails() in src/core/cache/db.ts
+- [X] T027 Implement EmailCache constructor and initialize() in src/core/cache/db.ts
+- [X] T028 Implement EmailCache.upsertEmails() in src/core/cache/db.ts
   - Tests:
     - it should insert new emails
     - it should update existing emails by id
@@ -118,14 +118,14 @@
     - it should handle batch of 1000+ emails efficiently
     - it should preserve existing fields on partial update
     - it should use transaction for atomicity
-- [ ] T029 Implement EmailCache.getEmails() with sorting in src/core/cache/db.ts
+- [X] T029 Implement EmailCache.getEmails() with sorting in src/core/cache/db.ts
   - Tests:
     - it should return emails sorted by date descending (default)
     - it should sort by sender alphabetically
     - it should sort by subject alphabetically
     - it should handle empty cache
     - it should respect limit parameter (boundary: 0, 1, 100)
-- [ ] T030 Implement EmailCache.getLastSync() and setLastSync() in src/core/cache/db.ts
+- [X] T030 Implement EmailCache.getLastSync() and setLastSync() in src/core/cache/db.ts
   - Tests:
     - it should return null if never synced
     - it should return last sync timestamp after setLastSync
@@ -133,14 +133,14 @@
 
 ### Config Loading
 
-- [ ] T031 Write unit test for config loading in tests/unit/config.test.ts
+- [X] T031 Write unit test for config loading in tests/unit/config.test.ts
   - Tests:
     - it should load config from ~/.config/gmail-sweep/config.json
     - it should return default config if file not exists
     - it should throw on malformed JSON
     - it should merge partial config with defaults
-- [ ] T032 Implement loadConfig() in src/core/config.ts
-- [ ] T033 Implement default config creation in src/core/config.ts
+- [X] T032 Implement loadConfig() in src/core/config.ts
+- [X] T033 Implement default config creation in src/core/config.ts
   - Tests:
     - it should create config directory if not exists
     - it should write default config with all required fields
@@ -148,18 +148,18 @@
 
 ### CLI Entry Point
 
-- [ ] T034 Implement CLI argument parsing with commander in src/cli/index.ts
+- [X] T034 Implement CLI argument parsing with commander in src/cli/index.ts
   - Tests:
     - it should parse --account flag
     - it should show help with --help
     - it should show version with --version
     - it should exit with error on unknown flag
-- [ ] T035 Implement Gmail account argument handling in src/cli/index.ts
+- [X] T035 Implement Gmail account argument handling in src/cli/index.ts
   - Tests:
     - it should use default account if not specified
     - it should validate account exists in config
     - it should throw on unknown account
-- [ ] T036 Wire CLI to TUI app launch in src/cli/index.ts
+- [X] T036 Wire CLI to TUI app launch in src/cli/index.ts
 
 ### Integration Tests for Foundational Phase
 
