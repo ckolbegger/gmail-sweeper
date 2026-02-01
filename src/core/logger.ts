@@ -1,4 +1,4 @@
-import type { LogLevel } from './config';
+import type { LogLevel } from './config.js';
 
 const REDACT_KEYS = ['token', 'secret', 'password', 'authorization'];
 
@@ -37,8 +37,10 @@ export function createLogger(level: LogLevel = 'info'): Logger {
     if (!shouldLog(lvl, level)) return;
     const payload = meta ? JSON.stringify(redact(meta)) : '';
     const line = payload ? `${message} ${payload}` : message;
+    const logger = console;
+    const method = (lvl === 'debug' ? 'log' : lvl) as keyof Console;
     // eslint-disable-next-line no-console
-    console[lvl === 'debug' ? 'log' : lvl](line);
+    (logger[method] as (...args: unknown[]) => void)(line);
   };
 
   return {

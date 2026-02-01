@@ -65,7 +65,7 @@
 
 ### Tests for User Story 1 (MANDATORY - Strict TDD) ⚠️
 
-- [ ] T008 [P] [US1] Contract test for list emails in `tests/contract/emails_list.test.ts`
+- [x] T008 [P] [US1] Contract test for list emails in `tests/contract/emails_list.test.ts`
   - Tests:
     - it should return a list with required fields
     - it should honor sender/date/label/category filters
