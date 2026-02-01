@@ -1,0 +1,176 @@
+openapi: 3.0.3
+info:
+  title: Smart Inbox Organizer Local API
+  version: 0.1.0
+servers:
+  - url: http://localhost
+paths:
+  /emails:
+    get:
+      summary: List emails with filters or natural-language query
+      parameters:
+        - in: query
+          name: sender
+          schema: { type: string }
+        - in: query
+          name: date_from
+          schema: { type: string, format: date-time }
+        - in: query
+          name: date_to
+          schema: { type: string, format: date-time }
+        - in: query
+          name: label
+          schema: { type: string }
+        - in: query
+          name: category
+          schema: { type: string }
+        - in: query
+          name: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Email list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  emails:
+                    type: array
+                    items: { $ref: "#/components/schemas/Email" }
+  /emails/{message_id}:
+    get:
+      summary: Fetch full email content
+      parameters:
+        - in: path
+          name: message_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Email detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Email" }
+  /actions/label:
+    post:
+      summary: Apply label to selected emails
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message_ids: { type: array, items: { type: string } }
+                label: { type: string }
+      responses:
+        "200": { description: Labeled }
+  /actions/archive:
+    post:
+      summary: Archive selected emails
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message_ids: { type: array, items: { type: string } }
+      responses:
+        "200": { description: Archived }
+  /actions/delete:
+    post:
+      summary: Delete selected emails
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message_ids: { type: array, items: { type: string } }
+      responses:
+        "200": { description: Deleted }
+  /saved-queries:
+    get:
+      summary: List saved queries
+      responses:
+        "200":
+          description: Saved query list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  saved_queries:
+                    type: array
+                    items: { $ref: "#/components/schemas/SavedQuery" }
+    post:
+      summary: Create a saved query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SavedQuery" }
+      responses:
+        "201": { description: Created }
+  /saved-queries/{saved_query_id}:
+    put:
+      summary: Update a saved query
+      parameters:
+        - in: path
+          name: saved_query_id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SavedQuery" }
+      responses:
+        "200": { description: Updated }
+  /saved-queries/{saved_query_id}/run:
+    post:
+      summary: Run a saved query
+      parameters:
+        - in: path
+          name: saved_query_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Query results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  emails:
+                    type: array
+                    items: { $ref: "#/components/schemas/Email" }
+components:
+  schemas:
+    Email:
+      type: object
+      properties:
+        message_id: { type: string }
+        thread_id: { type: string }
+        sender: { type: string }
+        subject: { type: string }
+        received_at: { type: string, format: date-time }
+        labels: { type: array, items: { type: string } }
+        category: { type: string }
+        is_read: { type: boolean }
+        snippet: { type: string }
+        body: { type: string }
+    SavedQuery:
+      type: object
+      properties:
+        saved_query_id: { type: string }
+        name: { type: string }
+        query_text: { type: string }
+        action_type: { type: string, enum: [label, archive, delete, none] }
+        action_label: { type: string }
+        order_index: { type: integer }
+        last_run_at: { type: string, format: date-time }
