@@ -36,31 +36,26 @@
 
 ### Database & Persistence
 
-- [ ] T007 [P] Create SQLite database schema in src/core/persistence/migrations/001_initial.sql
+- [ ] T007 [P] Create SQLite database schema for emails and labels in src/core/persistence/migrations/001_initial.sql
 - [ ] T008 [P] Implement database connection and migration runner in src/core/persistence/database.ts
-- [ ] T009 [P] Create Zod validation schemas in src/core/models/validation.ts
+- [ ] T009 [P] Create Zod validation schemas for Email and Label in src/core/models/validation.ts
 
-### Core Models
+### Core Models (MVP-Only)
 
 - [ ] T010 [P] Create Email model types and validation in src/core/models/email.ts
-- [ ] T011 [P] Create Query model types and validation in src/core/models/query.ts
-- [ ] T012 [P] Create Workflow model types and validation in src/core/models/workflow.ts
-- [ ] T013 [P] Create Session model types and validation in src/core/models/session.ts
 - [ ] T014 [P] Create Label model types and validation in src/core/models/label.ts
-- [ ] T015 Create models barrel export in src/core/models/index.ts
+- [ ] T015 Create models barrel export (Email, Label only) in src/core/models/index.ts
 
-### Shared Contracts
+### Shared Contracts (MVP-Only)
 
 - [ ] T016 [P] Create shared type definitions in src/core/contracts/types.ts
 - [ ] T017 [P] Create Gmail API contract interfaces in src/core/contracts/gmail-api.ts
-- [ ] T018 [P] Create NL Query contract interfaces in src/core/contracts/nl-query.ts
-- [ ] T019 [P] Create Workflow contract interfaces in src/core/contracts/workflow.ts
 - [ ] T020 Create contracts barrel export in src/core/contracts/index.ts
 
-### Error Handling & Logging
+### Error Handling & Logging (Minimal)
 
-- [ ] T021 [P] Implement custom error classes in src/core/errors/index.ts
-- [ ] T022 [P] Implement logging infrastructure in src/core/logging/index.ts
+- [ ] T021 [P] Implement minimal error classes (GmailError only) in src/core/errors/index.ts
+- [ ] T022 [P] Implement minimal logging wrapper (console-based) in src/core/logging/index.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -134,27 +129,34 @@
 
 ### Implementation for User Story 2
 
+#### Query Model & Contracts (Deferred from Phase 2)
+
+- [ ] T046 [P] [US2] Create Query model types and validation in src/core/models/query.ts
+- [ ] T047 [P] [US2] Create NL Query contract interfaces in src/core/contracts/nl-query.ts
+- [ ] T048 [P] [US2] Add Query to models barrel export in src/core/models/index.ts
+- [ ] T049 [P] [US2] Add NLQueryError to error classes in src/core/errors/index.ts
+
 #### Query Engine
 
-- [ ] T046 [US2] Implement Ollama client wrapper in src/core/services/ollama-client.ts
-- [ ] T047 [US2] Implement NLQueryEngine for semantic search in src/core/services/nl-query-engine.ts
-- [ ] T048 [US2] Implement query result caching in src/core/services/nl-query-engine.ts
-- [ ] T049 [US2] Implement query explanation feature in src/core/services/nl-query-engine.ts
+- [ ] T050 [US2] Implement Ollama client wrapper in src/core/services/ollama-client.ts
+- [ ] T051 [US2] Implement NLQueryEngine for semantic search in src/core/services/nl-query-engine.ts
+- [ ] T052 [US2] Implement query result caching in src/core/services/nl-query-engine.ts
+- [ ] T053 [US2] Implement query explanation feature in src/core/services/nl-query-engine.ts
 
 #### Query Repository
 
-- [ ] T050 [US2] Implement QueryRepository for saved queries in src/core/services/query-repository.ts
+- [ ] T054 [US2] Implement QueryRepository for saved queries in src/core/services/query-repository.ts
 
 #### CLI Components
 
-- [ ] T051 [US2] Create QueryInput TUI component in src/cli/components/query-input.tsx
-- [ ] T052 [US2] Integrate NL query input with email list filtering in src/cli/app.tsx
-- [ ] T053 [US2] Add query execution status display in src/cli/components/query-input.tsx
+- [ ] T055 [US2] Create QueryInput TUI component in src/cli/components/query-input.tsx
+- [ ] T056 [US2] Integrate NL query input with email list filtering in src/cli/app.tsx
+- [ ] T057 [US2] Add query execution status display in src/cli/components/query-input.tsx
 
 #### Integration
 
-- [ ] T054 [US2] Wire up natural language queries to filter email list in src/cli/app.tsx
-- [ ] T055 [US2] Implement email detail pane display when email selected in src/cli/components/email-detail.tsx
+- [ ] T058 [US2] Wire up natural language queries to filter email list in src/cli/app.tsx
+- [ ] T059 [US2] Implement email detail pane display when email selected in src/cli/components/email-detail.tsx
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -170,35 +172,35 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T056 [P] [US3] Unit test for email selection logic in tests/unit/core/email-selection.test.ts
-- [ ] T057 [P] [US3] Integration test for email actions flow in tests/integration/email-actions.test.ts
-- [ ] T058 [P] [US3] Contract test for Gmail batch actions in tests/contract/gmail-actions.test.ts
+- [ ] T060 [P] [US3] Unit test for email selection logic in tests/unit/core/email-selection.test.ts
+- [ ] T061 [P] [US3] Integration test for email actions flow in tests/integration/email-actions.test.ts
+- [ ] T062 [P] [US3] Contract test for Gmail batch actions in tests/contract/gmail-actions.test.ts
 
 ### Implementation for User Story 3
 
 #### Selection Logic
 
-- [ ] T059 [US3] Implement email selection state management in src/core/services/selection-service.ts
+- [ ] T063 [US3] Implement email selection state management in src/core/services/selection-service.ts
 
 #### Gmail Actions
 
-- [ ] T060 [US3] Implement label application in src/core/services/gmail-client.ts
-- [ ] T061 [US3] Implement archive operation in src/core/services/gmail-client.ts
-- [ ] T062 [US3] Implement delete (trash) operation in src/core/services/gmail-client.ts
-- [ ] T063 [US3] Implement batch action handling with progress in src/core/services/gmail-client.ts
+- [ ] T064 [US3] Implement label application in src/core/services/gmail-client.ts
+- [ ] T065 [US3] Implement archive operation in src/core/services/gmail-client.ts
+- [ ] T066 [US3] Implement delete (trash) operation in src/core/services/gmail-client.ts
+- [ ] T067 [US3] Implement batch action handling with progress in src/core/services/gmail-client.ts
 
 #### CLI Components
 
-- [ ] T064 [US3] Add keyboard shortcuts for selection (Space, a) in src/cli/hooks/use-keyboard.ts
-- [ ] T065 [US3] Add action keyboard shortcuts (l, e, d) in src/cli/hooks/use-keyboard.ts
-- [ ] T066 [US3] Create action confirmation dialog in src/cli/components/action-dialog.tsx
-- [ ] T067 [US3] Add visual selection indicators in src/cli/components/email-list.tsx
+- [ ] T068 [US3] Add keyboard shortcuts for selection (Space, a) in src/cli/hooks/use-keyboard.ts
+- [ ] T069 [US3] Add action keyboard shortcuts (l, e, d) in src/cli/hooks/use-keyboard.ts
+- [ ] T070 [US3] Create action confirmation dialog in src/cli/components/action-dialog.tsx
+- [ ] T071 [US3] Add visual selection indicators in src/cli/components/email-list.tsx
 
 #### Integration
 
-- [ ] T068 [US3] Wire up selection and actions to Gmail API in src/cli/app.tsx
-- [ ] T069 [US3] Implement action confirmation for destructive operations in src/cli/app.tsx
-- [ ] T070 [US3] Add action progress feedback in src/cli/components/action-dialog.tsx
+- [ ] T072 [US3] Wire up selection and actions to Gmail API in src/cli/app.tsx
+- [ ] T073 [US3] Implement action confirmation for destructive operations in src/cli/app.tsx
+- [ ] T074 [US3] Add action progress feedback in src/cli/components/action-dialog.tsx
 
 **Checkpoint**: MVP Complete (User Stories 1-3) - Core inbox management workflow functional
 
@@ -214,32 +216,39 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T071 [P] [US4] Unit test for WorkflowRepository in tests/unit/core/workflow-repository.test.ts
-- [ ] T072 [P] [US4] Integration test for workflow creation flow in tests/integration/workflow-create.test.ts
+- [ ] T075 [P] [US4] Unit test for WorkflowRepository in tests/unit/core/workflow-repository.test.ts
+- [ ] T076 [P] [US4] Integration test for workflow creation flow in tests/integration/workflow-create.test.ts
 
 ### Implementation for User Story 4
 
+#### Workflow Model & Contracts (Deferred from Phase 2)
+
+- [ ] T077 [P] [US4] Create Workflow model types and validation in src/core/models/workflow.ts
+- [ ] T078 [P] [US4] Create Workflow contract interfaces in src/core/contracts/workflow.ts
+- [ ] T079 [P] [US4] Add Workflow to models barrel export in src/core/models/index.ts
+- [ ] T080 [P] [US4] Add WorkflowError to error classes in src/core/errors/index.ts
+
 #### Workflow Repository
 
-- [ ] T073 [US4] Implement WorkflowRepository in src/core/services/workflow-repository.ts
-- [ ] T074 [US4] Implement workflow CRUD operations in src/core/services/workflow-repository.ts
+- [ ] T081 [US4] Implement WorkflowRepository in src/core/services/workflow-repository.ts
+- [ ] T082 [US4] Implement workflow CRUD operations in src/core/services/workflow-repository.ts
 
 #### Workflow Engine
 
-- [ ] T075 [US4] Implement workflow creation from current query in src/core/services/workflow-engine.ts
-- [ ] T076 [US4] Implement workflow action association in src/core/services/workflow-engine.ts
+- [ ] T083 [US4] Implement workflow creation from current query in src/core/services/workflow-engine.ts
+- [ ] T084 [US4] Implement workflow action association in src/core/services/workflow-engine.ts
 
 #### CLI Components
 
-- [ ] T077 [US4] Create WorkflowList TUI component in src/cli/components/workflow-list.tsx
-- [ ] T078 [US4] Create workflow save dialog in src/cli/components/workflow-save-dialog.tsx
-- [ ] T079 [US4] Add workflow keyboard shortcuts (w, W) in src/cli/hooks/use-keyboard.ts
+- [ ] T085 [US4] Create WorkflowList TUI component in src/cli/components/workflow-list.tsx
+- [ ] T086 [US4] Create workflow save dialog in src/cli/components/workflow-save-dialog.tsx
+- [ ] T087 [US4] Add workflow keyboard shortcuts (w, W) in src/cli/hooks/use-keyboard.ts
 
 #### Integration
 
-- [ ] T080 [US4] Wire up workflow save functionality in src/cli/app.tsx
-- [ ] T081 [US4] Implement workflow list view in src/cli/app.tsx
-- [ ] T082 [US4] Add workflow editing capability in src/cli/components/workflow-list.tsx
+- [ ] T088 [US4] Wire up workflow save functionality in src/cli/app.tsx
+- [ ] T089 [US4] Implement workflow list view in src/cli/app.tsx
+- [ ] T090 [US4] Add workflow editing capability in src/cli/components/workflow-list.tsx
 
 **Checkpoint**: User Story 4 complete - Workflows can be saved and managed
 
@@ -255,40 +264,43 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T083 [P] [US5] Unit test for SessionService in tests/unit/core/session-service.test.ts
-- [ ] T084 [P] [US5] Integration test for session workflow automation in tests/integration/session-workflows.test.ts
-- [ ] T085 [P] [US5] Unit test for workflow execution engine in tests/unit/core/workflow-execution.test.ts
+- [ ] T091 [P] [US5] Unit test for SessionService in tests/unit/core/session-service.test.ts
+- [ ] T092 [P] [US5] Integration test for session workflow automation in tests/integration/session-workflows.test.ts
+- [ ] T093 [P] [US5] Unit test for workflow execution engine in tests/unit/core/workflow-execution.test.ts
 
 ### Implementation for User Story 5
 
-#### Session Management
+#### Session Model & Management (Deferred from Phase 2)
 
-- [ ] T086 [US5] Implement SessionRepository in src/core/services/session-repository.ts
-- [ ] T087 [US5] Implement SessionService for tracking in src/core/services/session-service.ts
-- [ ] T088 [US5] Implement last session timestamp tracking in src/core/services/session-service.ts
+- [ ] T094 [P] [US5] Create Session model types and validation in src/core/models/session.ts
+- [ ] T095 [P] [US5] Add Session to models barrel export in src/core/models/index.ts
+- [ ] T096 [P] [US5] Update database schema for session tracking in src/core/persistence/migrations/002_add_sessions.sql
+- [ ] T097 [US5] Implement SessionRepository in src/core/services/session-repository.ts
+- [ ] T098 [US5] Implement SessionService for tracking in src/core/services/session-service.ts
+- [ ] T099 [US5] Implement last session timestamp tracking in src/core/services/session-service.ts
 
 #### Workflow Execution
 
-- [ ] T089 [US5] Implement workflow execution engine in src/core/services/workflow-engine.ts
-- [ ] T090 [US5] Implement workflow ordering and sequencing in src/core/services/workflow-engine.ts
-- [ ] T091 [US5] Implement ExecutionRepository for logging in src/core/services/execution-repository.ts
-- [ ] T092 [US5] Implement conflict resolution for multiple workflows in src/core/services/workflow-engine.ts
+- [ ] T100 [US5] Implement workflow execution engine in src/core/services/workflow-engine.ts
+- [ ] T101 [US5] Implement workflow ordering and sequencing in src/core/services/workflow-engine.ts
+- [ ] T102 [US5] Implement ExecutionRepository for logging in src/core/services/execution-repository.ts
+- [ ] T103 [US5] Implement conflict resolution for multiple workflows in src/core/services/workflow-engine.ts
 
 #### New Email Detection
 
-- [ ] T093 [US5] Implement new email detection since last session in src/core/services/gmail-client.ts
-- [ ] T094 [US5] Implement workflow prompt logic for new emails in src/core/services/workflow-engine.ts
+- [ ] T104 [US5] Implement new email detection since last session in src/core/services/gmail-client.ts
+- [ ] T105 [US5] Implement workflow prompt logic for new emails in src/core/services/workflow-engine.ts
 
 #### CLI Components
 
-- [ ] T095 [US5] Create session startup workflow prompt in src/cli/components/session-prompt.tsx
-- [ ] T096 [US5] Create workflow execution progress view in src/cli/components/workflow-progress.tsx
+- [ ] T106 [US5] Create session startup workflow prompt in src/cli/components/session-prompt.tsx
+- [ ] T107 [US5] Create workflow execution progress view in src/cli/components/workflow-progress.tsx
 
 #### Integration
 
-- [ ] T097 [US5] Wire up session startup workflow detection in src/cli/app.tsx
-- [ ] T098 [US5] Implement workflow confirmation before apply in src/cli/app.tsx
-- [ ] T099 [US5] Add workflow execution progress display in src/cli/app.tsx
+- [ ] T108 [US5] Wire up session startup workflow detection in src/cli/app.tsx
+- [ ] T109 [US5] Implement workflow confirmation before apply in src/cli/app.tsx
+- [ ] T110 [US5] Add workflow execution progress display in src/cli/app.tsx
 
 **Checkpoint**: All user stories complete - Full automation workflow functional
 
@@ -300,45 +312,45 @@
 
 ### Build & Distribution
 
-- [ ] T100 [P] Create build script for binary compilation in scripts/build-binary.ts
-- [ ] T101 [P] Configure pkg or deno compile for single executable output
-- [ ] T102 [P] Add CI/CD workflow for automated builds in .github/workflows/build.yml
+- [ ] T111 [P] Create build script for binary compilation in scripts/build-binary.ts
+- [ ] T112 [P] Configure pkg or deno compile for single executable output
+- [ ] T113 [P] Add CI/CD workflow for automated builds in .github/workflows/build.yml
 
 ### Documentation
 
-- [ ] T103 [P] Update README.md with installation and usage instructions
-- [ ] T104 [P] Create architecture documentation in docs/architecture.md
-- [ ] T105 [P] Add JSDoc comments to all public APIs
+- [ ] T114 [P] Update README.md with installation and usage instructions
+- [ ] T115 [P] Create architecture documentation in docs/architecture.md
+- [ ] T116 [P] Add JSDoc comments to all public APIs
 
 ### Testing & Quality
 
-- [ ] T106 [P] Add unit tests for all services in tests/unit/core/
-- [ ] T107 [P] Add CLI component tests in tests/unit/cli/
-- [ ] T108 [P] Add end-to-end test suite in tests/e2e/
-- [ ] T109 [P] Achieve >80% code coverage
+- [ ] T117 [P] Add comprehensive unit tests for all services in tests/unit/core/
+- [ ] T118 [P] Add CLI component tests in tests/unit/cli/
+- [ ] T119 [P] Add end-to-end test suite in tests/e2e/
+- [ ] T120 [P] Achieve >80% code coverage
 
 ### Performance & Optimization
 
-- [ ] T110 [P] Implement email list virtualization for large inboxes in src/cli/components/email-list.tsx
-- [ ] T111 [P] Add database query optimization and indexing verification
-- [ ] T112 [P] Implement request batching for Gmail API in src/core/services/gmail-client.ts
+- [ ] T121 [P] Implement email list virtualization for large inboxes in src/cli/components/email-list.tsx
+- [ ] T122 [P] Add database query optimization and indexing verification
+- [ ] T123 [P] Implement request batching for Gmail API in src/core/services/gmail-client.ts
 
 ### Error Handling & Reliability
 
-- [ ] T113 [P] Add comprehensive error boundaries in CLI components
-- [ ] T114 [P] Implement retry logic for Gmail API failures in src/core/services/gmail-client.ts
-- [ ] T115 [P] Add graceful degradation when Ollama is unavailable in src/core/services/nl-query-engine.ts
+- [ ] T124 [P] Add comprehensive error boundaries in CLI components
+- [ ] T125 [P] Implement retry logic for Gmail API failures in src/core/services/gmail-client.ts
+- [ ] T126 [P] Add graceful degradation when Ollama is unavailable in src/core/services/nl-query-engine.ts
 
 ### Security
 
-- [ ] T116 [P] Audit OAuth2 token storage security
-- [ ] T117 [P] Add input sanitization for all user inputs
-- [ ] T118 [P] Implement secure credential storage verification
+- [ ] T127 [P] Audit OAuth2 token storage security
+- [ ] T128 [P] Add input sanitization for all user inputs
+- [ ] T129 [P] Implement secure credential storage verification
 
 ### Quickstart Validation
 
-- [ ] T119 Run through quickstart.md validation - ensure all commands work
-- [ ] T120 Test binary distribution on clean machine
+- [ ] T130 Run through quickstart.md validation - ensure all commands work
+- [ ] T131 Test binary distribution on clean machine
 
 ---
 
