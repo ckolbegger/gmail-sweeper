@@ -29,11 +29,11 @@ description: "Task list template for feature implementation"
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create project structure (`src/`, `tests/`, `specs/`) per implementation plan
-- [ ] T002 Initialize Node.js project with TypeScript, `ink`, `react`, `vitest` dependencies
-- [ ] T003 [P] Configure linting (ESLint) and formatting (Prettier) tools
-- [ ] T004 [P] Setup `.env` and `credentials.json` handling (gitignores)
-- [ ] T005 [P] Setup `vitest` configuration and `ink-testing-library` helpers
+- [x] T001 Create project structure (`src/`, `tests/`, `specs/`) per implementation plan
+- [x] T002 Initialize Node.js project with TypeScript, `ink`, `react`, `vitest` dependencies
+- [x] T003 [P] Configure linting (ESLint) and formatting (Prettier) tools
+- [x] T004 [P] Setup `.env` and `credentials.json` handling (gitignores)
+- [x] T005 [P] Setup `vitest` configuration and `ink-testing-library` helpers
 
 ---
 
@@ -43,11 +43,11 @@ description: "Task list template for feature implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Define shared domain type `Email` in `src/types/index.ts` (Defer `Workflow` to US4)
-- [ ] T007 Define `IEmailService` (Read-Only methods) in `src/types/interfaces.ts` (Defer mutation methods to US3)
-- [ ] T008 Implement Mock `EmailService` (Read-Only) for testing in `tests/mocks/mockEmailService.ts`
-- [ ] T010 Setup main `App` component shell in `src/app.tsx`
-- [ ] T011 Implement `GmailService` skeleton (auth flow) using `google-auth-library` in `src/services/gmail/gmailService.ts`
+- [x] T006 Define shared domain type `Email` in `src/types/index.ts` (Defer `Workflow` to US4)
+- [x] T007 Define `IEmailService` (Read-Only methods) in `src/types/interfaces.ts` (Defer mutation methods to US3)
+- [x] T008 Implement Mock `EmailService` (Read-Only) for testing in `tests/mocks/mockEmailService.ts`
+- [x] T010 Setup main `App` component shell in `src/app.tsx`
+- [x] T011 Implement `GmailService` skeleton (auth flow) using `google-auth-library` in `src/services/gmail/gmailService.ts`
   - Tests:
     - it should instantiate with valid credentials
     - it should initiate OAuth2 flow if no token exists
