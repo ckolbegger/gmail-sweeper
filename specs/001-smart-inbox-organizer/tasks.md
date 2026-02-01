@@ -48,6 +48,11 @@ description: "Task list template for feature implementation"
 - [ ] T008 Implement Mock `EmailService` (Read-Only) for testing in `tests/mocks/mockEmailService.ts`
 - [ ] T010 Setup main `App` component shell in `src/app.tsx`
 - [ ] T011 Implement `GmailService` skeleton (auth flow) using `google-auth-library` in `src/services/gmail/gmailService.ts`
+  - Tests:
+    - it should instantiate with valid credentials
+    - it should initiate OAuth2 flow if no token exists
+    - it should refresh token if expired
+    - it should throw meaningful error if credentials.json is missing
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -64,11 +69,13 @@ description: "Task list template for feature implementation"
 - [ ] T015 [P] [US1] Implement `listEmails` in `src/services/gmail/gmailService.ts` (using Mock/Real switch)
   - Tests:
     - it should fetch emails with pagination tokens
-    - it should respect maxResults parameter
+    - it should respect maxResults parameter (boundary: 1 to 500)
     - it should sort emails by internalDate
     - it should map Gmail API response to Email domain model
-    - it should handle API errors gracefully
+    - it should handle API errors gracefully (401, 403, 429, 500)
     - it should correctly construct the query string (e.g., "label:INBOX")
+    - it should return empty list if API returns no messages (boundary)
+    - it should handle invalid/expired page tokens gracefully
 
 - [ ] T016 [P] [US1] Create `InboxList` component in `src/components/Inbox/InboxList.tsx`
   - Tests:
@@ -78,6 +85,7 @@ description: "Task list template for feature implementation"
     - it should visually indicate the currently focused item
     - it should display empty state when list is empty
     - it should support keyboard navigation (up/down arrows)
+    - it should not scroll past top or bottom boundary (boundary)
 
 - [ ] T017 [P] [US1] Create `EmailDetail` component in `src/components/Inbox/EmailDetail.tsx`
   - Tests:
@@ -130,6 +138,7 @@ description: "Task list template for feature implementation"
     - it should handle empty or ambiguous inputs
     - it should parse the AI response correctly (extracting query string)
     - it should fallback/error gracefully if AI is unavailable
+    - it should handle rate limit (429) responses with appropriate error message
 
 - [ ] T024 [P] [US2] Create `FilterInput` component in `src/components/Shared/FilterInput.tsx`
   - Tests:
@@ -175,6 +184,8 @@ description: "Task list template for feature implementation"
     - it should delete a workflow by ID
     - it should persist data across instances (mock fs/conf)
     - it should validate unique names (if required)
+    - it should handle corrupt or invalid JSON config file gracefully
+    - it should handle filesystem permission errors
 
 - [ ] T030 [P] [US4] Create `WorkflowList` component in `src/components/Workflows/WorkflowList.tsx`
   - Tests:
@@ -215,6 +226,8 @@ description: "Task list template for feature implementation"
     - it should call appropriate API method for "delete"
     - it should call appropriate API method for "label"
     - it should guard against acting on null/undefined IDs
+    - it should propagate specific API errors (403 Forbidden, 404 Not Found)
+    - it should handle partial success if supported (or fail all)
 
 - [ ] T036 [P] [US3] Create `ConfirmationDialog` component in `src/components/Shared/ConfirmationDialog.tsx`
   - Tests:
