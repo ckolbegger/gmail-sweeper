@@ -1,0 +1,48 @@
+{
+  "name": "gmail-sweep",
+  "version": "0.1.0",
+  "description": "CLI TUI application for organizing Gmail inboxes using natural language queries",
+  "type": "module",
+  "main": "dist/cli/index.js",
+  "bin": {
+    "gmail-sweep": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli/index.ts",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "lint": "eslint src tests --ext .ts,.tsx",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
+    "compile": "pkg dist/cli/index.js --out-path dist/bin",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["gmail", "cli", "tui", "email", "automation"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@napi-rs/keyring": "^1.1.6",
+    "better-sqlite3": "^12.1.0",
+    "googleapis": "^133.0.0",
+    "ink": "^4.4.1",
+    "ollama": "^0.4.9",
+    "react": "^18.2.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.9",
+    "@types/node": "^20.11.24",
+    "@types/react": "^18.2.61",
+    "@typescript-eslint/eslint-plugin": "^7.1.0",
+    "@typescript-eslint/parser": "^7.1.0",
+    "@yao-pkg/pkg": "^5.11.5",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3",
+    "vitest": "^1.3.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
