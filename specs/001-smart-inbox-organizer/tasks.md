@@ -108,7 +108,7 @@
     - it should render a list of emails
     - it should highlight unread emails
     - it should update when data changes
-- [ ] T016 [US1] Wire filters to list view in `src/tui/inbox_filters.ts`
+- [x] T016 [US1] Wire filters to list view in `src/tui/inbox_filters.ts`
   - Tests:
     - it should complete successfully
     - it should handle error conditions
