@@ -88,7 +88,7 @@
     - it should initialize with least-privilege scopes
     - it should handle auth failures gracefully
     - it should expose a reusable client instance
-- [ ] T012 [P] [US1] Implement email list service in `src/services/email_list_service.ts`
+- [x] T012 [P] [US1] Implement email list service in `src/services/email_list_service.ts`
   - Tests:
     - it should return emails sorted by received_at desc
     - it should apply sender/date/label/category filters
