@@ -28,12 +28,20 @@ export class GmailService implements IEmailService {
 
             this.auth = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
 
+            // Setup token refresh handling
+            this.auth.on('tokens', (tokens) => {
+                if (tokens.refresh_token) {
+                    // Logic to store new token would go here
+                    // fs.writeFile(TOKEN_PATH, JSON.stringify(this.auth.credentials))
+                }
+            });
+
             // 2. Load token if exists
             try {
                 const tokenContent = await fs.readFile(TOKEN_PATH, 'utf-8');
                 this.auth.setCredentials(JSON.parse(tokenContent));
             } catch (error) {
-                // Token doesn't exist, need to generate new one (CLI interaction needed? or just error out for now?)
+                // Token doesn't exist, need to generate new one
                 console.error('Token not found. Run auth script.');
                 throw new Error('Authentication required');
             }

@@ -1,15 +1,22 @@
 export interface Email {
-    id: string;
-    threadId: string;
-    labelIds: string[];
-    snippet: string;
-    internalDate: string; // stored as string timestamp
-    subject: string;
+    id: string;           // Gmail Message ID
+    threadId: string;     // Gmail Thread ID
+    internalDate: string; // Timestamp from Gmail
+    labelIds: string[];   // ["INBOX", "UNREAD", ...]
+    snippet: string;      // Short preview
+
+    // Computed/extracted fields for UI convenience
     from: string;
     to: string;
-    date: string; // Display date
-    body: string; // HTML or Text content
+    subject: string;
+    date: string;         // Human readable date header
     isUnread: boolean;
+    body: string;         // Sanitized or plain text body
+}
+
+export interface EmailHeader {
+    name: string;
+    value: string;
 }
 
 export type EmailFilter = {
