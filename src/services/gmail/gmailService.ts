@@ -57,12 +57,69 @@ export class GmailService implements IEmailService {
     async listEmails(filter: EmailFilter): Promise<PaginatedResponse<Email>> {
         if (!this.gmail) throw new Error('Not authenticated');
 
-        // Placeholder implementation for skeleton
-        return { items: [], resultSizeEstimate: 0 };
+        const { maxResults = 10, pageToken, q = 'label:INBOX' } = filter;
+
+        try {
+            const response = await this.gmail.users.messages.list({
+                userId: 'me',
+                maxResults,
+                pageToken,
+                q
+            });
+
+            const messages = response.data.messages || [];
+            const emails = await Promise.all(
+                messages.map(async (msg) => {
+                    return await this.getEmail(msg.id!);
+                })
+            );
+
+            // Filter out nulls and sort by internalDate (newest first)
+            const sortedEmails = emails
+                .filter((e): e is Email => e !== null)
+                .sort((a, b) => Number(b.internalDate) - Number(a.internalDate));
+
+            return {
+                items: sortedEmails,
+                nextPageToken: response.data.nextPageToken || undefined,
+                resultSizeEstimate: response.data.resultSizeEstimate || 0
+            };
+        } catch (error) {
+            // Re-throw if it's already an error object from API
+            throw error;
+        }
     }
 
     async getEmail(id: string): Promise<Email | null> {
         if (!this.gmail) throw new Error('Not authenticated');
-        return null;
+
+        try {
+            const response = await this.gmail.users.messages.get({
+                userId: 'me',
+                id
+            });
+
+            const msg = response.data;
+            const headers = msg.payload?.headers || [];
+
+            const getHeader = (name: string) => headers.find(h => h.name?.toLowerCase() === name.toLowerCase())?.value || '';
+
+            return {
+                id: msg.id!,
+                threadId: msg.threadId!,
+                labelIds: msg.labelIds || [],
+                snippet: msg.snippet || '',
+                internalDate: msg.internalDate || '',
+                subject: getHeader('Subject'),
+                from: getHeader('From'),
+                to: getHeader('To'),
+                date: getHeader('Date'),
+                body: msg.snippet || '', // Logic for body extraction would go here
+                isUnread: (msg.labelIds || []).includes('UNREAD')
+            };
+        } catch (error) {
+            console.error(`Error getting email ${id}:`, error);
+            return null;
+        }
     }
 }

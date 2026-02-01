@@ -62,10 +62,118 @@ describe('GmailService Authentication', () => {
     });
 
     it('should refresh token if expired', async () => {
-        // This is a placeholder as the current implementation doesn't yet have explicit 
-        // manual refresh logic, but Google's client handles it automatically if 
-        // the token setup is correct. We'll add a test for the event listener.
         await service.authenticate();
         expect(mockOAuth2Client.on).toHaveBeenCalledWith('tokens', expect.any(Function));
+    });
+});
+
+describe('GmailService listEmails', () => {
+    let service: GmailService;
+    let mockGmail: any;
+    let mockOAuth2Client: any;
+
+    beforeEach(async () => {
+        vi.clearAllMocks();
+
+        mockOAuth2Client = {
+            setCredentials: vi.fn(),
+            on: vi.fn(),
+        };
+
+        (google.auth as any).OAuth2 = vi.fn().mockImplementation(function () { return mockOAuth2Client; });
+
+        mockGmail = {
+            users: {
+                messages: {
+                    list: vi.fn(),
+                    get: vi.fn()
+                }
+            }
+        };
+        (google.gmail as any).mockReturnValue(mockGmail);
+
+        (fs.readFile as any).mockImplementation((path: string) => {
+            if (path.includes('credentials.json')) return Promise.resolve(JSON.stringify({
+                installed: { client_id: 'id', client_secret: 'secret', redirect_uris: ['url'] }
+            }));
+            if (path.includes('token.json')) return Promise.resolve(JSON.stringify({ access_token: 'test-token' }));
+            return Promise.resolve('{}');
+        });
+
+        service = new GmailService();
+        await service.authenticate();
+    });
+
+    it('should fetch emails with pagination tokens', async () => {
+        mockGmail.users.messages.list.mockResolvedValue({
+            data: {
+                messages: [{ id: '1' }],
+                nextPageToken: 'next-token',
+                resultSizeEstimate: 1
+            }
+        });
+
+        mockGmail.users.messages.get.mockResolvedValue({
+            data: {
+                id: '1',
+                threadId: 't1',
+                snippet: 'test snippet',
+                internalDate: '1000',
+                payload: {
+                    headers: [
+                        { name: 'Subject', value: 'Test Subject' },
+                        { name: 'From', value: 'sender@test.com' },
+                        { name: 'To', value: 'me@test.com' },
+                        { name: 'Date', value: 'today' }
+                    ]
+                }
+            }
+        });
+
+        const response = await service.listEmails({ maxResults: 10, pageToken: 'prev-token' });
+
+        expect(mockGmail.users.messages.list).toHaveBeenCalledWith({
+            userId: 'me',
+            maxResults: 10,
+            pageToken: 'prev-token',
+            q: 'label:INBOX'
+        });
+        expect(response.nextPageToken).toBe('next-token');
+        expect(response.items[0].id).toBe('1');
+    });
+
+    it('should sort emails by internalDate (descending)', async () => {
+        mockGmail.users.messages.list.mockResolvedValue({
+            data: {
+                messages: [{ id: '1' }, { id: '2' }]
+            }
+        });
+
+        mockGmail.users.messages.get.mockImplementation((params: any) => {
+            const data = params.id === '1'
+                ? { id: '1', internalDate: '1000', payload: { headers: [] } }
+                : { id: '2', internalDate: '2000', payload: { headers: [] } };
+            return Promise.resolve({ data });
+        });
+
+        const response = await service.listEmails({});
+        expect(response.items[0].id).toBe('2');
+        expect(response.items[1].id).toBe('1');
+    });
+
+    it('should handle API errors gracefully', async () => {
+        mockGmail.users.messages.list.mockRejectedValue(new Error('API Error'));
+        await expect(service.listEmails({})).rejects.toThrow('API Error');
+    });
+
+    it('should handle invalid/expired page tokens gracefully', async () => {
+        mockGmail.users.messages.list.mockRejectedValue({ code: 400, message: 'Invalid page token' });
+        await expect(service.listEmails({ pageToken: 'invalid' })).rejects.toMatchObject({ code: 400 });
+    });
+
+    it('should return empty list if API returns no messages', async () => {
+        mockGmail.users.messages.list.mockResolvedValue({ data: { messages: [] } });
+        const response = await service.listEmails({});
+        expect(response.items).toEqual([]);
     });
 });
