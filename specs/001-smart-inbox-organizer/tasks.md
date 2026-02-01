@@ -112,7 +112,7 @@
   - Tests:
     - it should complete successfully
     - it should handle error conditions
-- [ ] T017 [US1] Add unread emphasis rendering in `src/tui/inbox_list.ts`
+- [x] T017 [US1] Add unread emphasis rendering in `src/tui/inbox_list.ts`
   - Tests:
     - it should render unread in bold
     - it should render read in normal weight
