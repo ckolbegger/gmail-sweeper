@@ -8,13 +8,13 @@
   },
   "scripts": {
     "test": "vitest",
-    "dev": "ts-node src/index.tsx",
+    "dev": "tsx src/index.tsx",
     "lint": "eslint src/**/*.tsx src/**/*.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "devDependencies": {
     "@types/node": "^25.2.0",
     "@types/react": "^19.2.10",
@@ -27,8 +27,13 @@
     "ink-testing-library": "^4.0.0",
     "prettier": "^3.8.1",
     "react": "^19.2.4",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0",
+    "google-auth-library": "^10.5.0",
+    "googleapis": "^171.0.0"
   }
 }
