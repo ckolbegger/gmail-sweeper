@@ -7,7 +7,7 @@ description: "Task list template for feature implementation"
 **Input**: Design documents from `specs/001-smart-inbox-organizer/`
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: Tests are MANDATORY. Follow Strict TDD: Write tests FIRST, ensure they FAIL before implementation.
+**Tests**: Tests are MANDATORY. Follow Strict TDD: Write tests FIRST, ensure they FAIL before implementation. Enforce 100% integration test coverage for all user stories.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -43,10 +43,9 @@ description: "Task list template for feature implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Define shared domain types (Email, Workflow) in `src/types/index.ts` from data-model.md
-- [ ] T007 Define Service Interfaces (IEmailService, IAIService) in `src/types/interfaces.ts` from contracts/
-- [ ] T008 Implement Mock `EmailService` for testing in `tests/mocks/mockEmailService.ts`
-- [ ] T009 Implement Mock `AIService` for testing in `tests/mocks/mockAIService.ts`
+- [ ] T006 Define shared domain type `Email` in `src/types/index.ts` (Defer `Workflow` to US4)
+- [ ] T007 Define `IEmailService` (Read-Only methods) in `src/types/interfaces.ts` (Defer mutation methods to US3)
+- [ ] T008 Implement Mock `EmailService` (Read-Only) for testing in `tests/mocks/mockEmailService.ts`
 - [ ] T010 Setup main `App` component shell in `src/app.tsx`
 - [ ] T011 Implement `GmailService` skeleton (auth flow) using `google-auth-library` in `src/services/gmail/gmailService.ts`
 
@@ -60,22 +59,55 @@ description: "Task list template for feature implementation"
 
 **Independent Test**: Launch app -> Inbox loads -> Unread bold -> Preview panel works.
 
-### Tests for User Story 1 (MANDATORY - Strict TDD) ⚠️
-
-> **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
-
-- [ ] T012 [P] [US1] Unit test for `GmailService.listEmails` (pagination, sorting) in `tests/unit/gmailService.test.ts`
-- [ ] T013 [P] [US1] Component test for `InboxList` (rendering, selection) in `tests/components/InboxList.test.tsx`
-- [ ] T014 [P] [US1] Component test for `EmailDetail` (rendering body) in `tests/components/EmailDetail.test.tsx`
-
-### Implementation for User Story 1
+### Implementation for User Story 1 (Strict TDD)
 
 - [ ] T015 [P] [US1] Implement `listEmails` in `src/services/gmail/gmailService.ts` (using Mock/Real switch)
+  - Tests:
+    - it should fetch emails with pagination tokens
+    - it should respect maxResults parameter
+    - it should sort emails by internalDate
+    - it should map Gmail API response to Email domain model
+    - it should handle API errors gracefully
+    - it should correctly construct the query string (e.g., "label:INBOX")
+
 - [ ] T016 [P] [US1] Create `InboxList` component in `src/components/Inbox/InboxList.tsx`
+  - Tests:
+    - it should render a list of emails
+    - it should distinguish unread emails (bold/color)
+    - it should handle selection (enter/click)
+    - it should visually indicate the currently focused item
+    - it should display empty state when list is empty
+    - it should support keyboard navigation (up/down arrows)
+
 - [ ] T017 [P] [US1] Create `EmailDetail` component in `src/components/Inbox/EmailDetail.tsx`
+  - Tests:
+    - it should render email subject, from, and date headers
+    - it should render the email body content
+    - it should sanitize HTML content for display (or plain text fallback)
+    - it should handle "no email selected" state
+    - it should handle scrolling for long content
+
 - [ ] T018 [US1] Implement `useGmail` hook for data fetching in `src/hooks/useGmail.ts`
+  - Tests:
+    - it should fetch data on mount
+    - it should manage loading and error states
+    - it should expose refresh/refetch capability
+
 - [ ] T019 [US1] Integrate List and Detail into `src/app.tsx` with navigation state
+  - Tests:
+    - it should switch focus between list and detail panes
+    - it should update detail view when list item changes
+
 - [ ] T020 [US1] Add CLI flag parsing for page size override (`--limit`)
+
+### Integration Tests for User Story 1
+
+- [ ] T046 [US1] Integration test for Inbox Flow in `tests/integration/inbox-flow.test.ts`
+  - Tests:
+    - it should load initial inbox using Mock Service
+    - it should navigate through the list
+    - it should display details for the selected email
+    - it should handle pagination (load more) [if applicable]
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -87,17 +119,40 @@ description: "Task list template for feature implementation"
 
 **Independent Test**: Type "finance" -> List updates to show finance emails only.
 
-### Tests for User Story 2 (MANDATORY - Strict TDD) ⚠️
+### Implementation for User Story 2 (Strict TDD)
 
-- [ ] T021 [P] [US2] Unit test for `AIService.generateFilter` (prompt generation, parsing) in `tests/unit/aiService.test.ts`
-- [ ] T022 [P] [US2] Component test for `FilterInput` (input handling) in `tests/components/FilterInput.test.tsx`
-
-### Implementation for User Story 2
+- [ ] T009 [US2] Define `IAIService` interface and implement Mock `AIService` in `tests/mocks/mockAIService.ts` (Moved from Foundation)
 
 - [ ] T023 [P] [US2] Implement `GeminiService` in `src/services/ai/geminiService.ts` (using `@google/generative-ai`)
+  - Tests:
+    - it should generate a valid Gmail search query from natural language input
+    - it should handle API authentication errors
+    - it should handle empty or ambiguous inputs
+    - it should parse the AI response correctly (extracting query string)
+    - it should fallback/error gracefully if AI is unavailable
+
 - [ ] T024 [P] [US2] Create `FilterInput` component in `src/components/Shared/FilterInput.tsx`
+  - Tests:
+    - it should render an input field
+    - it should capture text input
+    - it should trigger `onSubmit` with the entered term
+    - it should display a loading indicator during processing
+    - it should support "clear" or "reset" functionality
+
 - [ ] T025 [US2] Update `useGmail` hook to support `query` parameter
+  - Tests:
+    - it should refetch emails when query changes
+    - it should reset pagination when query changes
+
 - [ ] T026 [US2] Integrate FilterInput into `src/app.tsx` (triggering re-fetch with query)
+
+### Integration Tests for User Story 2
+
+- [ ] T047 [US2] Integration test for Filter Flow in `tests/integration/filter-flow.test.ts`
+  - Tests:
+    - it should update email list based on filter input
+    - it should handle "no results" scenario integration
+    - it should interactions between Filter Input and Inbox List
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -109,17 +164,36 @@ description: "Task list template for feature implementation"
 
 **Independent Test**: Save query -> Restart -> Load query -> Results match.
 
-### Tests for User Story 4 (MANDATORY - Strict TDD) ⚠️
+### Implementation for User Story 4 (Strict TDD)
 
-- [ ] T027 [P] [US4] Unit test for `WorkflowService` (save, load, persist) in `tests/unit/workflowService.test.ts`
-- [ ] T028 [P] [US4] Component test for `WorkflowList` (display, selection) in `tests/components/WorkflowList.test.tsx`
-
-### Implementation for User Story 4
+- [ ] T044 [US4] Define `Workflow` domain type in `src/types/index.ts` (Moved from Foundation)
 
 - [ ] T029 [P] [US4] Implement `FileWorkflowService` using `conf` in `src/services/workflow/workflowService.ts`
+  - Tests:
+    - it should save a valid workflow object
+    - it should retrieve all saved workflows
+    - it should delete a workflow by ID
+    - it should persist data across instances (mock fs/conf)
+    - it should validate unique names (if required)
+
 - [ ] T030 [P] [US4] Create `WorkflowList` component in `src/components/Workflows/WorkflowList.tsx`
+  - Tests:
+    - it should list available workflows
+    - it should handle selection of a workflow
+    - it should provide visual indication of the "active" workflow
+    - it should handle empty list state
+
 - [ ] T031 [US4] Add "Save Workflow" action to `src/app.tsx`
+
 - [ ] T032 [US4] Implement startup prompt for saved workflows
+
+### Integration Tests for User Story 4
+
+- [ ] T048 [US4] Integration test for Workflow Persistence in `tests/integration/workflow-flow.test.ts`
+  - Tests:
+    - it should save a current filter as a workflow
+    - it should see the new workflow in the list
+    - it should apply the workflow filter when selected
 
 **Checkpoint**: User Story 4 complete (Note: US4 prioritized before US3 based on P2 vs P3)
 
@@ -131,17 +205,35 @@ description: "Task list template for feature implementation"
 
 **Independent Test**: Select email -> Archive -> Confirm -> Email removed from list.
 
-### Tests for User Story 3 (MANDATORY - Strict TDD) ⚠️
+### Implementation for User Story 3 (Strict TDD)
 
-- [ ] T033 [P] [US3] Unit test for `ActionService` (safety checks, API calls) in `tests/unit/actionService.test.ts`
-- [ ] T034 [P] [US3] Component test for `ConfirmationDialog` in `tests/components/ConfirmationDialog.test.tsx`
-
-### Implementation for User Story 3
+- [ ] T045 [US3] Update `IEmailService` and `MockEmailService` with mutation methods (archive/delete/label)
 
 - [ ] T035 [P] [US3] Implement `ActionService` in `src/services/actions/actionService.ts`
+  - Tests:
+    - it should call appropriate API method for "archive"
+    - it should call appropriate API method for "delete"
+    - it should call appropriate API method for "label"
+    - it should guard against acting on null/undefined IDs
+
 - [ ] T036 [P] [US3] Create `ConfirmationDialog` component in `src/components/Shared/ConfirmationDialog.tsx`
+  - Tests:
+    - it should render the confirmation message
+    - it should trigger "confirm" callback on Yes/Enter
+    - it should trigger "cancel" callback on No/Esc
+    - it should not be visible when `isOpen` is false
+
 - [ ] T037 [US3] Add action shortcuts (a/d/l) to `src/app.tsx` or `InboxList`
+
 - [ ] T038 [US3] Wire up actions to `GmailService` (archive/delete/label methods)
+
+### Integration Tests for User Story 3
+
+- [ ] T049 [US3] Integration test for Action Flow in `tests/integration/action-flow.test.ts`
+  - Tests:
+    - it should complete the Archive flow: Select -> Archive -> Confirm -> List Update
+    - it should complete the Delete flow: Select -> Delete -> Confirm -> List Update
+    - it should cancel an action without side effects
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -179,7 +271,6 @@ description: "Task list template for feature implementation"
 
 ### Parallel Opportunities
 
-- **T012, T013, T014** (US1 Tests) can run in parallel
 - **T015, T016, T017** (US1 Impl) can run in parallel
 - **US2 and US3** can technically be developed in parallel by separate devs
 
