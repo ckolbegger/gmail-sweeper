@@ -31,6 +31,7 @@ describe('Gmail adapter client', () => {
     const url = createAuthUrl(oauthClient);
 
     expect(url).toBe('http://auth');
+    expect(GMAIL_SCOPES).toEqual(['https://www.googleapis.com/auth/gmail.readonly']);
     expect(oauthClient.generateAuthUrl).toHaveBeenCalledWith({
       access_type: 'offline',
       scope: GMAIL_SCOPES

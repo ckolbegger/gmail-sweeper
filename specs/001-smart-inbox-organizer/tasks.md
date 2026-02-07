@@ -11,22 +11,22 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Initialize Node.js + TypeScript project in repository root (package.json, tsconfig.json)
+- [x] T001 Initialize Node.js + TypeScript project in repository root (package.json, tsconfig.json)
   - Tests:
     - it should create package.json with scripts
     - it should create tsconfig.json with strict settings
     - it should fail clearly if files already exist
-- [ ] T002 [P] Add linting/formatting config (eslint/prettier) in repo root
+- [x] T002 [P] Add linting/formatting config (eslint/prettier) in repo root
   - Tests:
     - it should lint TypeScript sources
     - it should format files consistently
     - it should fail on lint errors in CI mode
-- [ ] T003 Add Vitest config for unit/integration/contract tests in repo root
+- [x] T003 Add Vitest config for unit/integration/contract tests in repo root
   - Tests:
     - it should discover unit tests under tests/unit
     - it should discover integration tests under tests/integration
     - it should run contract tests under tests/contract
-- [ ] T004 Create base folder structure per plan in `src/` and `tests/`
+- [x] T004 Create base folder structure per plan in `src/` and `tests/`
   - Tests:
     - it should create all directories listed in plan
     - it should not overwrite existing files
@@ -37,17 +37,17 @@
 
 **Purpose**: Core infrastructure that MUST be complete before ANY user story can be implemented
 
-- [ ] T005 Setup configuration loader in `src/core/config.ts`
+- [x] T005 Setup configuration loader in `src/core/config.ts`
   - Tests:
     - it should load defaults and override with env
     - it should validate required config keys
     - it should surface missing config with clear error
-- [ ] T006 [P] Implement logging utility in `src/core/logger.ts`
+- [x] T006 [P] Implement logging utility in `src/core/logger.ts`
   - Tests:
     - it should log at info/warn/error levels
     - it should redact sensitive values
     - it should format logs consistently
-- [ ] T007 [P] Implement error types and error mapping in `src/core/errors.ts`
+- [x] T007 [P] Implement error types and error mapping in `src/core/errors.ts`
   - Tests:
     - it should map Gmail errors to domain errors
     - it should map validation errors to user-safe messages

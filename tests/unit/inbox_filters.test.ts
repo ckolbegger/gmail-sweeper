@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { applyInboxFilters } from '@/tui/inbox_filters.js';
 import { createEmail } from '@/core/entities.js';
+import { applyInboxFilters } from '@/tui/inbox_filters.js';
 
 describe('inbox filters wiring', () => {
   it('should complete successfully', () => {

@@ -2,7 +2,7 @@ import { google } from 'googleapis';
 
 import { GmailError } from '@/core/errors.js';
 
-export const GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.modify'];
+export const GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
 
 export interface GmailClientConfig {
   clientId: string;

@@ -11,7 +11,7 @@ module.exports = {
     project: './tsconfig.eslint.json'
   },
   plugins: ['import', '@typescript-eslint'],
-  extends: ['eslint:recommended', 'plugin:import/recommended', 'prettier'],
+  extends: ['eslint:recommended', 'plugin:import/recommended', 'plugin:import/typescript', 'prettier'],
   rules: {
     'import/order': [
       'error',
@@ -25,7 +25,14 @@ module.exports = {
     'no-undef': 'off'
   },
   settings: {
+    'import/parsers': {
+      '@typescript-eslint/parser': ['.ts']
+    },
     'import/resolver': {
+      typescript: {
+        project: './tsconfig.json',
+        alwaysTryTypes: true
+      },
       node: {
         extensions: ['.js', '.ts']
       }

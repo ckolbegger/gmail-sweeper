@@ -1,7 +1,7 @@
-import { mapError, ValidationError } from '@/core/errors.js';
 import type { Email } from '@/core/entities.js';
-import { runFilterWorkflow } from '@/services/filter_workflow.js';
+import { mapError, ValidationError } from '@/core/errors.js';
 import type { InboxFilterInput } from '@/services/filter_service.js';
+import { runFilterWorkflow } from '@/services/filter_workflow.js';
 
 export interface InboxFilterResult {
   output: string[];
