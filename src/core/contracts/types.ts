@@ -173,8 +173,8 @@ export interface EmailFilter {
 // ============================================================================
 
 export interface PaginationParams {
-  page: number;
-  pageSize: number;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface PaginatedResult<T> {
@@ -193,10 +193,15 @@ export type ApplicationEvent =
   | { type: 'EMAILS_SYNCED'; payload: { count: number; newCount: number } }
   | { type: 'QUERY_EXECUTED'; payload: { queryId: string; resultCount: number } }
   | { type: 'WORKFLOW_STARTED'; payload: { workflowId: string; executionId: string } }
-  | { type: 'WORKFLOW_COMPLETED'; payload: { workflowId: string; executionId: string; processedCount: number } }
+  | {
+      type: 'WORKFLOW_COMPLETED';
+      payload: { workflowId: string; executionId: string; processedCount: number };
+    }
   | { type: 'WORKFLOW_FAILED'; payload: { workflowId: string; executionId: string; error: string } }
   | { type: 'ACTION_APPLIED'; payload: { actionType: WorkflowActionType; emailCount: number } }
   | { type: 'SESSION_STARTED'; payload: { sessionId: string } }
   | { type: 'SESSION_ENDED'; payload: { sessionId: string } };
 
-export type EventHandler<T extends ApplicationEvent = ApplicationEvent> = (event: T) => void | Promise<void>;
+export type EventHandler<T extends ApplicationEvent = ApplicationEvent> = (
+  event: T
+) => void | Promise<void>;

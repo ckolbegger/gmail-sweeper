@@ -43,6 +43,7 @@ export interface AuthManager {
 // ============================================================================
 
 export interface EmailListOptions extends PaginationParams {
+  pageToken?: string;
   filter?: EmailFilter;
   sort?: {
     field: 'date' | 'sender' | 'subject';
@@ -291,5 +292,5 @@ export interface GmailClientConfig {
 export const DEFAULT_SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.modify',
-  'https://www.googleapis.com/auth/gmail.labels'
+  'https://www.googleapis.com/auth/gmail.labels',
 ];

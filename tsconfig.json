@@ -19,7 +19,6 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "ink",
     "types": ["node", "vitest/globals"]
   },
   "include": ["src/**/*", "tests/**/*"],

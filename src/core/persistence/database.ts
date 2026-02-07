@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
+import { fileURLToPath } from 'node:url';
 import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 interface DatabaseConfig {
   path: string;
@@ -14,7 +15,8 @@ export function getDatabase(config?: DatabaseConfig): Database.Database {
     return _db;
   }
 
-  const dbPath = config?.path ?? process.env.DATABASE_PATH ?? '~/.gmail-sweep/gmail-sweep.db';
+  const dbPath =
+    config?.path ?? process.env.DATABASE_PATH ?? process.env.HOME + '/.gmail-sweep/gmail-sweep.db';
   const db = new Database(dbPath, {
     readonly: config?.readonly ?? false,
   });
@@ -46,24 +48,20 @@ function runMigrations(db: Database.Database): void {
     );
   `);
 
-  const migrationsDir = join(__dirname, 'migrations');
+  const currentDir = dirname(fileURLToPath(import.meta.url));
+  const migrationsDir = join(currentDir, 'migrations');
   const migrationFiles = readdirSync(migrationsDir)
     .filter((f) => f.endsWith('.sql'))
     .sort();
 
-  const applied = db
-    .prepare('SELECT name FROM _migrations')
-    .all() as any[];
+  const applied = db.prepare('SELECT name FROM _migrations').all() as any[];
   const appliedNames = new Set(applied.map((a) => a.name));
 
   for (const file of migrationFiles) {
     if (!appliedNames.has(file)) {
       const migration = readFileSync(join(migrationsDir, file), 'utf-8');
       db.exec(migration);
-      db.prepare('INSERT INTO _migrations (name, applied_at) VALUES (?, ?)').run(
-        file,
-        Date.now()
-      );
+      db.prepare('INSERT INTO _migrations (name, applied_at) VALUES (?, ?)').run(file, Date.now());
     }
   }
 }

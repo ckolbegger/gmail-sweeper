@@ -1,0 +1,471 @@
+/**
+ * Main CLI App Structure
+ *
+ * Entry point for the TUI application.
+ */
+
+import { Box, Text, render, useApp, useInput } from 'ink';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { dirname, join } from 'node:path';
+import { homedir } from 'node:os';
+import { mkdirSync } from 'node:fs';
+import { EmailList } from './components/email-list.js';
+import { EmailDetail } from './components/email-detail.js';
+import type { Email } from '../core/models/email.js';
+import { useKeyboard } from './hooks/use-keyboard.js';
+import { getDatabase } from '../core/persistence/database.js';
+import { EmailRepository } from '../core/services/email-repository.js';
+import { GmailClient } from '../core/services/gmail-client.js';
+import { EmailSorter } from '../core/services/email-sorter.js';
+import { EmailFilter } from '../core/services/email-filter.js';
+import type { GmailClientConfig } from '../core/contracts/gmail-api.js';
+
+type AppView = 'loading' | 'auth' | 'email-list' | 'error';
+type FilterMode = 'sender' | 'label' | 'category';
+
+export function App() {
+  const { exit } = useApp();
+  const [view, setView] = useState<AppView>('loading');
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [selectedEmailId, setSelectedEmailId] = useState<string | undefined>();
+  const [error, setError] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState('Initializing...');
+  const [sort, setSort] = useState<{
+    field: 'date' | 'sender' | 'subject';
+    direction: 'asc' | 'desc';
+  }>({
+    field: 'date',
+    direction: 'desc',
+  });
+  const [filters, setFilters] = useState<{
+    sender?: string;
+    label?: string;
+    category?: string;
+    unreadOnly: boolean;
+  }>({ unreadOnly: false });
+  const [filterMode, setFilterMode] = useState<FilterMode | null>(null);
+  const [filterInput, setFilterInput] = useState('');
+
+  const emailSorter = useMemo(() => new EmailSorter(), []);
+  const emailFilter = useMemo(() => new EmailFilter(), []);
+
+  const selectInitialEmail = useCallback((loadedEmails: Email[]) => {
+    if (loadedEmails.length > 0) {
+      setSelectedEmailId((prev) =>
+        prev && loadedEmails.some((email) => email.id === prev) ? prev : loadedEmails[0].id
+      );
+    } else {
+      setSelectedEmailId(undefined);
+    }
+  }, []);
+
+  const resolveDatabasePath = (): string => {
+    if (process.env.DATABASE_PATH) {
+      return process.env.DATABASE_PATH;
+    }
+
+    return join(homedir(), '.local', 'share', 'gmail-sweep', 'emails.db');
+  };
+
+  const readGmailConfig = (): GmailClientConfig | null => {
+    const clientId = process.env.GMAIL_CLIENT_ID;
+    const clientSecret = process.env.GMAIL_CLIENT_SECRET;
+    const redirectUri = process.env.GMAIL_REDIRECT_URI;
+
+    if (!clientId || !clientSecret || !redirectUri) {
+      return null;
+    }
+
+    return { clientId, clientSecret, redirectUri };
+  };
+
+  const hydrateFromLocalStore = useCallback(
+    async (emailRepository: EmailRepository): Promise<Email[]> => {
+      const localResult = await emailRepository.list({ page: 1, pageSize: 500 });
+      return localResult.items;
+    },
+    []
+  );
+
+  const syncFromGmail = useCallback(
+    async (emailRepository: EmailRepository, gmailClient: GmailClient): Promise<Email[]> => {
+      setStatusMessage('Syncing inbox...');
+
+      const remoteResult = await gmailClient.listEmails({ page: 1, pageSize: 200 });
+      setStatusMessage(`Fetched ${remoteResult.items.length} emails from Gmail`);
+
+      for (const email of remoteResult.items) {
+        await emailRepository.save(email);
+      }
+
+      return hydrateFromLocalStore(emailRepository);
+    },
+    [hydrateFromLocalStore]
+  );
+
+  // Initialize app and load emails
+  useEffect(() => {
+    let active = true;
+
+    const initialize = async () => {
+      try {
+        setView('loading');
+
+        const dbPath = resolveDatabasePath();
+        mkdirSync(dirname(dbPath), { recursive: true });
+
+        const db = getDatabase({ path: dbPath });
+        const emailRepository = new EmailRepository(db);
+        let loadedEmails = await hydrateFromLocalStore(emailRepository);
+
+        const config = readGmailConfig();
+        if (!config) {
+          if (!active) {
+            return;
+          }
+
+          if (loadedEmails.length > 0) {
+            setEmails(loadedEmails);
+            selectInitialEmail(loadedEmails);
+            setStatusMessage('Showing locally cached emails');
+            setView('email-list');
+          } else {
+            setView('auth');
+          }
+          return;
+        }
+
+        const gmailClient = new GmailClient(config);
+        const isAuthenticated = await gmailClient.auth.isAuthenticated();
+
+        if (isAuthenticated) {
+          loadedEmails = await syncFromGmail(emailRepository, gmailClient);
+        }
+
+        if (!active) {
+          return;
+        }
+
+        if (loadedEmails.length > 0) {
+          setEmails(loadedEmails);
+          selectInitialEmail(loadedEmails);
+          setView('email-list');
+          return;
+        }
+
+        setView(isAuthenticated ? 'email-list' : 'auth');
+      } catch (err) {
+        if (!active) {
+          return;
+        }
+
+        setError(err instanceof Error ? err.message : 'Unknown initialization error');
+        setView('error');
+      }
+    };
+
+    void initialize();
+
+    return () => {
+      active = false;
+    };
+  }, [hydrateFromLocalStore, selectInitialEmail, syncFromGmail]);
+
+  // Handle sort changes
+  const handleSort = useCallback((field: 'date' | 'sender' | 'subject') => {
+    setSort((prev) => ({
+      field,
+      direction: prev.field === field && prev.direction === 'desc' ? 'asc' : 'desc',
+    }));
+  }, []);
+
+  // Handle email selection
+  const handleSelectEmail = useCallback((email: Email) => {
+    setSelectedEmailId(email.id);
+  }, []);
+
+  const displayedEmails = useMemo(() => {
+    let result = emails;
+
+    if (filters.sender) {
+      result = emailFilter.filterBySender(result, filters.sender);
+    }
+
+    if (filters.label) {
+      result = emailFilter.filterByLabel(result, filters.label);
+    }
+
+    if (filters.category) {
+      result = result.filter(
+        (email) => email.category?.toLowerCase() === filters.category?.toLowerCase()
+      );
+    }
+
+    if (filters.unreadOnly) {
+      result = emailFilter.filterByReadStatus(result, false);
+    }
+
+    if (sort.field === 'date') {
+      return emailSorter.sortByDate(result, sort.direction);
+    }
+
+    if (sort.field === 'sender') {
+      return emailSorter.sortBySender(result, sort.direction);
+    }
+
+    return emailSorter.sortBySubject(result, sort.direction);
+  }, [emails, filters, sort, emailFilter, emailSorter]);
+
+  const selectedEmail = useMemo(
+    () =>
+      displayedEmails.find((email) => email.id === selectedEmailId) ?? displayedEmails[0] ?? null,
+    [displayedEmails, selectedEmailId]
+  );
+
+  const applyFilterInput = useCallback(() => {
+    const value = filterInput.trim();
+
+    if (filterMode === 'sender') {
+      setFilters((prev) => ({ ...prev, sender: value || undefined }));
+    }
+
+    if (filterMode === 'label') {
+      setFilters((prev) => ({ ...prev, label: value || undefined }));
+    }
+
+    if (filterMode === 'category') {
+      setFilters((prev) => ({ ...prev, category: value || undefined }));
+    }
+
+    setFilterInput('');
+    setFilterMode(null);
+  }, [filterInput, filterMode]);
+
+  useInput((input, key) => {
+    if (!filterMode) {
+      return;
+    }
+
+    if (key.return) {
+      applyFilterInput();
+      return;
+    }
+
+    if (key.escape) {
+      setFilterInput('');
+      setFilterMode(null);
+      return;
+    }
+
+    if (key.backspace || key.delete) {
+      setFilterInput((prev) => prev.slice(0, -1));
+      return;
+    }
+
+    if (input.length === 1) {
+      setFilterInput((prev) => prev + input);
+    }
+  });
+
+  // Global keyboard shortcuts
+  useKeyboard({
+    shortcuts: [
+      { key: 'q', handler: () => exit(), description: 'Quit' },
+      {
+        key: 'd',
+        handler: () => {
+          if (filterMode) {
+            return false;
+          }
+
+          handleSort('date');
+          return;
+        },
+        description: 'Sort by date',
+      },
+      {
+        key: 's',
+        handler: () => {
+          if (filterMode) {
+            return false;
+          }
+
+          handleSort('sender');
+          return;
+        },
+        description: 'Sort by sender',
+      },
+      {
+        key: 'u',
+        handler: () => {
+          if (filterMode) {
+            return false;
+          }
+
+          handleSort('subject');
+          return;
+        },
+        description: 'Sort by subject',
+      },
+      {
+        key: 'f',
+        handler: () => {
+          if (filterMode) {
+            return false;
+          }
+
+          setFilterMode('sender');
+          setFilterInput(filters.sender ?? '');
+          return;
+        },
+        description: 'Filter by sender',
+      },
+      {
+        key: 'l',
+        handler: () => {
+          if (filterMode) {
+            return false;
+          }
+
+          setFilterMode('label');
+          setFilterInput(filters.label ?? '');
+          return;
+        },
+        description: 'Filter by label',
+      },
+      {
+        key: 'c',
+        handler: () => {
+          if (filterMode) {
+            return false;
+          }
+
+          setFilterMode('category');
+          setFilterInput(filters.category ?? '');
+          return;
+        },
+        description: 'Filter by category',
+      },
+      {
+        key: 'r',
+        handler: () => {
+          if (filterMode) {
+            return false;
+          }
+
+          setFilters((prev) => ({ ...prev, unreadOnly: !prev.unreadOnly }));
+          return;
+        },
+        description: 'Toggle unread filter',
+      },
+      {
+        key: 'x',
+        handler: () => {
+          if (filterMode) {
+            return false;
+          }
+
+          setFilters({ unreadOnly: false });
+          return;
+        },
+        description: 'Clear filters',
+      },
+    ],
+  });
+
+  // Render loading view
+  if (view === 'loading') {
+    return (
+      <Box padding={1}>
+        <Text>Loading Gmail Sweep...</Text>
+        <Text dimColor>{statusMessage}</Text>
+      </Box>
+    );
+  }
+
+  // Render auth view
+  if (view === 'auth') {
+    return (
+      <Box padding={1}>
+        <Text>Please authenticate with Gmail first</Text>
+        <Text dimColor>
+          {' '}
+          Set GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REDIRECT_URI and run: gmail-sweep auth
+        </Text>
+      </Box>
+    );
+  }
+
+  // Render error view
+  if (view === 'error') {
+    return (
+      <Box padding={1}>
+        <Text color="red">Error: {error}</Text>
+        <Text dimColor>Press q to quit</Text>
+      </Box>
+    );
+  }
+
+  // Render main email list view
+  return (
+    <Box flexDirection="column" height="100%">
+      {/* Header */}
+      <Box paddingX={1} paddingY={1} borderStyle="single" borderBottom>
+        <Text bold>Gmail Sweep</Text>
+        <Text dimColor>
+          {' '}
+          • {displayedEmails.length}/{emails.length} emails
+        </Text>
+      </Box>
+
+      {/* Main content */}
+      <Box flexGrow={1} flexDirection="row">
+        {/* Email list */}
+        <Box width="65%" borderStyle="single" borderRight>
+          <EmailList
+            emails={displayedEmails}
+            selectedId={selectedEmailId}
+            onSelect={handleSelectEmail}
+            sort={sort}
+            onSort={handleSort}
+          />
+        </Box>
+
+        {/* Email detail */}
+        <Box width="35%">
+          <EmailDetail email={selectedEmail} />
+        </Box>
+      </Box>
+
+      {/* Footer */}
+      <Box paddingX={1} paddingY={1} borderStyle="single" borderTop flexDirection="column">
+        {filterMode && (
+          <Text>
+            {filterMode} filter: {filterInput || ' '}
+            <Text dimColor> (Enter apply, Esc cancel)</Text>
+          </Text>
+        )}
+        {!filterMode &&
+          (filters.sender || filters.label || filters.category || filters.unreadOnly) && (
+            <Text dimColor>
+              Active filters:
+              {filters.sender ? ` sender=${filters.sender}` : ''}
+              {filters.label ? ` label=${filters.label}` : ''}
+              {filters.category ? ` category=${filters.category}` : ''}
+              {filters.unreadOnly ? ' unread-only' : ''}
+            </Text>
+          )}
+        <Text dimColor>
+          ↑↓ Navigate • Enter Select • d/s/u Sort • f/l/c Filter • r Unread • x Clear • q Quit
+        </Text>
+      </Box>
+    </Box>
+  );
+}
+
+/**
+ * Render the app
+ */
+export function renderApp(): void {
+  render(<App />);
+}
