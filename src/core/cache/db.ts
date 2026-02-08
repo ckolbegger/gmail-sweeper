@@ -186,45 +186,43 @@ export class EmailCache {
 
   /**
    * T029: Retrieves emails from the cache with sorting options.
-   * @param limit - Maximum number of emails to return
-   * @param offset - Number of emails to skip
-   * @param sortBy - Field to sort by (date, sender, subject)
-   * @param sortOrder - 'ASC' or 'DESC'
-   * @param labelFilter - Optional label to filter by
-   * @param categoryFilter - Optional category to filter by
+   * @param options - Query options (limit, offset, sortBy, sortDesc, labelFilter, categoryFilter)
    * @returns Array of emails
    */
-  getEmails(
-    limit: number = 50,
-    offset: number = 0,
-    sortBy: string = 'date',
-    sortOrder: 'ASC' | 'DESC' = 'DESC',
-    labelFilter?: string,
-    categoryFilter?: string
-  ): Email[] {
+  getEmails(options?: Partial<EmailCacheOptions>): Email[] {
     this.ensureInitialized();
+
+    const limit = options?.limit ?? 50;
+    const offset = options?.offset ?? 0;
+    const sortBy = options?.sortBy ?? 'date';
+    const sortDesc = options?.sortDesc !== false; // default: true
 
     let query = 'SELECT * FROM emails WHERE 1=1';
     const params: any[] = [];
 
-    if (labelFilter) {
+    if (options?.labelFilter) {
       query += ' AND labels_json LIKE ?';
-      params.push(`%"${labelFilter}"%`);
+      params.push(`%"${options.labelFilter}"%`);
     }
 
-    if (categoryFilter) {
+    if (options?.categoryFilter) {
       query += ' AND category = ?';
-      params.push(categoryFilter);
+      params.push(options.categoryFilter);
     }
 
     // Validate sortBy to prevent SQL injection
     const validSortFields = ['date', 'sender_email', 'subject'];
-    if (!validSortFields.includes(sortBy)) {
-      sortBy = 'date';
-    }
+    const mappedSortBy = sortBy === 'sender' ? 'sender_email' : sortBy;
+    const finalSortBy = validSortFields.includes(mappedSortBy) ? mappedSortBy : 'date';
 
-    query += ` ORDER BY ${sortBy} ${sortOrder} LIMIT ? OFFSET ?`;
-    params.push(limit, offset);
+    const sortOrder = sortDesc ? 'DESC' : 'ASC';
+    query += ` ORDER BY ${finalSortBy} ${sortOrder}`;
+
+    // If limit is 0, return all (no LIMIT clause)
+    if (limit > 0) {
+      query += ` LIMIT ? OFFSET ?`;
+      params.push(limit, offset);
+    }
 
     const stmt = this.db.prepare(query);
     stmt.bind(params);
