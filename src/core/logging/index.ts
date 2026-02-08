@@ -135,3 +135,12 @@ export function getLogger(context: string): Logger {
 export function resetLoggers(): void {
   loggers.clear();
 }
+
+// ============================================================================
+// Default Logger Instance
+// ============================================================================
+
+/**
+ * Default logger for general application logging
+ */
+export const logger = getLogger('app');

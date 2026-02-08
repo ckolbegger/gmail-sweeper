@@ -54,6 +54,14 @@ export interface AuthManager {
 export interface EmailListOptions extends PaginationParams {
   filter?: EmailFilter;
   sort?: SortOptions;
+  /** Gmail API query string (e.g., "from:sender@example.com") */
+  q?: string;
+  /** Gmail label IDs to filter by */
+  labelIds?: string[];
+  /** Page token for pagination */
+  pageToken?: string;
+  /** Maximum results to return (default: 100) */
+  maxResults?: number;
 }
 
 export interface GmailClient {

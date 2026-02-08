@@ -26,6 +26,8 @@ export interface PaginatedResult<T> {
   limit: number;
   /** Whether there are more items */
   hasMore: boolean;
+  /** Next page token for API pagination */
+  nextPageToken?: string;
 }
 
 // ============================================================================
@@ -85,21 +87,36 @@ export interface Email {
 // Filter & Sort Types
 // ============================================================================
 
+export interface DateRangeFilter {
+  /** Start date for range */
+  start?: Date;
+  /** End date for range */
+  end?: Date;
+}
+
 export interface EmailFilter {
   /** Filter by sender email */
   sender?: string;
-  /** Filter by date range start */
+  /** Filter by date range start (legacy) */
   dateFrom?: Date;
-  /** Filter by date range end */
+  /** Filter by date range end (legacy) */
   dateTo?: Date;
-  /** Filter by label IDs */
+  /** Filter by date range (new) */
+  dateRange?: DateRangeFilter;
+  /** Filter by label IDs (OR logic) */
   labels?: string[];
+  /** Filter by single label */
+  label?: string;
   /** Filter by read status */
   isRead?: boolean;
   /** Filter by category */
   category?: GmailCategory;
   /** Full-text search query */
   searchText?: string;
+  /** Filter by subject containing text */
+  subject?: string;
+  /** Filter by thread ID */
+  threadId?: string;
 }
 
 export type SortField = 'date' | 'sender' | 'subject';
@@ -248,29 +265,23 @@ export interface Session {
 // ============================================================================
 
 export interface SyncProgress {
-  /** Total emails to sync (estimated) */
-  total: number;
+  /** Total count of all items */
+  totalCount: number;
   /** Emails processed so far */
-  processed: number;
+  processedCount: number;
   /** Current batch number */
-  batchNumber: number;
-  /** Emails in current batch */
-  batchSize: number;
+  currentBatch: number;
+  /** Total number of batches */
+  totalBatches: number;
 }
 
 export interface SyncResult {
-  /** Whether sync completed successfully */
-  success: boolean;
-  /** New emails synced */
-  emailsAdded: number;
-  /** Emails updated */
-  emailsUpdated: number;
-  /** Emails deleted remotely */
-  emailsDeleted: number;
+  /** Synced emails */
+  emails: Email[];
   /** History ID to use for next incremental sync */
   historyId: string;
-  /** Error message if sync failed */
-  error?: string;
+  /** Sync completion timestamp */
+  syncedAt: Date;
 }
 
 // ============================================================================
@@ -278,12 +289,12 @@ export interface SyncResult {
 // ============================================================================
 
 export interface BatchActionResult {
-  /** Whether the batch operation completed */
+  /** Whether the batch operation completed successfully */
   success: boolean;
   /** Number of emails successfully processed */
-  successfulCount: number;
+  processedCount: number;
   /** Number of emails that failed */
   failedCount: number;
-  /** Details of failures */
-  failures: Array<{ emailId: string; error: string }>;
+  /** Error details for failed emails */
+  errors: Array<{ emailId: string; error: string }>;
 }

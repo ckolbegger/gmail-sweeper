@@ -1,0 +1,249 @@
+/**
+ * Main CLI App Component
+ *
+ * The main TUI application that wires everything together.
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { Box, Text, useApp, useInput, useStdout, useStdin } from 'ink';
+import { EmailList } from './components/email-list.js';
+import { EmailDetail } from './components/email-detail.js';
+import type { Email } from '../core/contracts/types.js';
+import type { EmailRepository } from '../core/services/email-repository.js';
+import type { GmailClient } from '../core/contracts/gmail-api.js';
+import { logger } from '../core/logging/index.js';
+import { getDefaultDatabase } from '../core/persistence/database.js';
+
+export interface AppProps {
+  gmailClient: GmailClient;
+  emailRepository: EmailRepository;
+}
+
+type AppView = 'list' | 'detail' | 'loading' | 'error';
+
+export function App({ gmailClient, emailRepository }: AppProps): React.ReactElement {
+  const { exit } = useApp();
+  
+  // Cleanup function to close database and exit
+  const cleanupAndExit = useCallback(() => {
+    // Close database connection
+    const db = getDefaultDatabase();
+    db.close();
+    // Exit the app (Ink unmount)
+    exit();
+    // Force process termination to ensure clean exit
+    process.exit(0);
+  }, [exit]);
+  const { stdout } = useStdout();
+  const { setRawMode } = useStdin();
+  const terminalHeight = stdout.rows;
+
+  // Ensure stdin is in raw mode for keyboard input
+  // Only run once on mount, cleanup on unmount
+  useEffect(() => {
+    if (setRawMode) {
+      setRawMode(true);
+    }
+    return () => {
+      if (setRawMode) {
+        setRawMode(false);
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const [view, setView] = useState<AppView>('loading');
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [syncProgress, setSyncProgress] = useState('');
+
+  // Initial sync on mount
+  useEffect(() => {
+    const syncEmails = async () => {
+      try {
+        // Check if authenticated
+        const isAuthenticated = await gmailClient.auth.isAuthenticated();
+        if (!isAuthenticated) {
+          setErrorMessage('Not authenticated. Run: gmail-sweep auth');
+          setView('error');
+          return;
+        }
+
+        // Try to load emails from local database first
+        const localEmails = await emailRepository.list({ limit: 50 });
+        if (localEmails.items.length > 0) {
+          setEmails(localEmails.items);
+          setView('list');
+        }
+
+        // Sync with Gmail
+        setSyncProgress('Syncing with Gmail...');
+        const result = await gmailClient.fullSync({
+          batchSize: 100,
+          onProgress: (progress) => {
+            setSyncProgress(`Synced ${progress.processedCount} emails...`);
+          },
+        });
+
+        // Save synced emails to database
+        for (const email of result.emails) {
+          await emailRepository.save(email);
+        }
+
+        // Reload from database
+        const updatedEmails = await emailRepository.list({ limit: 50 });
+        setEmails(updatedEmails.items);
+        setSyncProgress('');
+        setView('list');
+
+        logger.info(`Synced ${result.emails.length} emails`);
+      } catch (error) {
+        logger.error('Failed to sync emails', error);
+        setErrorMessage(error instanceof Error ? error.message : 'Sync failed');
+        setView('error');
+      }
+    };
+
+    syncEmails();
+  }, [gmailClient, emailRepository]);
+
+  // Keyboard shortcuts for app-level actions
+  useInput((input, key) => {
+    if (view === 'list') {
+      if (key.upArrow) {
+        setSelectedIndex((prev) => Math.max(0, prev - 1));
+      } else if (key.downArrow) {
+        setSelectedIndex((prev) => Math.min(emails.length - 1, prev + 1));
+      } else if (key.return) {
+        const email = emails[selectedIndex];
+        if (email) {
+          setSelectedEmail(email);
+          setView('detail');
+        }
+      } else if (input === 'q') {
+        cleanupAndExit();
+      } else if (input === 'r') {
+        // Refresh
+        setView('loading');
+        setSyncProgress('Refreshing...');
+        gmailClient
+          .fullSync({ batchSize: 100 })
+          .then(async (result) => {
+            for (const email of result.emails) {
+              await emailRepository.save(email);
+            }
+            const updated = await emailRepository.list({ limit: 50 });
+            setEmails(updated.items);
+            setSyncProgress('');
+            setView('list');
+          })
+          .catch((err) => {
+            setErrorMessage(err.message);
+            setView('error');
+          });
+      }
+    } else if (view === 'detail') {
+      if (key.escape || input === 'q') {
+        setView('list');
+        setSelectedEmail(null);
+      }
+    }
+  });
+
+  // Loading view
+  if (view === 'loading') {
+    return React.createElement(
+      Box,
+      { flexDirection: 'column', padding: 1 },
+      React.createElement(Text, { color: 'cyan' }, 'Gmail Sweep'),
+      React.createElement(Text, null, syncProgress || 'Loading...')
+    );
+  }
+
+  // Error view
+  if (view === 'error') {
+    return React.createElement(
+      Box,
+      { flexDirection: 'column', padding: 1 },
+      React.createElement(Text, { color: 'red', bold: true }, 'Error'),
+      React.createElement(Text, null, errorMessage),
+      React.createElement(Text, { color: 'gray' }, 'Press q to quit')
+    );
+  }
+
+  // Detail view - full screen
+  if (view === 'detail' && selectedEmail) {
+    return React.createElement(
+      Box,
+      { flexDirection: 'column', height: terminalHeight },
+      React.createElement(EmailDetail, { 
+        email: selectedEmail,
+        terminalHeight: terminalHeight,
+      })
+    );
+  }
+
+  // List view
+  // Calculate available space for emails
+  const headerLines = 3;  // Header with border
+  const footerLines = 3;  // Footer with border
+  const indicatorLines = 2; // Space for scroll indicators
+  const availableLines = terminalHeight - headerLines - footerLines - indicatorLines;
+  const emailLineHeight = 2; // Each email takes 2 lines
+  const maxVisibleEmails = Math.max(3, Math.floor(availableLines / emailLineHeight));
+
+  return React.createElement(
+    Box,
+    { flexDirection: 'column', height: terminalHeight },
+    // Header (fixed at top)
+    React.createElement(
+      Box,
+      { 
+        padding: 1, 
+        borderStyle: 'single', 
+        borderBottom: true,
+        flexShrink: 0,
+      },
+      React.createElement(Text, { bold: true, color: 'cyan' }, 'Gmail Sweep'),
+      React.createElement(Text, null, ` | ${emails.length} emails | ? for help`)
+    ),
+    // Email list container (constrained height)
+    React.createElement(
+      Box,
+      { 
+        flexDirection: 'column',
+        flexGrow: 1,
+        overflow: 'hidden',
+      },
+      React.createElement(EmailList, {
+        emails,
+        selectedIndex,
+        onSelect: (id) => {
+          const email = emails.find((e) => e.id === id);
+          if (email) {
+            setSelectedEmail(email);
+            setView('detail');
+          }
+        },
+        onSelectionChange: setSelectedIndex,
+        maxVisible: maxVisibleEmails,
+      })
+    ),
+    // Footer (fixed at bottom)
+    React.createElement(
+      Box,
+      { 
+        padding: 1, 
+        borderStyle: 'single', 
+        borderTop: true,
+        flexShrink: 0,
+      },
+      React.createElement(
+        Text,
+        { color: 'gray' },
+        '↑↓ navigate | Enter view | r refresh | q quit'
+      )
+    )
+  );
+}

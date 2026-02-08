@@ -17,12 +17,19 @@
     "compile": "pkg dist/cli/index.js --out-path dist/bin",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["gmail", "cli", "tui", "email", "automation"],
+  "keywords": [
+    "gmail",
+    "cli",
+    "tui",
+    "email",
+    "automation"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@napi-rs/keyring": "^1.1.6",
     "better-sqlite3": "^12.1.0",
+    "dotenv": "^17.2.4",
     "googleapis": "^133.0.0",
     "ink": "^4.4.1",
     "ollama": "^0.4.9",
@@ -32,11 +39,12 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.9",
     "@types/node": "^20.11.24",
-    "@types/react": "^18.2.61",
+    "@types/react": "^18.3.27",
     "@typescript-eslint/eslint-plugin": "^7.1.0",
     "@typescript-eslint/parser": "^7.1.0",
     "@yao-pkg/pkg": "^5.11.5",
     "eslint": "^8.57.0",
+    "ink-testing-library": "^4.0.0",
     "prettier": "^3.2.5",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3",
