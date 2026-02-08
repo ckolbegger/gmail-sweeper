@@ -78,9 +78,8 @@ export function EmailList({
             {/* Selection indicator */}
             <Text width={1}>{isSelected ? '>' : ' '}</Text>
 
-            {/* Subject */}
-            <Text width="40%">
-              {email.isRead ? '' : ' '}
+            {/* Subject - T045: Bold for unread emails */}
+            <Text width="40%" bold={!email.isRead}>
               {email.isRead ? ' ' : '• '}
               {truncateSubject(email.subject, maxSubjectLength)}
             </Text>

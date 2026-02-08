@@ -144,14 +144,21 @@ async function main(): Promise<void> {
       console.error('Config:', JSON.stringify(effectiveConfig, null, 2));
     }
 
-    // Launch TUI
-    // TODO: T036 - Wire to TUI app launch
-    // const { launchTUI } = await import('../tui/index.js');
-    // await launchTUI(effectiveConfig, configDir);
+    // Launch TUI - T036
+    const { GmailClient } = await import('../core/gmail/client.js');
+    const { EmailCache } = await import('../core/cache/db.js');
+    const { launchTUI } = await import('../tui/index.js');
 
-    console.log('Gmail Sweep TUI');
-    console.log(`Account: ${account}`);
-    console.log('TUI implementation pending (Phase 3)...');
+    // Initialize Gmail client
+    const client = new GmailClient(account, configDir);
+    await client.authenticate();
+
+    // Initialize email cache
+    const dbPath = `${configDir}/emails.db`;
+    const cache = new EmailCache(dbPath);
+
+    // Launch TUI application
+    await launchTUI(client, cache);
   } catch (error) {
     if (error instanceof Error) {
       // Commander.js help/version exits
