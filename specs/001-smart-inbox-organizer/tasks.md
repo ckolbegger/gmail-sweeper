@@ -117,6 +117,48 @@
     - it should render unread in bold
     - it should render read in normal weight
 
+### Runtime Completion for User Story 1 (MANDATORY before US2)
+
+- [x] T048 [P] [US1] Unit tests for CLI argument parsing in `tests/unit/cli_args.test.ts`
+  - Tests:
+    - it should parse sender/date/label/category filters from flags
+    - it should parse pagination and output limit flags with defaults
+    - it should reject unknown flags with clear errors
+- [x] T049 [P] [US1] Unit tests for token store adapter in `tests/unit/token_store.test.ts`
+  - Tests:
+    - it should return null when token file does not exist
+    - it should persist access/refresh tokens to disk
+    - it should surface invalid token payloads with clear errors
+- [x] T050 [P] [US1] Extend Gmail list adapter to hydrate message metadata in `src/adapters/gmail/list_emails.ts`
+  - Tests:
+    - it should fetch subject/sender/date metadata for listed message ids
+    - it should map Gmail labels to read state and category fields
+    - it should skip malformed message payloads without crashing listing
+- [x] T051 [P] [US1] Implement CLI inbox workflow orchestrator in `src/cli/app.ts`
+  - Tests:
+    - it should request auth when no stored tokens are present
+    - it should exchange auth code and persist tokens when provided
+    - it should load inbox, apply filters, and render summarized output
+- [x] T052 [US1] Add executable CLI entrypoint in `src/cli/index.ts`
+  - Tests:
+    - it should run workflow with process argv inputs
+    - it should return zero exit code on successful inbox rendering
+    - it should return non-zero exit code with user-safe error output
+- [x] T053 [US1] Add `app` run script in `package.json` for CLI execution
+  - Tests:
+    - it should execute built CLI entrypoint via npm script
+    - it should support passing filter/auth flags through npm run
+- [x] T054 [US1] Integration test for CLI browse/filter flow in `tests/integration/cli_browse_workflow.test.ts`
+  - Tests:
+    - it should perform auth bootstrap path then exit with next-step instructions
+    - it should render filtered inbox results when valid tokens are available
+    - it should show empty state output when filters produce no matches
+- [x] T055 [US1] Update quickstart with runnable CLI steps in `specs/001-smart-inbox-organizer/quickstart.md`
+  - Tests:
+    - it should document exact build and run commands
+    - it should document first-run auth bootstrap and rerun flow
+    - it should document filter flags for sender/date/label/category
+
 **Checkpoint**: User Story 1 functional and testable independently
 
 ---

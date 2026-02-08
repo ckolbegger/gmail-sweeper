@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 export interface AppConfig {
@@ -15,13 +18,63 @@ const REQUIRED_KEYS: Array<keyof AppConfig> = [
   'dbPath'
 ];
 
-export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
+interface LoadConfigOptions {
+  dotenvPath?: string;
+}
+
+function parseDotEnv(content: string): NodeJS.ProcessEnv {
+  const parsed: NodeJS.ProcessEnv = {};
+  const lines = content.split(/\r?\n/);
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (line.length === 0 || line.startsWith('#')) {
+      continue;
+    }
+
+    const match = line.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+    if (!match) {
+      continue;
+    }
+
+    const key = match[1];
+    let value = match[2] ?? '';
+
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    parsed[key] = value;
+  }
+
+  return parsed;
+}
+
+function loadDotEnv(dotenvPath: string): NodeJS.ProcessEnv {
+  if (!existsSync(dotenvPath)) {
+    return {};
+  }
+  const content = readFileSync(dotenvPath, 'utf8');
+  return parseDotEnv(content);
+}
+
+export function loadConfig(
+  env: NodeJS.ProcessEnv = process.env,
+  options: LoadConfigOptions = {}
+): AppConfig {
+  const dotenvPath = options.dotenvPath ?? resolve(process.cwd(), '.env');
+  const dotenvEnv = loadDotEnv(dotenvPath);
+  const mergedEnv: NodeJS.ProcessEnv = { ...dotenvEnv, ...env };
+
   const config: AppConfig = {
-    gmailClientId: env.GMAIL_CLIENT_ID ?? '',
-    gmailClientSecret: env.GMAIL_CLIENT_SECRET ?? '',
-    gmailRedirectUri: env.GMAIL_REDIRECT_URI ?? '',
-    logLevel: (env.LOG_LEVEL as LogLevel) ?? 'info',
-    dbPath: env.DB_PATH ?? 'data/local.db'
+    gmailClientId: mergedEnv.GMAIL_CLIENT_ID ?? '',
+    gmailClientSecret: mergedEnv.GMAIL_CLIENT_SECRET ?? '',
+    gmailRedirectUri: mergedEnv.GMAIL_REDIRECT_URI ?? '',
+    logLevel: (mergedEnv.LOG_LEVEL as LogLevel) ?? 'info',
+    dbPath: mergedEnv.DB_PATH ?? 'data/local.db'
   };
 
   const missing = REQUIRED_KEYS.filter((key) => !config[key]);

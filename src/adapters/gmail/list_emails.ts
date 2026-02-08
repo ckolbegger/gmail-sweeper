@@ -1,3 +1,4 @@
+import { createEmail, type Email } from '@/core/entities.js';
 import { GmailError } from '@/core/errors.js';
 
 export interface GmailMessageRef {
@@ -24,6 +25,35 @@ export interface GmailClientLike {
   };
 }
 
+export interface GmailMessageHeader {
+  name?: string;
+  value?: string;
+}
+
+export interface GmailGetResponse {
+  data: {
+    id?: string;
+    internalDate?: string;
+    labelIds?: string[];
+    payload?: {
+      headers?: GmailMessageHeader[];
+    };
+  };
+}
+
+export interface GmailReadClientLike extends GmailClientLike {
+  users: {
+    messages: GmailClientLike['users']['messages'] & {
+      get: (params: {
+        userId: string;
+        id: string;
+        format: 'metadata';
+        metadataHeaders: string[];
+      }) => Promise<GmailGetResponse>;
+    };
+  };
+}
+
 export interface GmailListOptions {
   userId?: string;
   pageSize?: number;
@@ -39,6 +69,18 @@ const DEFAULT_PAGE_LIMIT = 5;
 const RATE_LIMIT_STATUS = 429;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+const HEADER_SUBJECT = 'subject';
+const HEADER_FROM = 'from';
+const HEADER_DATE = 'date';
+
+const CATEGORY_MAP: Record<string, string> = {
+  CATEGORY_PERSONAL: 'primary',
+  CATEGORY_SOCIAL: 'social',
+  CATEGORY_PROMOTIONS: 'promotions',
+  CATEGORY_UPDATES: 'updates',
+  CATEGORY_FORUMS: 'forums'
+};
 
 function isRateLimitError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
@@ -94,4 +136,91 @@ export async function listInboxMessages(
   }
 
   return messages;
+}
+
+function findHeader(headers: GmailMessageHeader[] = [], name: string): string | undefined {
+  const loweredName = name.toLowerCase();
+  return headers.find((header) => header.name?.toLowerCase() === loweredName)?.value;
+}
+
+function parseReceivedAt(data: GmailGetResponse['data']): number | undefined {
+  if (data.internalDate) {
+    const timestamp = Number.parseInt(data.internalDate, 10);
+    if (Number.isFinite(timestamp) && timestamp > 0) {
+      return timestamp;
+    }
+  }
+
+  const parsedDate = Date.parse(findHeader(data.payload?.headers, HEADER_DATE) ?? '');
+  if (Number.isFinite(parsedDate) && parsedDate > 0) {
+    return parsedDate;
+  }
+
+  return undefined;
+}
+
+function mapCategory(labels: string[]): string | undefined {
+  for (const label of labels) {
+    if (CATEGORY_MAP[label]) {
+      return CATEGORY_MAP[label];
+    }
+  }
+  return undefined;
+}
+
+function mapMessageToEmail(data: GmailGetResponse['data']): Email | null {
+  const messageId = data.id;
+  const labels = data.labelIds ?? [];
+  const receivedAt = parseReceivedAt(data);
+
+  if (!messageId || !receivedAt) {
+    return null;
+  }
+
+  try {
+    return createEmail({
+      message_id: messageId,
+      received_at: receivedAt,
+      subject: findHeader(data.payload?.headers, HEADER_SUBJECT),
+      sender: findHeader(data.payload?.headers, HEADER_FROM),
+      labels,
+      category: mapCategory(labels),
+      is_read: !labels.includes('UNREAD')
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function listInboxEmails(
+  gmail: GmailReadClientLike,
+  options: GmailListOptions = {},
+  deps: GmailListDeps = {}
+): Promise<Email[]> {
+  const userId = options.userId ?? 'me';
+  const refs = await listInboxMessages(gmail, options, deps);
+  const emails: Email[] = [];
+
+  for (const ref of refs) {
+    try {
+      const response = await gmail.users.messages.get({
+        userId,
+        id: ref.id,
+        format: 'metadata',
+        metadataHeaders: ['Subject', 'From', 'Date']
+      });
+
+      const email = mapMessageToEmail(response.data);
+      if (email) {
+        emails.push(email);
+      }
+    } catch (error) {
+      throw new GmailError('Failed to fetch inbox message metadata', {
+        message_id: ref.id,
+        cause: error instanceof Error ? error.message : error
+      });
+    }
+  }
+
+  return emails.sort((a, b) => b.received_at - a.received_at);
 }
