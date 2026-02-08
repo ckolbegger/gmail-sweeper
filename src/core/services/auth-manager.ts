@@ -79,7 +79,7 @@ export class AuthManager implements AuthManagerContract {
    */
   async exchangeCode(code: string): Promise<AuthCredentials> {
     try {
-      const { tokens } = await this.oauth2Client.getAccessToken(code);
+      const { tokens } = await this.oauth2Client.getToken(code);
 
       if (!tokens.access_token) {
         throw new GmailErrorClass('INVALID_REQUEST', 'No access token returned');

@@ -8,81 +8,119 @@ import { Box, Text, useInput } from 'ink';
 import type { Email } from '../../core/models/email.js';
 import { useEffect, useMemo, useState } from 'react';
 
+export type SortField = 'date' | 'sender' | 'subject' | 'label' | 'category';
+
 export interface EmailListProps {
   emails: Email[];
   selectedId?: string;
   onSelect?: (email: Email) => void;
-  sort?: { field: 'date' | 'sender' | 'subject'; direction: 'asc' | 'desc' };
-  onSort?: (field: 'date' | 'sender' | 'subject') => void;
+  sort?: { field: SortField; direction: 'asc' | 'desc' };
+  onSort?: (field: SortField) => void;
+  maxVisibleRows?: number;
 }
 
-export function EmailList({ emails, selectedId, onSelect, sort, onSort }: EmailListProps) {
+function charDisplayWidth(char: string): number {
+  const codePoint = char.codePointAt(0) ?? 0;
+  if (/\p{Extended_Pictographic}/u.test(char)) {
+    return 2;
+  }
+
+  return codePoint > 0xffff ? 2 : 1;
+}
+
+export function truncateDisplay(value: string, maxWidth: number): string {
+  if (maxWidth <= 0) {
+    return '';
+  }
+
+  let width = 0;
+  for (const char of value) {
+    width += charDisplayWidth(char);
+    if (width > maxWidth) {
+      let result = '';
+      let resultWidth = 0;
+      const budget = Math.max(1, maxWidth - 1);
+
+      for (const segment of value) {
+        const segmentWidth = charDisplayWidth(segment);
+        if (resultWidth + segmentWidth > budget) {
+          break;
+        }
+        result += segment;
+        resultWidth += segmentWidth;
+      }
+
+      return `${result.trimEnd()}…`;
+    }
+  }
+
+  return value;
+}
+
+export function EmailList({ emails, selectedId, onSelect, sort, maxVisibleRows }: EmailListProps) {
   const [selectedIndex, setSelectedIndex] = useState(() => {
     const idx = emails.findIndex((e) => e.id === selectedId);
     return idx >= 0 ? idx : 0;
   });
 
-  // Sort emails
-  const sortedEmails = useMemo(() => {
-    if (!sort) return emails;
-
-    return [...emails].sort((a, b) => {
-      let comparison = 0;
-
-      switch (sort.field) {
-        case 'date':
-          const aTime = a.dateReceived?.getTime() ?? 0;
-          const bTime = b.dateReceived?.getTime() ?? 0;
-          comparison = aTime - bTime;
-          break;
-        case 'sender':
-          comparison = a.sender.email.localeCompare(b.sender.email);
-          break;
-        case 'subject':
-          comparison = a.subject.localeCompare(b.subject);
-          break;
-      }
-
-      return sort.direction === 'asc' ? comparison : -comparison;
-    });
-  }, [emails, sort]);
+  const displayedEmails = emails;
 
   useEffect(() => {
-    const idx = sortedEmails.findIndex((email) => email.id === selectedId);
+    const idx = displayedEmails.findIndex((email) => email.id === selectedId);
     if (idx >= 0) {
       setSelectedIndex(idx);
       return;
     }
 
-    setSelectedIndex((current) => Math.min(current, Math.max(sortedEmails.length - 1, 0)));
-  }, [selectedId, sortedEmails]);
+    setSelectedIndex((current) => Math.min(current, Math.max(displayedEmails.length - 1, 0)));
+  }, [selectedId, displayedEmails]);
 
-  useEffect(() => {
-    const email = sortedEmails[selectedIndex];
-    if (email) {
-      onSelect?.(email);
+  const maxRows = Math.max(1, (maxVisibleRows ?? displayedEmails.length) || 1);
+
+  const windowStart = useMemo(() => {
+    if (displayedEmails.length <= maxRows) {
+      return 0;
     }
-  }, [selectedIndex, sortedEmails, onSelect]);
+
+    const centeredStart = selectedIndex - Math.floor(maxRows / 2);
+    const maxStart = displayedEmails.length - maxRows;
+    return Math.max(0, Math.min(centeredStart, maxStart));
+  }, [displayedEmails.length, maxRows, selectedIndex]);
+
+  const windowEnd = Math.min(displayedEmails.length, windowStart + maxRows);
+  const visibleEmails = displayedEmails.slice(windowStart, windowEnd);
 
   // Handle keyboard navigation
-  useInput((input, key) => {
+  useInput((_input, key) => {
+    if (displayedEmails.length === 0) {
+      return;
+    }
+
     if (key.upArrow) {
-      setSelectedIndex((i) => Math.max(0, i - 1));
+      setSelectedIndex((current) => {
+        const next = Math.max(0, current - 1);
+        const nextEmail = displayedEmails[next];
+        if (nextEmail) {
+          onSelect?.(nextEmail);
+        }
+        return next;
+      });
     } else if (key.downArrow) {
-      setSelectedIndex((i) => Math.min(sortedEmails.length - 1, i + 1));
-    } else if (key.return && sortedEmails[selectedIndex]) {
-      onSelect?.(sortedEmails[selectedIndex]);
-    } else if (input === 'd' && onSort) {
-      onSort('date');
-    } else if (input === 's' && onSort) {
-      onSort('sender');
-    } else if (input === 'u' && onSort) {
-      onSort('subject');
+      setSelectedIndex((current) => {
+        const next = Math.min(displayedEmails.length - 1, current + 1);
+        const nextEmail = displayedEmails[next];
+        if (nextEmail) {
+          onSelect?.(nextEmail);
+        }
+        return next;
+      });
+    } else if (key.return && displayedEmails[selectedIndex]) {
+      onSelect?.(displayedEmails[selectedIndex]);
     }
   });
 
   // Handle empty state
-  if (sortedEmails.length === 0) {
+  if (displayedEmails.length === 0) {
     return (
       <Box paddingX={1}>
         <Text dimColor>No emails found</Text>
@@ -113,14 +151,6 @@ export function EmailList({ emails, selectedId, onSelect, sort, onSort }: EmailL
     return ' ';
   };
 
-  const truncate = (value: string, maxLength: number): string => {
-    if (value.length <= maxLength) {
-      return value;
-    }
-
-    return `${value.slice(0, maxLength - 1)}…`;
-  };
-
   // Show headers with sort indicators
   const headers = (
     <Box flexDirection="row" paddingX={1} borderStyle="single" borderBottom>
@@ -139,25 +169,29 @@ export function EmailList({ emails, selectedId, onSelect, sort, onSort }: EmailL
   // Show email list
   const list = (
     <Box flexDirection="column">
-      {sortedEmails.map((email, index) => {
-        const isSelected = index === selectedIndex;
+      {windowStart > 0 && (
+        <Box paddingX={1}>
+          <Text dimColor>↑ {windowStart} earlier emails</Text>
+        </Box>
+      )}
+
+      {visibleEmails.map((email, index) => {
+        const absoluteIndex = windowStart + index;
+        const isSelected = absoluteIndex === selectedIndex;
         const isUnread = !email.isRead;
 
         return (
-          <Box
-            key={email.id}
-            flexDirection="row"
-            paddingX={1}
-            borderStyle={isSelected ? 'single' : undefined}
-          >
+          <Box key={email.id} flexDirection="row" paddingX={1} borderStyle={undefined}>
             <Box width={40}>
               <Text bold={isUnread} dimColor={!isSelected}>
-                {truncate(email.subject, 38)}
+                {isSelected
+                  ? `> ${truncateDisplay(email.subject, 36)}`
+                  : `  ${truncateDisplay(email.subject, 36)}`}
               </Text>
             </Box>
             <Box width={25}>
               <Text dimColor={!isSelected}>
-                {truncate(email.sender.name || email.sender.email, 23)}
+                {truncateDisplay(email.sender.name || email.sender.email, 23)}
               </Text>
             </Box>
             <Box width={12}>
@@ -166,6 +200,12 @@ export function EmailList({ emails, selectedId, onSelect, sort, onSort }: EmailL
           </Box>
         );
       })}
+
+      {windowEnd < displayedEmails.length && (
+        <Box paddingX={1}>
+          <Text dimColor>↓ {displayedEmails.length - windowEnd} more emails</Text>
+        </Box>
+      )}
     </Box>
   );
 

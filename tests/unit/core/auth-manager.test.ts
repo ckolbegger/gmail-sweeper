@@ -5,6 +5,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { AuthManager } from '../../../src/core/services/auth-manager.js';
 
+const getTokenMock = vi.fn(() =>
+  Promise.resolve({
+    tokens: {
+      access_token: 'test-access-token',
+      refresh_token: 'test-refresh-token',
+      expiry_date: Date.now() + 3600000,
+    },
+  })
+);
+
 // Mock keyring
 vi.mock('@napi-rs/keyring', () => ({
   Entry: vi.fn().mockImplementation(() => ({
@@ -20,15 +30,7 @@ vi.mock('googleapis', () => ({
     auth: {
       OAuth2: vi.fn().mockImplementation(() => ({
         generateAuthUrl: vi.fn(() => 'https://accounts.google.com/o/oauth2/auth'),
-        getAccessToken: vi.fn(() =>
-          Promise.resolve({
-            tokens: {
-              access_token: 'test-access-token',
-              refresh_token: 'test-refresh-token',
-              expiry_date: Date.now() + 3600000,
-            },
-          })
-        ),
+        getToken: getTokenMock,
         refreshAccessToken: vi.fn(() =>
           Promise.resolve({
             credentials: {
@@ -75,6 +77,7 @@ describe('AuthManager', () => {
 
       expect(credentials.accessToken).toBe('test-access-token');
       expect(credentials.refreshToken).toBe('test-refresh-token');
+      expect(getTokenMock).toHaveBeenCalledWith('test-auth-code');
     });
   });
 

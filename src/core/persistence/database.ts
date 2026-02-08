@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'node:url';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 interface DatabaseConfig {
@@ -49,13 +49,34 @@ function runMigrations(db: Database.Database): void {
   `);
 
   const currentDir = dirname(fileURLToPath(import.meta.url));
-  const migrationsDir = join(currentDir, 'migrations');
+  const migrationDirCandidates = [
+    join(currentDir, 'migrations'),
+    join(process.cwd(), 'src', 'core', 'persistence', 'migrations'),
+    join(process.cwd(), 'dist', 'core', 'persistence', 'migrations'),
+  ];
+
+  const migrationsDir = migrationDirCandidates.find((candidate) => existsSync(candidate));
+
+  if (!migrationsDir) {
+    throw new Error(
+      `Migration directory not found. Looked in: ${migrationDirCandidates.join(', ')}`
+    );
+  }
+
   const migrationFiles = readdirSync(migrationsDir)
     .filter((f) => f.endsWith('.sql'))
     .sort();
 
   const applied = db.prepare('SELECT name FROM _migrations').all() as any[];
   const appliedNames = new Set(applied.map((a) => a.name));
+
+  if (!appliedNames.has('001_initial.sql') && hasExistingInitialSchema(db)) {
+    db.prepare('INSERT INTO _migrations (name, applied_at) VALUES (?, ?)').run(
+      '001_initial.sql',
+      Date.now()
+    );
+    appliedNames.add('001_initial.sql');
+  }
 
   for (const file of migrationFiles) {
     if (!appliedNames.has(file)) {
@@ -64,6 +85,22 @@ function runMigrations(db: Database.Database): void {
       db.prepare('INSERT INTO _migrations (name, applied_at) VALUES (?, ?)').run(file, Date.now());
     }
   }
+}
+
+function hasExistingInitialSchema(db: Database.Database): boolean {
+  const table = db
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'app_metadata'")
+    .get() as { name: string } | undefined;
+
+  if (!table) {
+    return false;
+  }
+
+  const schemaVersion = db
+    .prepare("SELECT value FROM app_metadata WHERE key = 'schema_version'")
+    .get() as { value: string } | undefined;
+
+  return schemaVersion !== undefined;
 }
 
 export const database = {

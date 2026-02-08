@@ -21,7 +21,6 @@ import { AuthManager } from './auth-manager.js';
 import { GmailError } from '../errors/index.js';
 
 export class GmailClient implements GmailClientContract {
-  private gmail: any;
   private rateLimiter: Map<string, number[]> = new Map();
   private readonly maxRequestsPerSecond: number;
 
@@ -36,16 +35,10 @@ export class GmailClient implements GmailClientContract {
    * Initialize Gmail API client
    */
   private async getClient(): Promise<any> {
-    if (!this.gmail) {
-      const token = await this.auth.getAccessToken();
-      this.gmail = google.gmail({ version: 'v1' });
-      this.gmail.context = {
-        _options: {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      };
-    }
-    return this.gmail;
+    const token = await this.auth.getAccessToken();
+    const oauth2Client = new google.auth.OAuth2();
+    oauth2Client.setCredentials({ access_token: token });
+    return google.gmail({ version: 'v1', auth: oauth2Client });
   }
 
   /**
@@ -106,11 +99,11 @@ export class GmailClient implements GmailClientContract {
    * List emails from Gmail with optional filtering and sorting
    */
   async listEmails(options: EmailListOptions = {}): Promise<PaginatedResult<Email>> {
-    const client = await this.getClient();
     const page = options.page ?? 1;
     const pageSize = options.pageSize ?? 50;
 
     const response = await this.executeWithRetry(async () => {
+      const client = await this.getClient();
       return client.users.messages.list({
         userId: 'me',
         maxResults: pageSize,
@@ -143,9 +136,8 @@ export class GmailClient implements GmailClientContract {
    * Get a single email by ID
    */
   async getEmail(id: string): Promise<Email | null> {
-    const client = await this.getClient();
-
     const response = await this.executeWithRetry(async () => {
+      const client = await this.getClient();
       return client.users.messages.get({
         userId: 'me',
         id: id,
@@ -188,7 +180,6 @@ export class GmailClient implements GmailClientContract {
       onProgress?: (progress: SyncProgress) => void;
     } = {}
   ): Promise<SyncResult> {
-    const client = await this.getClient();
     const batchSize = options.batchSize || 100;
     let pageToken: string | undefined;
     let totalEmails = 0;
@@ -197,7 +188,10 @@ export class GmailClient implements GmailClientContract {
 
     // First, get estimated total
     try {
-      const profile = await client.users.getProfile({ userId: 'me' });
+      const profile = await this.executeWithRetry(async () => {
+        const client = await this.getClient();
+        return client.users.getProfile({ userId: 'me' });
+      });
       totalEmails = profile.data.messagesTotal || 0;
     } catch {
       totalEmails = 0;
@@ -207,6 +201,7 @@ export class GmailClient implements GmailClientContract {
       batchNumber++;
 
       const response = await this.executeWithRetry(async () => {
+        const client = await this.getClient();
         return client.users.messages.list({
           userId: 'me',
           maxResults: batchSize,
@@ -235,7 +230,10 @@ export class GmailClient implements GmailClientContract {
     } while (pageToken);
 
     // Get current history ID
-    const profile = await client.users.getProfile({ userId: 'me' });
+    const profile = await this.executeWithRetry(async () => {
+      const client = await this.getClient();
+      return client.users.getProfile({ userId: 'me' });
+    });
 
     return {
       success: true,
@@ -253,7 +251,6 @@ export class GmailClient implements GmailClientContract {
     historyId: string;
     onProgress?: (progress: SyncProgress) => void;
   }): Promise<SyncResult> {
-    const client = await this.getClient();
     let pageToken: string | undefined;
     let emailsAdded = 0;
     let emailsUpdated = 0;
@@ -262,6 +259,7 @@ export class GmailClient implements GmailClientContract {
 
     do {
       const response = await this.executeWithRetry(async () => {
+        const client = await this.getClient();
         return client.users.history.list({
           userId: 'me',
           startHistoryId: options.historyId,
@@ -306,7 +304,10 @@ export class GmailClient implements GmailClientContract {
     } while (pageToken);
 
     // Get current history ID
-    const profile = await client.users.getProfile({ userId: 'me' });
+    const profile = await this.executeWithRetry(async () => {
+      const client = await this.getClient();
+      return client.users.getProfile({ userId: 'me' });
+    });
 
     return {
       success: true,
@@ -321,8 +322,8 @@ export class GmailClient implements GmailClientContract {
    * Get the current history ID for incremental sync
    */
   async getCurrentHistoryId(): Promise<string> {
-    const client = await this.getClient();
     const profile = await this.executeWithRetry(async () => {
+      const client = await this.getClient();
       return client.users.getProfile({ userId: 'me' });
     });
 
@@ -333,13 +334,13 @@ export class GmailClient implements GmailClientContract {
    * Apply a label to emails
    */
   async labelEmails(emailIds: string[], labelId: string): Promise<BatchActionResult> {
-    const client = await this.getClient();
     const failures: Array<{ emailId: string; error: string }> = [];
     let successfulCount = 0;
 
     for (const emailId of emailIds) {
       try {
         await this.executeWithRetry(async () => {
+          const client = await this.getClient();
           return client.users.messages.modify({
             userId: 'me',
             id: emailId,
@@ -366,13 +367,13 @@ export class GmailClient implements GmailClientContract {
    * Remove a label from emails
    */
   async removeLabel(emailIds: string[], labelId: string): Promise<BatchActionResult> {
-    const client = await this.getClient();
     const failures: Array<{ emailId: string; error: string }> = [];
     let successfulCount = 0;
 
     for (const emailId of emailIds) {
       try {
         await this.executeWithRetry(async () => {
+          const client = await this.getClient();
           return client.users.messages.modify({
             userId: 'me',
             id: emailId,
@@ -406,13 +407,13 @@ export class GmailClient implements GmailClientContract {
    * Delete emails (move to trash)
    */
   async deleteEmails(emailIds: string[]): Promise<BatchActionResult> {
-    const client = await this.getClient();
     const failures: Array<{ emailId: string; error: string }> = [];
     let successfulCount = 0;
 
     for (const emailId of emailIds) {
       try {
         await this.executeWithRetry(async () => {
+          const client = await this.getClient();
           return client.users.messages.trash({
             userId: 'me',
             id: emailId,
@@ -436,7 +437,6 @@ export class GmailClient implements GmailClientContract {
    * Mark emails as read/unread
    */
   async markAsRead(emailIds: string[], isRead: boolean): Promise<BatchActionResult> {
-    const client = await this.getClient();
     const label = isRead ? 'UNREAD' : 'UNREAD';
     const failures: Array<{ emailId: string; error: string }> = [];
     let successfulCount = 0;
@@ -444,6 +444,7 @@ export class GmailClient implements GmailClientContract {
     for (const emailId of emailIds) {
       try {
         await this.executeWithRetry(async () => {
+          const client = await this.getClient();
           return client.users.messages.modify({
             userId: 'me',
             id: emailId,

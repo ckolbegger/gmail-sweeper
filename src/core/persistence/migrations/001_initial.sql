@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS app_metadata (
 );
 
 -- Insert schema version
-INSERT INTO app_metadata (key, value) VALUES ('schema_version', '1');
+INSERT OR IGNORE INTO app_metadata (key, value) VALUES ('schema_version', '1');
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_emails_date ON emails(date_received DESC);

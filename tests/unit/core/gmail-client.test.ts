@@ -24,7 +24,9 @@ vi.mock('googleapis', () => ({
       },
     })),
     auth: {
-      OAuth2: vi.fn(),
+      OAuth2: vi.fn().mockImplementation(() => ({
+        setCredentials: vi.fn(),
+      })),
     },
   },
 }));

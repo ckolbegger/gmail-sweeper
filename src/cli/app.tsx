@@ -4,7 +4,7 @@
  * Entry point for the TUI application.
  */
 
-import { Box, Text, render, useApp, useInput } from 'ink';
+import { Box, Text, render, useApp, useInput, useStdout } from 'ink';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
@@ -19,19 +19,21 @@ import { GmailClient } from '../core/services/gmail-client.js';
 import { EmailSorter } from '../core/services/email-sorter.js';
 import { EmailFilter } from '../core/services/email-filter.js';
 import type { GmailClientConfig } from '../core/contracts/gmail-api.js';
+import { HELP_SECTIONS } from './help.js';
 
 type AppView = 'loading' | 'auth' | 'email-list' | 'error';
 type FilterMode = 'sender' | 'label' | 'category';
 
 export function App() {
   const { exit } = useApp();
+  const { stdout } = useStdout();
   const [view, setView] = useState<AppView>('loading');
   const [emails, setEmails] = useState<Email[]>([]);
   const [selectedEmailId, setSelectedEmailId] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState('Initializing...');
   const [sort, setSort] = useState<{
-    field: 'date' | 'sender' | 'subject';
+    field: 'date' | 'sender' | 'subject' | 'label' | 'category';
     direction: 'asc' | 'desc';
   }>({
     field: 'date',
@@ -45,6 +47,8 @@ export function App() {
   }>({ unreadOnly: false });
   const [filterMode, setFilterMode] = useState<FilterMode | null>(null);
   const [filterInput, setFilterInput] = useState('');
+  const [detailScrollOffset, setDetailScrollOffset] = useState(0);
+  const [showHelp, setShowHelp] = useState(false);
 
   const emailSorter = useMemo(() => new EmailSorter(), []);
   const emailFilter = useMemo(() => new EmailFilter(), []);
@@ -171,8 +175,7 @@ export function App() {
     };
   }, [hydrateFromLocalStore, selectInitialEmail, syncFromGmail]);
 
-  // Handle sort changes
-  const handleSort = useCallback((field: 'date' | 'sender' | 'subject') => {
+  const handleSort = useCallback((field: 'date' | 'sender' | 'subject' | 'label' | 'category') => {
     setSort((prev) => ({
       field,
       direction: prev.field === field && prev.direction === 'desc' ? 'asc' : 'desc',
@@ -205,15 +208,18 @@ export function App() {
       result = emailFilter.filterByReadStatus(result, false);
     }
 
-    if (sort.field === 'date') {
-      return emailSorter.sortByDate(result, sort.direction);
+    switch (sort.field) {
+      case 'date':
+        return emailSorter.sortByDate(result, sort.direction);
+      case 'sender':
+        return emailSorter.sortBySender(result, sort.direction);
+      case 'subject':
+        return emailSorter.sortBySubject(result, sort.direction);
+      case 'label':
+        return emailSorter.sortByLabel(result, sort.direction);
+      case 'category':
+        return emailSorter.sortByCategory(result, sort.direction);
     }
-
-    if (sort.field === 'sender') {
-      return emailSorter.sortBySender(result, sort.direction);
-    }
-
-    return emailSorter.sortBySubject(result, sort.direction);
   }, [emails, filters, sort, emailFilter, emailSorter]);
 
   const selectedEmail = useMemo(
@@ -221,6 +227,30 @@ export function App() {
       displayedEmails.find((email) => email.id === selectedEmailId) ?? displayedEmails[0] ?? null,
     [displayedEmails, selectedEmailId]
   );
+
+  const configuredDetailMargin = Number.parseInt(process.env.DETAIL_BODY_MARGIN ?? '10', 10);
+  const detailBodyMargin = Number.isFinite(configuredDetailMargin)
+    ? Math.min(20, Math.max(4, configuredDetailMargin))
+    : 10;
+  const maxDetailBodyColumns = Math.max(
+    22,
+    Math.floor((stdout.columns ?? 80) * 0.35) - detailBodyMargin
+  );
+  const hasFooterDetail =
+    filterMode !== null ||
+    Boolean(filters.sender) ||
+    Boolean(filters.label) ||
+    Boolean(filters.category) ||
+    filters.unreadOnly;
+  const headerLines = 3;
+  const footerLines = hasFooterDetail ? 4 : 3;
+  const mainPaneHeight = Math.max(10, (stdout.rows ?? 24) - headerLines - footerLines);
+  const listRowsForEmails = Math.max(4, mainPaneHeight - 4);
+  const detailBodyLines = Math.max(3, mainPaneHeight - 9);
+
+  useEffect(() => {
+    setDetailScrollOffset(0);
+  }, [selectedEmailId]);
 
   const applyFilterInput = useCallback(() => {
     const value = filterInput.trim();
@@ -242,6 +272,15 @@ export function App() {
   }, [filterInput, filterMode]);
 
   useInput((input, key) => {
+    if (showHelp && (input === '?' || key.escape)) {
+      setShowHelp(false);
+      return;
+    }
+
+    if (showHelp) {
+      return;
+    }
+
     if (!filterMode) {
       return;
     }
@@ -270,11 +309,37 @@ export function App() {
   // Global keyboard shortcuts
   useKeyboard({
     shortcuts: [
-      { key: 'q', handler: () => exit(), description: 'Quit' },
+      {
+        key: '?',
+        handler: () => {
+          setShowHelp((prev) => {
+            const next = !prev;
+            if (next) {
+              setFilterMode(null);
+              setFilterInput('');
+            }
+            return next;
+          });
+          return;
+        },
+        description: 'Toggle help panel',
+      },
+      {
+        key: 'q',
+        handler: () => {
+          if (showHelp) {
+            setShowHelp(false);
+            return;
+          }
+
+          exit();
+        },
+        description: 'Quit',
+      },
       {
         key: 'd',
         handler: () => {
-          if (filterMode) {
+          if (filterMode || showHelp) {
             return false;
           }
 
@@ -286,7 +351,7 @@ export function App() {
       {
         key: 's',
         handler: () => {
-          if (filterMode) {
+          if (filterMode || showHelp) {
             return false;
           }
 
@@ -298,7 +363,7 @@ export function App() {
       {
         key: 'u',
         handler: () => {
-          if (filterMode) {
+          if (filterMode || showHelp) {
             return false;
           }
 
@@ -308,9 +373,33 @@ export function App() {
         description: 'Sort by subject',
       },
       {
+        key: 'b',
+        handler: () => {
+          if (filterMode || showHelp) {
+            return false;
+          }
+
+          handleSort('label');
+          return;
+        },
+        description: 'Sort by label',
+      },
+      {
+        key: 'g',
+        handler: () => {
+          if (filterMode || showHelp) {
+            return false;
+          }
+
+          handleSort('category');
+          return;
+        },
+        description: 'Sort by category',
+      },
+      {
         key: 'f',
         handler: () => {
-          if (filterMode) {
+          if (filterMode || showHelp) {
             return false;
           }
 
@@ -323,7 +412,7 @@ export function App() {
       {
         key: 'l',
         handler: () => {
-          if (filterMode) {
+          if (filterMode || showHelp) {
             return false;
           }
 
@@ -336,7 +425,7 @@ export function App() {
       {
         key: 'c',
         handler: () => {
-          if (filterMode) {
+          if (filterMode || showHelp) {
             return false;
           }
 
@@ -349,7 +438,7 @@ export function App() {
       {
         key: 'r',
         handler: () => {
-          if (filterMode) {
+          if (filterMode || showHelp) {
             return false;
           }
 
@@ -361,7 +450,7 @@ export function App() {
       {
         key: 'x',
         handler: () => {
-          if (filterMode) {
+          if (filterMode || showHelp) {
             return false;
           }
 
@@ -369,6 +458,32 @@ export function App() {
           return;
         },
         description: 'Clear filters',
+      },
+      {
+        key: '[',
+        handler: () => {
+          if (filterMode || showHelp) {
+            return false;
+          }
+
+          setDetailScrollOffset((prev) =>
+            Math.max(0, prev - Math.max(1, Math.floor(detailBodyLines / 2)))
+          );
+          return;
+        },
+        description: 'Scroll detail up',
+      },
+      {
+        key: ']',
+        handler: () => {
+          if (filterMode || showHelp) {
+            return false;
+          }
+
+          setDetailScrollOffset((prev) => prev + Math.max(1, Math.floor(detailBodyLines / 2)));
+          return;
+        },
+        description: 'Scroll detail down',
       },
     ],
   });
@@ -419,22 +534,50 @@ export function App() {
       </Box>
 
       {/* Main content */}
-      <Box flexGrow={1} flexDirection="row">
-        {/* Email list */}
-        <Box width="65%" borderStyle="single" borderRight>
-          <EmailList
-            emails={displayedEmails}
-            selectedId={selectedEmailId}
-            onSelect={handleSelectEmail}
-            sort={sort}
-            onSort={handleSort}
-          />
-        </Box>
+      <Box flexDirection="row" height={mainPaneHeight}>
+        {showHelp ? (
+          <Box width="100%" height={mainPaneHeight} paddingX={1} paddingY={1} borderStyle="round">
+            <Box flexDirection="column" width="100%">
+              <Text bold>Keyboard Help</Text>
+              <Text dimColor>Press ? or Esc to close</Text>
+              <Box marginTop={1} flexDirection="column">
+                {HELP_SECTIONS.map((section) => (
+                  <Box key={section.title} flexDirection="column" marginBottom={1}>
+                    <Text bold>{section.title}</Text>
+                    {section.commands.map((command) => (
+                      <Text key={`${section.title}-${command.key}`}>
+                        {command.key.padEnd(10, ' ')} {command.description}
+                      </Text>
+                    ))}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          </Box>
+        ) : (
+          <>
+            {/* Email list */}
+            <Box width="65%" height={mainPaneHeight} borderStyle="single" borderRight>
+              <EmailList
+                emails={displayedEmails}
+                selectedId={selectedEmailId}
+                onSelect={handleSelectEmail}
+                sort={sort}
+                maxVisibleRows={listRowsForEmails}
+              />
+            </Box>
 
-        {/* Email detail */}
-        <Box width="35%">
-          <EmailDetail email={selectedEmail} />
-        </Box>
+            {/* Email detail */}
+            <Box width="35%" height={mainPaneHeight}>
+              <EmailDetail
+                email={selectedEmail}
+                maxBodyLines={detailBodyLines}
+                maxBodyColumns={maxDetailBodyColumns}
+                scrollOffset={detailScrollOffset}
+              />
+            </Box>
+          </>
+        )}
       </Box>
 
       {/* Footer */}
@@ -456,7 +599,8 @@ export function App() {
             </Text>
           )}
         <Text dimColor>
-          ↑↓ Navigate • Enter Select • d/s/u Sort • f/l/c Filter • r Unread • x Clear • q Quit
+          ↑↓ Navigate • [/] Detail scroll • d/s/u/b/g Sort • f/l/c Filter • r Unread • x Clear • ?
+          Help • q Quit
         </Text>
       </Box>
     </Box>
