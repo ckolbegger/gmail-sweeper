@@ -3,6 +3,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { useInput, useApp } from 'ink';
 
 interface UseKeyboardOptions {
   itemCount: number;
@@ -13,6 +14,7 @@ interface UseKeyboardOptions {
 
 interface UseKeyboardResult {
   selectedIndex: number;
+  previewScrollOffset: number;
   handleKey: (event: { key: string; ctrlKey?: boolean; shiftKey?: boolean }) => void;
 }
 
@@ -23,6 +25,8 @@ export function useKeyboard({
   pageSize = 10,
 }: UseKeyboardOptions): UseKeyboardResult {
   const [index, setIndex] = useState(selectedIndex);
+  const [previewScrollOffset, setPreviewScrollOffset] = useState(0);
+  const { exit } = useApp();
 
   const clampIndex = useCallback((idx: number) => {
     return Math.max(0, Math.min(idx, itemCount - 1));
@@ -70,8 +74,44 @@ export function useKeyboard({
     [index, itemCount, clampIndex, onSelect, pageSize]
   );
 
+  // Wire into Ink's input system to capture keyboard events
+  useInput((input, key) => {
+    if (input === 'q') {
+      exit();
+      return;
+    }
+
+    // Preview scroll: [ up, ] down
+    if (input === ']') {
+      setPreviewScrollOffset(prev => prev + 3);
+      return;
+    }
+    if (input === '[') {
+      setPreviewScrollOffset(prev => Math.max(0, prev - 3));
+      return;
+    }
+
+    // Navigation resets preview scroll
+    if (key.downArrow || input === 'j') {
+      setPreviewScrollOffset(0);
+      handleKey({ key: 'ArrowDown' });
+    } else if (key.upArrow || input === 'k') {
+      setPreviewScrollOffset(0);
+      handleKey({ key: 'ArrowUp' });
+    } else if (key.return) {
+      handleKey({ key: 'Enter' });
+    } else if (key.pageDown) {
+      setPreviewScrollOffset(0);
+      handleKey({ key: 'PageDown' });
+    } else if (key.pageUp) {
+      setPreviewScrollOffset(0);
+      handleKey({ key: 'PageUp' });
+    }
+  });
+
   return {
     selectedIndex: index,
+    previewScrollOffset,
     handleKey,
   };
 }

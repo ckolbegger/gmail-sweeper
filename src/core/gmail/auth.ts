@@ -236,20 +236,73 @@ export async function loadToken(configDir: string): Promise<StoredToken | null> 
 }
 
 /**
+ * Initiates interactive OAuth2 flow with user input.
+ * @param credentials - OAuth2 credentials
+ * @param configDir - Config directory for token storage
+ * @param inputFn - Function to get user input (authorization code)
+ * @returns Token object after successful authentication
+ * @throws AuthenticationError on failure
+ */
+export async function interactiveOAuthFlow(
+  credentials: OAuth2Credentials,
+  configDir: string,
+  inputFn: (prompt: string) => Promise<string>
+): Promise<StoredToken> {
+  // Validate credentials
+  if (!credentials.clientId || !credentials.clientSecret) {
+    throw new AuthenticationError('Missing OAuth2 credentials: clientId and clientSecret are required');
+  }
+
+  // Generate auth URL
+  const authUrl = generateAuthUrl(credentials);
+
+  // Display URL to user and get authorization code
+  console.log('\n🔐 Gmail authentication required\n');
+  console.log('Please visit this URL to authorize the application:');
+  console.log(`\n${authUrl}\n`);
+
+  const code = await inputFn('Enter the authorization code: ');
+
+  if (!code) {
+    throw new AuthenticationError('Authorization code is required');
+  }
+
+  // Exchange code for tokens
+  const token = await exchangeCodeForTokens({
+    ...credentials,
+    code,
+  });
+
+  // Save token for future use
+  await saveToken(configDir, token);
+
+  console.log('✅ Authentication successful! Token saved.\n');
+
+  return token;
+}
+
+/**
  * Gets an authenticated OAuth2 client, refreshing the token if needed.
  * @param credentials - OAuth2 credentials
  * @param configDir - Config directory for token storage
+ * @param inputFn - Optional function to get user input for interactive auth
  * @returns Authenticated OAuth2 client
- * @throws AuthenticationError if no valid token exists
+ * @throws AuthenticationError if no valid token exists and inputFn not provided
  */
 export async function getAuthenticatedClient(
   credentials: OAuth2Credentials,
-  configDir: string
+  configDir: string,
+  inputFn?: (prompt: string) => Promise<string>
 ): Promise<Auth.OAuth2Client> {
   let token = await loadToken(configDir);
 
   if (!token) {
-    throw new AuthenticationError('No stored token found. Please authenticate first.');
+    if (inputFn) {
+      // Interactive OAuth flow
+      token = await interactiveOAuthFlow(credentials, configDir, inputFn);
+    } else {
+      throw new AuthenticationError('No stored token found. Please authenticate first.');
+    }
   }
 
   // Refresh if expired

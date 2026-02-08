@@ -66,10 +66,11 @@ export class GmailClient {
 
   /**
    * T023: Authenticates with Gmail API using OAuth2.
+   * @param inputFn - Optional function to get user input for interactive auth
    * @returns true if authentication succeeded
    * @throws AuthenticationError if authentication fails
    */
-  async authenticate(): Promise<boolean> {
+  async authenticate(inputFn?: (prompt: string) => Promise<string>): Promise<boolean> {
     try {
       if (!this.credentials) {
         // Use default credentials from environment or config
@@ -80,7 +81,7 @@ export class GmailClient {
         };
       }
 
-      this.auth = await getAuthenticatedClient(this.credentials, this.configDir);
+      this.auth = await getAuthenticatedClient(this.credentials, this.configDir, inputFn);
       this.gmail = google.gmail({ version: 'v1', auth: this.auth });
       return true;
     } catch (error) {

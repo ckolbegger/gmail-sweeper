@@ -4,6 +4,9 @@
  * T034-T036: CLI entry point for Gmail Sweep.
  */
 
+import 'dotenv/config.js';
+import { createInterface } from 'readline';
+import { open } from 'fs/promises';
 import { Command } from 'commander';
 import { loadConfig, createDefaultConfig, DEFAULT_CONFIG_DIR } from '../core/config.js';
 import type { Config } from '../core/models/index.js';
@@ -106,6 +109,64 @@ export function validateAccount(
 }
 
 /**
+ * Creates an input function for interactive user prompts via readline.
+ * Uses /dev/tty to avoid interfering with Ink's stdin handling.
+ * @returns Function that prompts user for input
+ */
+export function createUserInputFunction(): (prompt: string) => Promise<string> {
+  return async (prompt: string): Promise<string> => {
+    try {
+      // Try to use /dev/tty to avoid interfering with Ink
+      const tty = await open('/dev/tty', 'r+');
+      const rl = createInterface({
+        input: tty.createReadStream(),
+        output: process.stdout,
+      });
+
+      return new Promise((resolve, reject) => {
+        rl.question(prompt, async (answer) => {
+          rl.close();
+          try {
+            await tty.close();
+          } catch {
+            // Ignore close errors
+          }
+          resolve(answer.trim());
+        });
+
+        rl.on('error', async (err) => {
+          rl.close();
+          try {
+            await tty.close();
+          } catch {
+            // Ignore close errors
+          }
+          reject(err);
+        });
+      });
+    } catch {
+      // Fallback to process.stdin if /dev/tty is not available
+      const rl = createInterface({
+        input: process.stdin,
+        output: process.stdout,
+      });
+
+      return new Promise((resolve, reject) => {
+        rl.question(prompt, (answer) => {
+          rl.close();
+          resolve(answer.trim());
+        });
+
+        rl.on('error', (err) => {
+          rl.close();
+          reject(err);
+        });
+      });
+    }
+  };
+}
+
+/**
  * T036: Main entry point - launches the TUI application.
  */
 async function main(): Promise<void> {
@@ -151,7 +212,8 @@ async function main(): Promise<void> {
 
     // Initialize Gmail client
     const client = new GmailClient(account, configDir);
-    await client.authenticate();
+    const inputFn = createUserInputFunction();
+    await client.authenticate(inputFn);
 
     // Initialize email cache
     const dbPath = `${configDir}/emails.db`;

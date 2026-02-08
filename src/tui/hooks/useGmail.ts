@@ -24,6 +24,7 @@ interface UseGmailState {
 interface UseGmailResult extends UseGmailState {
   refresh: () => Promise<void>;
   loadMore: () => Promise<void>;
+  fetchEmailDetail: (emailId: string) => Promise<Email | null>;
 }
 
 export function useGmail({
@@ -161,9 +162,34 @@ export function useGmail({
     }
   }, [state.hasMore, state.pageToken, cache, client, initialLoadSize]);
 
+  const fetchEmailDetail = useCallback(async (emailId: string): Promise<Email | null> => {
+    if (!client) return null;
+
+    // Check if we already have the body
+    const existing = state.emails.find(e => e.id === emailId);
+    if (existing?.bodyText || existing?.bodyHtml) {
+      return existing;
+    }
+
+    try {
+      const fullEmail = await client.getMessage(emailId, 'full');
+
+      // Update the email in state with full body
+      setState(prev => ({
+        ...prev,
+        emails: prev.emails.map(e => e.id === emailId ? { ...e, ...fullEmail } : e),
+      }));
+
+      return fullEmail;
+    } catch {
+      return null;
+    }
+  }, [client, state.emails]);
+
   return {
     ...state,
     refresh,
     loadMore,
+    fetchEmailDetail,
   };
 }

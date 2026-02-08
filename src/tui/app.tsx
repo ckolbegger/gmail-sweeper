@@ -2,9 +2,8 @@
  * T041/T048/T050: Main TUI app shell - coordinates email list, preview, and keyboard navigation.
  */
 
-import { useState } from 'react';
-import { Box, Text } from 'ink';
-import type { Email } from '../core/models/index.js';
+import { useEffect, useRef } from 'react';
+import { Box, Text, useStdout } from 'ink';
 import type { GmailClient } from '../core/gmail/client.js';
 import type { EmailCache } from '../core/cache/db.js';
 import { EmailList } from './components/EmailList.js';
@@ -18,21 +17,32 @@ interface AppProps {
 }
 
 export function InboxApp({ client, cache }: AppProps) {
-  const { emails, isLoading, error } = useGmail({ client, cache });
-  const [selectedEmail, setSelectedEmail] = useState<Email>();
+  const { emails, isLoading, error, fetchEmailDetail } = useGmail({ client, cache });
+  const lastFetchedId = useRef<string | null>(null);
+  const { stdout } = useStdout();
+  const terminalHeight = stdout?.rows ?? 24;
+  // Reserve 3 lines for header + footer + loading indicator
+  const contentHeight = Math.max(5, terminalHeight - 3);
 
   const keyboard = useKeyboard({
     itemCount: emails.length,
-    selectedIndex: Math.max(
-      0,
-      selectedEmail ? emails.findIndex(e => e.id === selectedEmail.id) : 0
-    ),
-    onSelect: (index) => {
-      if (emails[index]) {
-        setSelectedEmail(emails[index]);
-      }
-    },
+    selectedIndex: 0,
+    onSelect: () => {},
+    pageSize: 10,
   });
+
+  // Derive selected email from current navigation index
+  const selectedEmail = emails[keyboard.selectedIndex];
+
+  // Fetch full email body when selection changes
+  useEffect(() => {
+    if (selectedEmail && selectedEmail.id !== lastFetchedId.current) {
+      if (!selectedEmail.bodyText && !selectedEmail.bodyHtml) {
+        lastFetchedId.current = selectedEmail.id;
+        fetchEmailDetail(selectedEmail.id);
+      }
+    }
+  }, [selectedEmail, fetchEmailDetail]);
 
   // T050: Loading state
   if (isLoading && emails.length === 0) {
@@ -63,20 +73,20 @@ export function InboxApp({ client, cache }: AppProps) {
       </Box>
 
       {/* Main content - split pane */}
-      <Box flexDirection="row">
+      <Box flexDirection="row" height={contentHeight}>
         {/* Left: Email list */}
-        <Box width="50%">
+        <Box width="50%" height={contentHeight} overflow="hidden">
           <EmailList
             emails={emails}
             selectedIndex={keyboard.selectedIndex}
             maxSubjectLength={40}
-            viewportHeight={15}
+            viewportHeight={contentHeight}
           />
         </Box>
 
         {/* Right: Email preview */}
-        <Box width="50%" paddingLeft={2}>
-          <EmailPreview email={selectedEmail} maxHeight={15} />
+        <Box width="50%" paddingLeft={1} height={contentHeight} overflow="hidden">
+          <EmailPreview email={selectedEmail} maxHeight={contentHeight} scrollOffset={keyboard.previewScrollOffset} />
         </Box>
       </Box>
 

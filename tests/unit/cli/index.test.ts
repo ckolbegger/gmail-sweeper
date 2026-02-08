@@ -4,6 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { parseArgs, validateAccount, type CLIOptions } from '../../../src/cli/index.js';
+import * as fs from 'fs';
 
 describe('CLI', () => {
   beforeEach(() => {
@@ -97,6 +98,54 @@ describe('CLI', () => {
       const options: CLIOptions = {};
       const account = validateAccount(options, '');
       expect(account).toBe('');
+    });
+  });
+
+  describe('dotenv', () => {
+    it('should load environment variables from .env file', () => {
+      // Create a temporary .env file for testing
+      const testEnvPath = '/tmp/test-gmail-sweep.env';
+      const testEnvContent = 'TEST_GMAIL_CLIENT_ID=test-client-id\nTEST_GMAIL_CLIENT_SECRET=test-secret\n';
+      fs.writeFileSync(testEnvPath, testEnvContent);
+
+      try {
+        // Import and execute dotenv config
+        const dotenv = require('dotenv');
+        const result = dotenv.config({ path: testEnvPath });
+
+        // Verify that dotenv.config succeeded
+        expect(result.error).toBeUndefined();
+        expect(result.parsed).toBeDefined();
+        expect(result.parsed?.TEST_GMAIL_CLIENT_ID).toBe('test-client-id');
+        expect(result.parsed?.TEST_GMAIL_CLIENT_SECRET).toBe('test-secret');
+      } finally {
+        // Cleanup
+        fs.unlinkSync(testEnvPath);
+      }
+    });
+
+    it('should verify .env file exists in project root', () => {
+      // Check that the .env file exists in the project root
+      const envPath = process.cwd() + '/.env';
+      expect(fs.existsSync(envPath)).toBe(true);
+    });
+
+    it('should have GMAIL_CLIENT_ID in .env', () => {
+      const envPath = process.cwd() + '/.env';
+      const envContent = fs.readFileSync(envPath, 'utf-8');
+      expect(envContent).toContain('GMAIL_CLIENT_ID');
+    });
+
+    it('should have GMAIL_CLIENT_SECRET in .env', () => {
+      const envPath = process.cwd() + '/.env';
+      const envContent = fs.readFileSync(envPath, 'utf-8');
+      expect(envContent).toContain('GMAIL_CLIENT_SECRET');
+    });
+
+    it('should have GMAIL_REDIRECT_URI in .env', () => {
+      const envPath = process.cwd() + '/.env';
+      const envContent = fs.readFileSync(envPath, 'utf-8');
+      expect(envContent).toContain('GMAIL_REDIRECT_URI');
     });
   });
 });

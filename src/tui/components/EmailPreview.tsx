@@ -8,6 +8,7 @@ import type { Email } from '../../core/models/index.js';
 interface EmailPreviewProps {
   email: Email | undefined;
   maxHeight: number;
+  scrollOffset?: number;
 }
 
 /**
@@ -34,52 +35,53 @@ function formatRecipients(recipients: Array<{ email: string; name?: string }>): 
     .join(', ');
 }
 
-export function EmailPreview({ email, maxHeight = 20 }: EmailPreviewProps) {
+export function EmailPreview({ email, maxHeight = 20, scrollOffset = 0 }: EmailPreviewProps) {
   if (!email) {
     return (
-      <Box flexDirection="column" padding={1}>
-        <Text>No email selected. Select an email from the list.</Text>
+      <Box flexDirection="column">
+        <Text dimColor>No email selected.</Text>
       </Box>
     );
   }
 
+  // Header takes ~4 lines (subject, from, to, separator)
+  const headerLines = 4;
+  // 1 line for scroll indicator at bottom
+  const bodyMaxLines = Math.max(1, maxHeight - headerLines - 1);
+
   const body = email.bodyText || (email.bodyHtml ? htmlToText(email.bodyHtml) : '');
-  const bodyLines = body.split('\n');
-  const displayedLines = maxHeight ? bodyLines.slice(0, maxHeight) : bodyLines;
+  const allBodyLines = body.split('\n');
+  const totalLines = allBodyLines.length;
+  const clampedOffset = Math.min(scrollOffset, Math.max(0, totalLines - bodyMaxLines));
+  const displayedLines = allBodyLines.slice(clampedOffset, clampedOffset + bodyMaxLines);
+  const hasMore = clampedOffset + bodyMaxLines < totalLines;
+  const hasScrolledDown = clampedOffset > 0;
 
   return (
-    <Box flexDirection="column" padding={1} width="100%">
+    <Box flexDirection="column" width="100%">
       {/* Header */}
-      <Text bold>{email.subject}</Text>
-
-      {/* From/To */}
-      <Box flexDirection="row" marginY={1}>
-        <Text>From: </Text>
-        <Text>{email.sender.name || email.sender.email}</Text>
-      </Box>
-
-      <Box flexDirection="row" marginY={1}>
-        <Text>To: </Text>
-        <Text>{formatRecipients(email.recipients)}</Text>
-      </Box>
-
-      {/* Attachments indicator */}
-      {email.hasAttachments && (
-        <Box marginY={1}>
-          <Text>📎 Has attachments</Text>
-        </Box>
-      )}
+      <Text bold wrap="truncate">{email.subject}</Text>
+      <Text wrap="truncate">From: {email.sender.name || email.sender.email}</Text>
+      <Text wrap="truncate">To: {formatRecipients(email.recipients)}</Text>
+      {email.hasAttachments && <Text>📎 Has attachments</Text>}
+      <Text dimColor>{'─'.repeat(40)}</Text>
 
       {/* Body */}
-      <Box flexDirection="column" marginY={1} borderStyle="round" borderColor="gray">
-        {displayedLines.length > 0 ? (
-          displayedLines.map((line, idx) => (
-            <Text key={idx}>{line}</Text>
-          ))
-        ) : (
-          <Text>(No body)</Text>
-        )}
-      </Box>
+      {displayedLines.length > 0 ? (
+        displayedLines.map((line, idx) => (
+          <Text key={idx} wrap="truncate">{line}</Text>
+        ))
+      ) : (
+        <Text dimColor>(No body)</Text>
+      )}
+
+      {/* Scroll indicator */}
+      <Text dimColor>
+        {hasScrolledDown ? '↑ ' : '  '}
+        Lines {clampedOffset + 1}-{Math.min(clampedOffset + bodyMaxLines, totalLines)} of {totalLines}
+        {hasMore ? ' ↓' : ''}
+        {(hasMore || hasScrolledDown) ? '  [/] scroll' : ''}
+      </Text>
     </Box>
   );
 }
