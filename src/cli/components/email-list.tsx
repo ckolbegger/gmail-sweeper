@@ -57,6 +57,10 @@ export function truncateDisplay(value: string, maxWidth: number): string {
   return value;
 }
 
+export function toAscii(value: string): string {
+  return value.replace(/[^\x20-\x7E]/g, '').trimStart();
+}
+
 export function EmailList({ emails, selectedId, onSelect, sort, maxVisibleRows }: EmailListProps) {
   const [selectedIndex, setSelectedIndex] = useState(() => {
     const idx = emails.findIndex((e) => e.id === selectedId);
@@ -185,8 +189,8 @@ export function EmailList({ emails, selectedId, onSelect, sort, maxVisibleRows }
             <Box width={40}>
               <Text bold={isUnread} dimColor={!isSelected}>
                 {isSelected
-                  ? `> ${truncateDisplay(email.subject, 36)}`
-                  : `  ${truncateDisplay(email.subject, 36)}`}
+                  ? `> ${truncateDisplay(toAscii(email.subject), 36)}`
+                  : `  ${truncateDisplay(toAscii(email.subject), 36)}`}
               </Text>
             </Box>
             <Box width={25}>
