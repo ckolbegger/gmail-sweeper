@@ -2,7 +2,6 @@
  * T049: TUI entry point - initializes and renders the Ink app.
  */
 
-import React from 'react';
 import { render } from 'ink';
 import type { GmailClient } from '../core/gmail/client.js';
 import type { EmailCache } from '../core/cache/db.js';

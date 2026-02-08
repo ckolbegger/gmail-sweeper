@@ -3,15 +3,13 @@
  * sql.js provides pure JavaScript SQLite without native compilation issues.
  */
 
+// @ts-ignore - sql.js has no TypeScript declarations
 import initSqlJs from 'sql.js';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
 import type {
   Email,
-  EmailAddress,
-  Label,
   EmailCacheOptions,
-  Category,
 } from '../models/index.js';
 
 let SQL: any = null;

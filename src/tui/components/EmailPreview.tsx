@@ -2,13 +2,12 @@
  * T047: EmailPreview component - displays full email content.
  */
 
-import React from 'react';
 import { Box, Text } from 'ink';
 import type { Email } from '../../core/models/index.js';
 
 interface EmailPreviewProps {
-  email?: Email;
-  maxHeight?: number;
+  email: Email | undefined;
+  maxHeight: number;
 }
 
 /**

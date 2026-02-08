@@ -18,7 +18,7 @@ interface UseGmailState {
   isLoading: boolean;
   error: Error | null;
   hasMore: boolean;
-  pageToken?: string;
+  pageToken: string | undefined;
 }
 
 interface UseGmailResult extends UseGmailState {
@@ -36,6 +36,7 @@ export function useGmail({
     isLoading: true,
     error: null,
     hasMore: true,
+    pageToken: undefined,
   });
 
   const pendingRefreshRef = useRef<Promise<void> | null>(null);
@@ -137,7 +138,7 @@ export function useGmail({
 
       const result = await client.listMessages({
         maxResults: initialLoadSize,
-        pageToken: state.pageToken,
+        ...(state.pageToken ? { pageToken: state.pageToken } : {}),
       });
 
       cache.upsertEmails(result.messages);

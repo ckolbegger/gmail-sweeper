@@ -2,14 +2,12 @@
  * T044: EmailList component - displays list of emails with selection and virtualization.
  */
 
-import React, { useMemo, useState } from 'react';
 import { Box, Text } from 'ink';
 import type { Email } from '../../core/models/index.js';
 
 interface EmailListProps {
   emails: Email[];
   selectedIndex: number;
-  onSelect: (index: number) => void;
   maxSubjectLength?: number;
   viewportHeight?: number;
 }
@@ -44,12 +42,9 @@ function truncateSubject(subject: string, maxLength: number = 60): string {
 export function EmailList({
   emails,
   selectedIndex,
-  onSelect,
   maxSubjectLength = 60,
   viewportHeight = 10,
 }: EmailListProps) {
-  const [scrollOffset, setScrollOffset] = useState(0);
-
   // Ensure selected index stays within bounds
   const clampedSelectedIndex = Math.max(0, Math.min(selectedIndex, emails.length - 1));
 
@@ -76,19 +71,27 @@ export function EmailList({
         return (
           <Box key={email.id} flexDirection="row" padding={0} {...displayStyle}>
             {/* Selection indicator */}
-            <Text width={1}>{isSelected ? '>' : ' '}</Text>
+            <Box width={1}>
+              <Text>{isSelected ? '>' : ' '}</Text>
+            </Box>
 
             {/* Subject - T045: Bold for unread emails */}
-            <Text width="40%" bold={!email.isRead}>
-              {email.isRead ? ' ' : '• '}
-              {truncateSubject(email.subject, maxSubjectLength)}
-            </Text>
+            <Box width="40%">
+              <Text bold={!email.isRead}>
+                {email.isRead ? ' ' : '• '}
+                {truncateSubject(email.subject, maxSubjectLength)}
+              </Text>
+            </Box>
 
             {/* Sender */}
-            <Text width="30%">{email.sender.name || email.sender.email}</Text>
+            <Box width="30%">
+              <Text>{email.sender.name || email.sender.email}</Text>
+            </Box>
 
             {/* Date */}
-            <Text width="20%">{formatRelativeDate(email.date)}</Text>
+            <Box width="20%">
+              <Text>{formatRelativeDate(email.date)}</Text>
+            </Box>
           </Box>
         );
       })}
