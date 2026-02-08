@@ -147,25 +147,6 @@ describe('EmailList', () => {
     expect(onSelect).toBeDefined();
   });
 
-  it('should display email labels', () => {
-    const email = createEmail({
-      id: '1',
-      subject: 'Labeled Email',
-      labels: ['INBOX', 'IMPORTANT', 'STARRED'],
-    });
-
-    const { lastFrame } = render(
-      React.createElement(EmailList, {
-        emails: [email],
-        selectedIndex: 0,
-        onSelect: vi.fn(),
-      })
-    );
-
-    const frame = lastFrame();
-    expect(frame).toContain('INBOX');
-  });
-
   it('should truncate long subjects', () => {
     const email = createEmail({
       id: '1',

@@ -57,11 +57,30 @@ function formatDate(date: Date): string {
 }
 
 /**
+ * Strip emoji and other wide characters that cause terminal alignment issues
+ */
+function stripEmoji(text: string): string {
+  // Remove emoji and other non-ASCII characters that affect terminal width
+  return text
+    .replace(/[\u{1F600}-\u{1F64F}]/gu, '') // Emoticons
+    .replace(/[\u{1F300}-\u{1F5FF}]/gu, '') // Symbols & pictographs
+    .replace(/[\u{1F680}-\u{1F6FF}]/gu, '') // Transport & map symbols
+    .replace(/[\u{1F1E0}-\u{1F1FF}]/gu, '') // Flags
+    .replace(/[\u{2600}-\u{26FF}]/gu, '')   // Misc symbols
+    .replace(/[\u{2700}-\u{27BF}]/gu, '')   // Dingbats
+    .replace(/[\u{1F900}-\u{1F9FF}]/gu, '') // Supplemental symbols
+    .replace(/[\u{1FA00}-\u{1FA6F}]/gu, '') // Chess symbols
+    .replace(/[\u{1FA70}-\u{1FAFF}]/gu, '') // Symbols and pictographs extended-a
+    .trim();
+}
+
+/**
  * Truncate text to max length
  */
 function truncate(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength - 3) + '...';
+  const cleanText = stripEmoji(text);
+  if (cleanText.length <= maxLength) return cleanText;
+  return cleanText.slice(0, maxLength - 3) + '...';
 }
 
 /**
@@ -179,9 +198,6 @@ export function EmailList({
         const displayText = truncate(email.subject, 50);
         const senderName = email.sender.name || email.sender.email;
         const dateStr = formatDate(email.dateReceived);
-
-        // Build labels string
-        const labelsStr = email.labels.slice(0, 3).map(l => `[${truncate(l, 8)}]`).join(' ');
         const indent = showReadStatus ? '      ' : '   ';
         
         return (
@@ -199,10 +215,8 @@ export function EmailList({
                 (isSelected ? '>' : ' ') + 
                 // Read status
                 (showReadStatus ? (email.isRead ? '   ' : ' ● ') : ' ') +
-                // Subject padded for labels
-                displayText.padEnd(50, ' ') +
-                // Labels
-                labelsStr
+                // Subject
+                displayText
               )
             ),
             
