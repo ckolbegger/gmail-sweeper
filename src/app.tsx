@@ -17,6 +17,23 @@ export default function App({ limit = 10, service: providedService }: AppProps) 
     const { emails, loading, error } = useGmail(service, { maxResults: limit });
     const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
     const [focusedIndex, setFocusedIndex] = useState(0);
+    const [terminalDimensions, setTerminalDimensions] = useState({
+        columns: process.stdout.columns || 100,
+        rows: process.stdout.rows || 24
+    });
+
+    useEffect(() => {
+        const updateDimensions = () => {
+            setTerminalDimensions({
+                columns: process.stdout.columns,
+                rows: process.stdout.rows
+            });
+        };
+        process.stdout.on('resize', updateDimensions);
+        return () => {
+            process.stdout.off('resize', updateDimensions);
+        };
+    }, []);
 
     // Reset focus if emails change
     useEffect(() => {
@@ -34,7 +51,6 @@ export default function App({ limit = 10, service: providedService }: AppProps) 
             }
         }
 
-        // Only navigate if detail panel is NOT open
         if (!selectedEmail) {
             if (key.upArrow) {
                 setFocusedIndex(prev => Math.max(0, prev - 1));
@@ -52,41 +68,48 @@ export default function App({ limit = 10, service: providedService }: AppProps) 
     });
 
     return (
-        <Box flexDirection="column" padding={1}>
-            <Box borderStyle="round" borderColor="blue" paddingX={1} marginBottom={1}>
+        <Box flexDirection="column" padding={1} width={terminalDimensions.columns} height={terminalDimensions.rows}>
+            <Box borderStyle="round" borderColor="blue" paddingX={1} marginBottom={1} flexShrink={0}>
                 <Text bold color="green">Gmail Sweep (v0.1.0)</Text>
             </Box>
 
             {loading && (
-                <Box padding={1}>
+                <Box padding={1} flexGrow={1}>
                     <Text color="yellow">Loading emails (check browser for auth if needed)...</Text>
                 </Box>
             )}
 
             {error && (
-                <Box padding={1}>
+                <Box padding={1} flexGrow={1}>
                     <Text color="red">Error: {error}</Text>
                 </Box>
             )}
 
             {!loading && !error && (
-                <Box flexDirection="row">
+                <Box flexDirection="row" flexGrow={1} overflow="hidden">
                     <Box width="40%" flexDirection="column">
                         <InboxList 
                             emails={emails} 
                             focusedIndex={focusedIndex}
+                            terminalWidth={terminalDimensions.columns}
+                            terminalHeight={terminalDimensions.rows}
                         />
                     </Box>
                     <Box width="60%" marginLeft={2}>
-                        <EmailDetail email={selectedEmail} isActive={!!selectedEmail} />
+                        <EmailDetail 
+                            email={selectedEmail} 
+                            isActive={!!selectedEmail} 
+                            terminalWidth={terminalDimensions.columns}
+                            terminalHeight={terminalDimensions.rows}
+                        />
                     </Box>
                 </Box>
             )}
 
-            <Box marginTop={1} borderStyle="classic" borderColor="gray" paddingX={1}>
+            <Box marginTop={1} borderStyle="classic" borderColor="gray" paddingX={1} flexShrink={0}>
                 <Text color="gray"> 
                     {selectedEmail 
-                        ? ' [Esc] Close Detail ' 
+                        ? ' [Esc] Close Detail  [Arrows] Scroll ' 
                         : ' [Arrows] Navigate  [Enter] View  [Esc] Exit '}
                 </Text>
             </Box>

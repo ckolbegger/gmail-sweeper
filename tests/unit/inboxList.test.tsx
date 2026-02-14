@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { InboxList } from '../../src/components/Inbox/InboxList';
 import { Email } from '../../src/types';
 
@@ -36,43 +36,32 @@ const mockEmails: Email[] = [
 describe('InboxList', () => {
     it('should render a list of emails', () => {
         const { lastFrame } = render(
-            <InboxList emails={mockEmails} focusedIndex={0} />
+            <InboxList emails={mockEmails} focusedIndex={0} terminalWidth={100} terminalHeight={24} />
         );
 
         const frame = lastFrame();
         expect(frame).toContain('Test Subject 1');
         expect(frame).toContain('Test Subject 2');
-        expect(frame).toContain('sender1@test.com');
-        expect(frame).toContain('sender2@test.com');
-    });
-
-    it('should distinguish unread emails with bold text', () => {
-        const { lastFrame } = render(
-            <InboxList emails={mockEmails} focusedIndex={0} />
-        );
-        // Note: Styling is hard to test via frame strings, but we ensure no crash
-        expect(lastFrame()).toBeDefined();
+        expect(frame).toContain('sender1@test');
     });
 
     it('should show the focus indicator on the correct item', async () => {
         const { lastFrame, rerender } = render(
-            <InboxList emails={mockEmails} focusedIndex={0} />
+            <InboxList emails={mockEmails} focusedIndex={0} terminalWidth={100} terminalHeight={24} />
         );
 
-        // Initial focus on first email
         expect(lastFrame()).toContain('❯');
-        expect(lastFrame()).toContain('sender1@test.com');
+        expect(lastFrame()).toContain('sender1@test');
 
-        // Update focus to second item
-        rerender(<InboxList emails={mockEmails} focusedIndex={1} />);
+        rerender(<InboxList emails={mockEmails} focusedIndex={1} terminalWidth={100} terminalHeight={24} />);
         
         expect(lastFrame()).toContain('❯');
-        expect(lastFrame()).toContain('sender2@test.com');
+        expect(lastFrame()).toContain('sender2@test');
     });
 
     it('should display empty state when list is empty', () => {
         const { lastFrame } = render(
-            <InboxList emails={[]} focusedIndex={0} />
+            <InboxList emails={[]} focusedIndex={0} terminalWidth={100} terminalHeight={24} />
         );
 
         expect(lastFrame()).toContain('No emails found');

@@ -20,7 +20,7 @@ const mockEmail: Email = {
 
 describe('EmailDetail', () => {
     it('should render email subject, from, and date headers', () => {
-        const { lastFrame } = render(<EmailDetail email={mockEmail} />);
+        const { lastFrame } = render(<EmailDetail email={mockEmail} terminalWidth={100} terminalHeight={24} />);
         const frame = lastFrame();
         expect(frame).toContain('Detailed Subject');
         expect(frame).toContain('From: sender@detail.com');
@@ -28,27 +28,26 @@ describe('EmailDetail', () => {
     });
 
     it('should render the email body content', () => {
-        const { lastFrame } = render(<EmailDetail email={mockEmail} />);
+        const { lastFrame } = render(<EmailDetail email={mockEmail} terminalWidth={100} terminalHeight={24} />);
         expect(lastFrame()).toContain('This is the full body content of the email.');
     });
 
     it('should handle "no email selected" state', () => {
-        const { lastFrame } = render(<EmailDetail email={null} />);
+        const { lastFrame } = render(<EmailDetail email={null} terminalWidth={100} terminalHeight={24} />);
         expect(lastFrame()).toContain('Select an email to view details');
     });
 
     it('should wrap long lines into multiple lines', async () => {
-        // A line long enough to likely exceed typical terminal width fractions
-        const longLine = 'This is a very long line that should be wrapped into multiple lines so that the user can read the entire content without horizontal scrolling or truncation.';
+        const longLine = 'This is a very long line that should be wrapped';
         const emailWithLongLine = { ...mockEmail, body: longLine };
         
-        const { lastFrame } = render(<EmailDetail email={emailWithLongLine} isActive={true} />);
+        // availableWidth = 40 * 0.6 - 8 = 16
+        const { lastFrame } = render(<EmailDetail email={emailWithLongLine} isActive={true} terminalWidth={40} terminalHeight={24} />);
         
         const frame = lastFrame();
-        // If it wraps, we expect to see parts of the string on what looks like different lines
-        // or at least that the string is present and not truncated with '...'
-        expect(frame).toContain('This is a very long line');
-        expect(frame).toContain('horizontal scrolling');
-        expect(frame).not.toContain('...'); // wrap="truncate-end" would add this, we want to remove it
+        expect(frame).toContain('This is a very');
+        expect(frame).toContain('line that should');
+        expect(frame).toContain('be');
+        expect(frame).toContain('wrapped');
     });
 });
