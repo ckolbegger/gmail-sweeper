@@ -154,6 +154,34 @@ describe('GmailService listEmails', () => {
         expect(response.items[0].id).toBe('1');
     });
 
+    it('should extract full body from multipart message', async () => {
+        mockGmail.users.messages.list.mockResolvedValue({
+            data: { messages: [{ id: '1' }] }
+        });
+
+        const testBody = 'Hello, this is the full body content!';
+        const encodedBody = Buffer.from(testBody).toString('base64').replace(/\+/g, '-').replace(/\//g, '_');
+
+        mockGmail.users.messages.get.mockResolvedValue({
+            data: {
+                id: '1',
+                payload: {
+                    mimeType: 'multipart/alternative',
+                    parts: [
+                        {
+                            mimeType: 'text/plain',
+                            body: { data: encodedBody }
+                        }
+                    ],
+                    headers: []
+                }
+            }
+        });
+
+        const response = await service.listEmails({});
+        expect(response.items[0].body).toBe(testBody);
+    });
+
     it('should sort emails by internalDate (descending)', async () => {
         mockGmail.users.messages.list.mockResolvedValue({
             data: {

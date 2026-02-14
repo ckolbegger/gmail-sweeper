@@ -187,12 +187,41 @@ export class GmailService implements IEmailService {
                 from: getHeader('From'),
                 to: getHeader('To'),
                 date: getHeader('Date'),
-                body: msg.snippet || '', 
+                body: this.getBody(msg.payload), 
                 isUnread: (msg.labelIds || []).includes('UNREAD')
             };
         } catch (error) {
             console.error(`Error getting email ${id}:`, error);
             return null;
         }
+    }
+
+    private getBody(payload: any): string {
+        let body = '';
+        
+        if (payload.parts) {
+            for (const part of payload.parts) {
+                if (part.mimeType === 'text/plain') {
+                    body += this.decodeBase64(part.body.data);
+                } else if (part.mimeType === 'text/html' && !body) {
+                    // Fallback to HTML if no plain text found yet
+                    // In a real app we'd strip HTML tags here
+                    body += this.decodeBase64(part.body.data);
+                } else if (part.parts) {
+                    body += this.getBody(part);
+                }
+            }
+        } else if (payload.body && payload.body.data) {
+            body = this.decodeBase64(payload.body.data);
+        }
+
+        return body || payload.snippet || '';
+    }
+
+    private decodeBase64(data: string): string {
+        if (!data) return '';
+        // Gmail uses base64url encoding
+        const base64 = data.replace(/-/g, '+').replace(/_/g, '/');
+        return Buffer.from(base64, 'base64').toString('utf-8');
     }
 }
