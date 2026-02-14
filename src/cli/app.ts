@@ -1,13 +1,16 @@
 import { google } from 'googleapis';
 
 import { createAuthUrl, createGmailClient } from '@/adapters/gmail/client.js';
+import { getEmailDetail, type GmailDetailClientLike } from '@/adapters/gmail/get_email.js';
 import { listInboxEmails, type GmailReadClientLike } from '@/adapters/gmail/list_emails.js';
 import { readAuthTokens, type AuthTokens, writeAuthTokens } from '@/adapters/storage/token_store.js';
 import { parseCliArgs } from '@/cli/args.js';
 import type { AppConfig } from '@/core/config.js';
 import { loadConfig } from '@/core/config.js';
 import { listEmails } from '@/services/email_list_service.js';
+import { renderEmailPreview } from '@/tui/email_preview.js';
 import { renderInboxList } from '@/tui/inbox_list.js';
+import { runInkSession, type RunInkSessionOptions } from '@/tui/ink_runtime.js';
 
 type WritableLogLevel = AppConfig['logLevel'];
 
@@ -25,6 +28,9 @@ export interface CliDeps {
   exchangeAuthCode?: (config: AppConfig, code: string) => Promise<AuthTokens>;
   createGmailClient?: typeof createGmailClient;
   listInboxEmails?: typeof listInboxEmails;
+  getEmailDetail?: typeof getEmailDetail;
+  navigationInputs?: string[];
+  runInkSession?: (options: RunInkSessionOptions) => Promise<void>;
   writeLine?: (line: string) => void;
 }
 
@@ -69,6 +75,8 @@ function renderHelp(): string[] {
     '  --page-limit <n>        Gmail list page count limit (default 5)',
     '  --token-path <path>     Auth token path (default .gmail-sweeper/tokens.json)',
     '  --auth-code <code>      OAuth authorization code to store',
+    '  --interactive           Keep session open for detail navigation',
+    '  --commands <items>      Comma list of commands for scripted navigation',
     '  --print-auth-url        Print auth URL and exit',
     '  --help                  Show help'
   ];
@@ -91,6 +99,8 @@ export async function runInboxCli(argv: string[], deps: CliDeps = {}): Promise<n
   const buildAuthUrl = deps.createAuthUrl ?? defaultCreateAuthUrl;
   const exchangeCode = deps.exchangeAuthCode ?? defaultExchangeAuthCode;
   const listEmailRecords = deps.listInboxEmails ?? listInboxEmails;
+  const fetchEmailDetail = deps.getEmailDetail ?? getEmailDetail;
+  const launchInkSession = deps.runInkSession ?? runInkSession;
   const createClient = deps.createGmailClient ?? createGmailClient;
 
   const config = load();
@@ -121,7 +131,7 @@ export async function runInboxCli(argv: string[], deps: CliDeps = {}): Promise<n
     redirectUri: config.gmailRedirectUri,
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken
-  }) as GmailReadClientLike;
+  }) as GmailReadClientLike & GmailDetailClientLike;
 
   const emails = await listEmailRecords(gmail, {
     pageLimit: options.pageLimit,
@@ -136,10 +146,28 @@ export async function runInboxCli(argv: string[], deps: CliDeps = {}): Promise<n
   });
   const visible = filtered.slice(0, options.limit);
   const lines = renderInboxList(visible);
+  const messageIds = visible.map((email) => email.message_id);
 
   writeLine(`Loaded ${emails.length} emails, showing ${visible.length}.`);
-  for (const line of lines) {
-    writeLine(line);
+  if (options.interactive) {
+    await launchInkSession({
+      listLines: lines,
+      messageIds,
+      fetchDetailLines: async (messageId) => {
+        const detail = await fetchEmailDetail(gmail, messageId, { userId: 'me' });
+        return renderEmailPreview(detail);
+      },
+      scriptedCommands: deps.navigationInputs ?? options.commands,
+      writeFrame: (frame) => {
+        for (const line of frame) {
+          writeLine(line);
+        }
+      }
+    });
+  } else {
+    for (const line of lines) {
+      writeLine(line);
+    }
   }
 
   return 0;

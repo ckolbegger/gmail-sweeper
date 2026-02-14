@@ -9,6 +9,8 @@ export interface CliOptions {
   limit: number;
   tokenPath: string;
   authCode?: string;
+  interactive: boolean;
+  commands: string[];
   printAuthUrl: boolean;
   help: boolean;
 }
@@ -18,6 +20,8 @@ const DEFAULT_OPTIONS: CliOptions = {
   pageSize: 50,
   limit: 25,
   tokenPath: '.gmail-sweeper/tokens.json',
+  interactive: false,
+  commands: [],
   printAuthUrl: false,
   help: false
 };
@@ -99,6 +103,16 @@ export function parseCliArgs(args: string[]): CliOptions {
         break;
       case '--auth-code':
         options.authCode = getValue(args, index, arg);
+        index += 1;
+        break;
+      case '--interactive':
+        options.interactive = true;
+        break;
+      case '--commands':
+        options.commands = getValue(args, index, arg)
+          .split(',')
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0);
         index += 1;
         break;
       case '--print-auth-url':

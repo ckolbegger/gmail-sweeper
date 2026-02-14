@@ -3,12 +3,12 @@ import { mapError } from '@/core/errors.js';
 
 async function main(): Promise<void> {
   const exitCode = await runInboxCli(process.argv.slice(2));
-  process.exitCode = exitCode;
+  process.exit(exitCode);
 }
 
 main().catch((error) => {
   const mapped = mapError(error);
   // eslint-disable-next-line no-console
   console.error(`(error) ${mapped.message}`);
-  process.exitCode = 1;
+  process.exit(1);
 });
