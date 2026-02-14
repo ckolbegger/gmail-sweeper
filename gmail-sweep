@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Gmail Sweep - Interactive Inbox Organizer
+
+# Get the directory where the script is located
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Run the app using tsx
+exec npx tsx "$DIR/src/index.tsx" "$@"
