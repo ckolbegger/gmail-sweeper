@@ -54,6 +54,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
     }, [email, availableWidth]);
 
     const maxOffset = Math.max(0, allLines.length - windowHeight);
+    const clampedOffset = Math.min(scrollOffset, maxOffset);
 
     // Reset scroll when email changes
     useEffect(() => {
@@ -79,7 +80,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
         );
     }
 
-    const visibleLines = allLines.slice(scrollOffset, scrollOffset + windowHeight);
+    const visibleLines = allLines.slice(clampedOffset, clampedOffset + windowHeight);
 
     return (
         <Box flexDirection="column" padding={1} borderStyle="single" borderColor={isActive ? 'blue' : 'gray'} width="100%" height="100%">
@@ -96,7 +97,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                 {allLines.length > windowHeight && (
                     <Box marginTop={0}>
                         <Text color="yellow">
-                            -- [{scrollOffset + 1}-{Math.min(scrollOffset + windowHeight, allLines.length)} of {allLines.length}] --
+                            -- [{clampedOffset + 1}-{Math.min(clampedOffset + windowHeight, allLines.length)} of {allLines.length}] --
                         </Text>
                     </Box>
                 )}

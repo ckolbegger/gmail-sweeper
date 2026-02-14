@@ -15,8 +15,10 @@ export const InboxList: React.FC<InboxListProps> = ({
     terminalWidth, 
     terminalHeight 
 }) => {
-  const visibleCount = useMemo(() => Math.max(5, terminalHeight - 10), [terminalHeight]);
-  const listWidth = useMemo(() => Math.floor(terminalWidth * 0.4) - 2, [terminalWidth]);
+  // Each email now takes 2 lines. 
+  // We subtract headers/footers and then divide by 2 to get visible count.
+  const visibleCount = useMemo(() => Math.max(2, Math.floor((terminalHeight - 10) / 2)), [terminalHeight]);
+  const listWidth = Math.floor(terminalWidth * 0.4) - 2;
 
   if (!emails || emails.length === 0) {
     return (
@@ -36,29 +38,50 @@ export const InboxList: React.FC<InboxListProps> = ({
         const isFocused = absoluteIndex === focusedIndex;
         const isUnread = email.isUnread;
 
+        // Metadata line formatting: Sender (Left) | Date (Right)
+        // Reserve ~16 chars for date
+        const dateStr = email.date || '';
+        const maxSenderWidth = Math.max(5, listWidth - dateStr.length - 5);
+        const senderStr = (email.from || '').substring(0, maxSenderWidth);
+
         return (
           <Box 
             key={email.id} 
+            flexDirection="column"
             backgroundColor={isFocused ? 'blue' : undefined}
-            height={1}
+            paddingX={1}
+            marginBottom={1}
           >
-            <Text color={isFocused ? 'white' : 'blue'}>
-              {isFocused ? '❯' : ' '}
-            </Text>
-            <Text 
-              bold={isUnread} 
-              color={isFocused ? 'white' : (isUnread ? 'white' : 'gray')} 
-              wrap="truncate"
-            >
-              {` ${(email.from || '').substring(0, 12).padEnd(12)}│`}
-            </Text>
-            <Text 
-              bold={isUnread} 
-              color={isFocused ? 'white' : undefined} 
-              wrap="truncate"
-            >
-              {` ${(email.subject || '')}`}
-            </Text>
+            {/* Line 1: Subject */}
+            <Box>
+              <Text color={isFocused ? 'white' : 'blue'}>
+                {isFocused ? '❯ ' : '  '}
+              </Text>
+              <Text 
+                bold={isUnread} 
+                color={isFocused ? 'white' : undefined} 
+                wrap="truncate-end"
+              >
+                {email.subject || '(No Subject)'}
+              </Text>
+            </Box>
+
+            {/* Line 2: Sender & Date */}
+            <Box justifyContent="space-between">
+              <Text 
+                color={isFocused ? 'white' : 'gray'} 
+                dimColor={!isFocused}
+                wrap="truncate-end"
+              >
+                {`  ${senderStr}`}
+              </Text>
+              <Text 
+                color={isFocused ? 'white' : 'gray'} 
+                dimColor={!isFocused}
+              >
+                {dateStr}
+              </Text>
+            </Box>
           </Box>
         );
       })}

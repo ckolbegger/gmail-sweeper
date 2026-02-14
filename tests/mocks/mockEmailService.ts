@@ -1,5 +1,6 @@
 import { IEmailService } from '../../src/types/interfaces';
 import { Email, EmailFilter, PaginatedResponse } from '../../src/types/index';
+import { format } from 'date-fns';
 
 export class MockEmailService implements IEmailService {
     private emails: Email[] = [];
@@ -19,7 +20,7 @@ export class MockEmailService implements IEmailService {
             subject: `Mock Subject ${i}`,
             from: `sender${i}@example.com`,
             to: 'me@example.com',
-            date: new Date(Date.now() - i * 3600000).toISOString(),
+            date: format(new Date(Date.now() - i * 3600000), 'MMM dd HH:mm'),
             body: `<div><h1>Hello from Email ${i}</h1><p>Body content here.</p></div>`,
             isUnread: i % 3 === 0,
         }));

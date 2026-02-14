@@ -7,6 +7,7 @@ import * as path from 'path';
 import * as http from 'http';
 import * as url from 'url';
 import { exec } from 'child_process';
+import { format } from 'date-fns';
 
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.modify'];
 const TOKEN_PATH = path.join(process.cwd(), 'token.json');
@@ -186,7 +187,7 @@ export class GmailService implements IEmailService {
                 subject: getHeader('Subject'),
                 from: getHeader('From'),
                 to: getHeader('To'),
-                date: getHeader('Date'),
+                date: format(new Date(parseInt(msg.internalDate || '0', 10)), 'MMM dd HH:mm'),
                 body: this.getBody(msg.payload), 
                 isUnread: (msg.labelIds || []).includes('UNREAD')
             };

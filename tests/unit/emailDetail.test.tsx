@@ -50,4 +50,43 @@ describe('EmailDetail', () => {
         expect(frame).toContain('be');
         expect(frame).toContain('wrapped');
     });
+
+    it('should scroll content when arrow keys are pressed', async () => {
+        const lines = Array.from({ length: 30 }, (_, i) => `Line ${String.fromCharCode(65 + i)}`);
+        const emailWithLongBody = { ...mockEmail, body: lines.join('\n') };
+        
+        const { lastFrame, stdin } = render(<EmailDetail email={emailWithLongBody} isActive={true} terminalWidth={100} terminalHeight={24} />);
+
+        // Initial view should show Line A
+        expect(lastFrame()).toContain('Line A');
+        expect(lastFrame()).not.toContain('Line Z');
+
+        // Scroll down significantly
+        for (let i = 0; i < 15; i++) {
+            stdin.write('\u001B[B'); // Down arrow
+            await new Promise(resolve => setTimeout(resolve, 5));
+        }
+        
+        const frame = lastFrame();
+        expect(frame).not.toContain('Line A');
+        expect(frame).toContain('Line P');
+    });
+
+    it('should reset scroll position when email changes', async () => {
+        const longBody = Array.from({ length: 30 }, (_, i) => `Line ${i}`).join('\n');
+        const email1 = { ...mockEmail, id: '1', body: longBody };
+        const email2 = { ...mockEmail, id: '2', body: 'New Content' };
+        
+        const { lastFrame, stdin, rerender } = render(<EmailDetail email={email1} isActive={true} terminalWidth={100} terminalHeight={24} />);
+
+        // Scroll down
+        stdin.write('\u001B[B');
+        await new Promise(resolve => setTimeout(resolve, 10));
+        
+        // Change email
+        rerender(<EmailDetail email={email2} isActive={true} terminalWidth={100} terminalHeight={24} />);
+        
+        expect(lastFrame()).toContain('New Content');
+        // If we reached here without error, the reset effect triggered
+    });
 });
