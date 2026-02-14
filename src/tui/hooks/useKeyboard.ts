@@ -9,6 +9,7 @@ interface UseKeyboardOptions {
   itemCount: number;
   selectedIndex: number;
   onSelect: (index: number) => void;
+  onRefresh?: () => void;
   pageSize?: number;
 }
 
@@ -22,6 +23,7 @@ export function useKeyboard({
   itemCount,
   selectedIndex,
   onSelect,
+  onRefresh,
   pageSize = 10,
 }: UseKeyboardOptions): UseKeyboardResult {
   const [index, setIndex] = useState(selectedIndex);
@@ -78,6 +80,12 @@ export function useKeyboard({
   useInput((input, key) => {
     if (input === 'q') {
       exit();
+      return;
+    }
+
+    // Ctrl+R to refresh
+    if (input === 'r' && key.ctrl) {
+      onRefresh?.();
       return;
     }
 

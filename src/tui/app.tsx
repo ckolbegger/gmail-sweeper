@@ -17,7 +17,7 @@ interface AppProps {
 }
 
 export function InboxApp({ client, cache }: AppProps) {
-  const { emails, isLoading, error, fetchEmailDetail } = useGmail({ client, cache });
+  const { emails, isLoading, error, fetchEmailDetail, refresh } = useGmail({ client, cache });
   const lastFetchedId = useRef<string | null>(null);
   const { stdout } = useStdout();
   const terminalHeight = stdout?.rows ?? 24;
@@ -28,6 +28,7 @@ export function InboxApp({ client, cache }: AppProps) {
     itemCount: emails.length,
     selectedIndex: 0,
     onSelect: () => {},
+    onRefresh: refresh,
     pageSize: 10,
   });
 
