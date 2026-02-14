@@ -78,7 +78,7 @@ export default function App({ limit = 10, service: providedService }: AppProps) 
                         />
                     </Box>
                     <Box width="60%" marginLeft={2}>
-                        <EmailDetail email={selectedEmail} />
+                        <EmailDetail email={selectedEmail} isActive={!!selectedEmail} />
                     </Box>
                 </Box>
             )}
