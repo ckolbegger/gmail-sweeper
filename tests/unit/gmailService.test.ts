@@ -182,6 +182,32 @@ describe('GmailService listEmails', () => {
         expect(response.items[0].body).toBe(testBody);
     });
 
+    it('should strip HTML tags from HTML-only messages', async () => {
+        mockGmail.users.messages.list.mockResolvedValue({
+            data: { messages: [{ id: 'html-id' }] }
+        });
+
+        const htmlBody = '<html><body><h1>Hello World</h1><p>This is <b>bold</b> text.</p></body></html>';
+        const encodedBody = Buffer.from(htmlBody).toString('base64').replace(/\+/g, '-').replace(/\//g, '_');
+
+        mockGmail.users.messages.get.mockResolvedValue({
+            data: {
+                id: 'html-id',
+                payload: {
+                    mimeType: 'text/html',
+                    body: { data: encodedBody },
+                    headers: []
+                }
+            }
+        });
+
+        const response = await service.listEmails({});
+        // html-to-text will convert <h1> to uppercase and keep text
+        expect(response.items[0].body).toContain('HELLO WORLD');
+        expect(response.items[0].body).toContain('This is bold text.');
+        expect(response.items[0].body).not.toContain('<html>');
+    });
+
     it('should sort emails by internalDate (descending)', async () => {
         mockGmail.users.messages.list.mockResolvedValue({
             data: {

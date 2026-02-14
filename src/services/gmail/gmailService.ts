@@ -8,6 +8,7 @@ import * as http from 'http';
 import * as url from 'url';
 import { exec } from 'child_process';
 import { format } from 'date-fns';
+import { convert } from 'html-to-text';
 
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.modify'];
 const TOKEN_PATH = path.join(process.cwd(), 'token.json');
@@ -206,14 +207,23 @@ export class GmailService implements IEmailService {
                     body += this.decodeBase64(part.body.data);
                 } else if (part.mimeType === 'text/html' && !body) {
                     // Fallback to HTML if no plain text found yet
-                    // In a real app we'd strip HTML tags here
-                    body += this.decodeBase64(part.body.data);
+                    const html = this.decodeBase64(part.body.data);
+                    body += convert(html, {
+                        wordwrap: false, // We handle wrapping in the UI
+                    });
                 } else if (part.parts) {
                     body += this.getBody(part);
                 }
             }
         } else if (payload.body && payload.body.data) {
-            body = this.decodeBase64(payload.body.data);
+            const data = this.decodeBase64(payload.body.data);
+            if (payload.mimeType === 'text/html') {
+                body = convert(data, {
+                    wordwrap: false,
+                });
+            } else {
+                body = data;
+            }
         }
 
         return body || payload.snippet || '';
