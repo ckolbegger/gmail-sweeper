@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Gmail Sweep CLI wrapper script
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Check if dist/cli/index.js exists
+if [ ! -f "$SCRIPT_DIR/dist/cli/index.js" ]; then
+    echo "❌ Build not found. Building..."
+    cd "$SCRIPT_DIR" && npm run build
+    if [ $? -ne 0 ]; then
+        echo "❌ Build failed"
+        exit 1
+    fi
+fi
+
+# Run the CLI
+exec node "$SCRIPT_DIR/dist/cli/index.js" "$@"
