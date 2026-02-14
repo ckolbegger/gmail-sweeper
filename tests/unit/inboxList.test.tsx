@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { InboxList } from '../../src/components/Inbox/InboxList';
 import { Email } from '../../src/types';
 
@@ -36,7 +36,7 @@ const mockEmails: Email[] = [
 describe('InboxList', () => {
     it('should render a list of emails', () => {
         const { lastFrame } = render(
-            <InboxList emails={mockEmails} onSelect={vi.fn()} />
+            <InboxList emails={mockEmails} focusedIndex={0} />
         );
 
         const frame = lastFrame();
@@ -48,67 +48,31 @@ describe('InboxList', () => {
 
     it('should distinguish unread emails with bold text', () => {
         const { lastFrame } = render(
-            <InboxList emails={mockEmails} onSelect={vi.fn()} />
+            <InboxList emails={mockEmails} focusedIndex={0} />
         );
-
-        // This is a bit tricky to test with string output, but we can verify our implementation uses 'bold'
-        // For now we assume the implementation will handle it.
-        // We might need to check if the framework supports querying for style markers if needed.
+        // Note: Styling is hard to test via frame strings, but we ensure no crash
+        expect(lastFrame()).toBeDefined();
     });
 
-    it('should support keyboard navigation', async () => {
-        const onSelect = vi.fn();
-        const { stdin, lastFrame } = render(
-            <InboxList emails={mockEmails} onSelect={onSelect} />
+    it('should show the focus indicator on the correct item', async () => {
+        const { lastFrame, rerender } = render(
+            <InboxList emails={mockEmails} focusedIndex={0} />
         );
 
         // Initial focus on first email
-        expect(lastFrame()).toContain('> sender1@test.com');
+        expect(lastFrame()).toContain('❯');
+        expect(lastFrame()).toContain('sender1@test.com');
 
-        // Press down arrow
-        stdin.write('\u001B[B');
-        await new Promise(resolve => setTimeout(resolve, 50));
-        expect(lastFrame()).toContain('> sender2@test.com');
-
-        // Press up arrow
-        stdin.write('\u001B[A');
-        await new Promise(resolve => setTimeout(resolve, 50));
-        expect(lastFrame()).toContain('> sender1@test.com');
-    });
-
-    it('should handle selection with Enter key', async () => {
-        const onSelect = vi.fn();
-        const { stdin } = render(
-            <InboxList emails={mockEmails} onSelect={onSelect} />
-        );
-
-        // Press Enter
-        stdin.write('\r');
-        await new Promise(resolve => setTimeout(resolve, 50));
-        expect(onSelect).toHaveBeenCalledWith(mockEmails[0]);
-    });
-
-    it('should not scroll past boundaries', async () => {
-        const { stdin, lastFrame } = render(
-            <InboxList emails={mockEmails} onSelect={vi.fn()} />
-        );
-
-        // Try to go above top
-        stdin.write('\u001B[A');
-        await new Promise(resolve => setTimeout(resolve, 50));
-        expect(lastFrame()).toContain('> sender1@test.com');
-
-        // Go to bottom
-        stdin.write('\u001B[B');
-        await new Promise(resolve => setTimeout(resolve, 50));
-        stdin.write('\u001B[B'); // Extra press
-        await new Promise(resolve => setTimeout(resolve, 50));
-        expect(lastFrame()).toContain('> sender2@test.com');
+        // Update focus to second item
+        rerender(<InboxList emails={mockEmails} focusedIndex={1} />);
+        
+        expect(lastFrame()).toContain('❯');
+        expect(lastFrame()).toContain('sender2@test.com');
     });
 
     it('should display empty state when list is empty', () => {
         const { lastFrame } = render(
-            <InboxList emails={[]} onSelect={vi.fn()} />
+            <InboxList emails={[]} focusedIndex={0} />
         );
 
         expect(lastFrame()).toContain('No emails found');

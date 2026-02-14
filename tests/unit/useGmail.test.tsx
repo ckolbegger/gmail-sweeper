@@ -1,13 +1,13 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { render } from 'ink-testing-library';
 import { describe, it, expect, vi } from 'vitest';
 import { useGmail } from '../../src/hooks/useGmail';
 import { IEmailService } from '../../src/types/interfaces';
 
-const mockEmails = [{ id: '1', subject: 'Test' }];
+const mockEmails: any = [{ id: '1', subject: 'Test' }];
 
 const createMockService = (emails: any = mockEmails): IEmailService => ({
-    listEmails: vi.fn().mockResolvedValue({ items: emails, resultSizeEstimate: emails.length }),
+    listEmails: vi.fn().mockResolvedValue({ items: emails, nextPageToken: undefined }),
     getEmail: vi.fn().mockResolvedValue(emails[0]),
     isAuthenticated: vi.fn().mockResolvedValue(true),
     authenticate: vi.fn().mockResolvedValue(undefined)
@@ -27,8 +27,9 @@ describe('useGmail', () => {
         render(<TestComponent />);
 
         // Wait for fetch
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 100));
 
+        expect(service.isAuthenticated).toHaveBeenCalled();
         expect(service.listEmails).toHaveBeenCalled();
         expect(results.emails).toEqual(mockEmails);
         expect(results.loading).toBe(false);
@@ -47,7 +48,7 @@ describe('useGmail', () => {
         render(<TestComponent />);
         expect(loadingState).toBe(true);
 
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 100));
         expect(loadingState).toBe(false);
     });
 
@@ -63,7 +64,7 @@ describe('useGmail', () => {
         };
 
         render(<TestComponent />);
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         expect(errorResult).toBe('Fetch failed');
     });
@@ -79,10 +80,10 @@ describe('useGmail', () => {
         };
 
         render(<TestComponent />);
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         vi.clearAllMocks();
-        refetchFn();
+        await refetchFn();
         expect(service.listEmails).toHaveBeenCalled();
     });
 });

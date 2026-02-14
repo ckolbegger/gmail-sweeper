@@ -1,58 +1,44 @@
-import React, { useState } from 'react';
-import { Box, Text, useInput } from 'ink';
+import React from 'react';
+import { Box, Text } from 'ink';
 import { Email } from '../../types';
 
 interface InboxListProps {
-    emails: Email[];
-    onSelect: (email: Email) => void;
+  emails: Email[];
+  focusedIndex: number;
 }
 
-export const InboxList: React.FC<InboxListProps> = ({ emails, onSelect }) => {
-    const [selectedIndex, setSelectedIndex] = useState(0);
-
-    useInput((_: string, key: any) => {
-        if (key.upArrow) {
-            setSelectedIndex((prev) => Math.max(0, prev - 1));
-        }
-
-        if (key.downArrow) {
-            setSelectedIndex((prev) => Math.min(emails.length - 1, prev + 1));
-        }
-
-        if (key.return) {
-            onSelect(emails[selectedIndex]);
-        }
-    });
-
-    if (emails.length === 0) {
-        return (
-            <Box>
-                <Text color="gray">No emails found.</Text>
-            </Box>
-        );
-    }
-
+export const InboxList: React.FC<InboxListProps> = ({ emails, focusedIndex }) => {
+  if (!emails || emails.length === 0) {
     return (
-        <Box flexDirection="column">
-            {emails.map((email, index) => {
-                const isSelected = index === selectedIndex;
-                const isUnread = email.isUnread;
-
-                return (
-                    <Box key={email.id} flexDirection="row">
-                        <Text color={isSelected ? 'cyan' : undefined}>
-                            {isSelected ? '> ' : '  '}
-                        </Text>
-                        <Text bold={isUnread} color={isUnread ? 'white' : 'gray'}>
-                            {email.from.padEnd(25)}
-                        </Text>
-                        <Text> | </Text>
-                        <Text bold={isUnread}>
-                            {email.subject}
-                        </Text>
-                    </Box>
-                );
-            })}
-        </Box>
+      <Box padding={1}>
+        <Text color="gray">No emails found</Text>
+      </Box>
     );
+  }
+
+  return (
+    <Box flexDirection="column">
+      {emails.map((email, index) => {
+        const isFocused = index === focusedIndex;
+        const isUnread = email.isUnread;
+
+        return (
+          <Box key={email.id} backgroundColor={isFocused ? 'blue' : undefined}>
+            <Text color={isFocused ? 'white' : 'blue'}>
+              {isFocused ? ' ❯ ' : '   '}
+            </Text>
+            <Text bold={isUnread} color={isFocused ? 'white' : (isUnread ? 'white' : 'gray')}>
+              {(email.from || '').padEnd(25)}
+            </Text>
+            <Text color={isFocused ? 'white' : 'gray'}> │ </Text>
+            <Text bold={isUnread} color={isFocused ? 'white' : undefined}>
+              {(email.subject || '').length > 50 ? (email.subject || '').substring(0, 47) + '...' : (email.subject || '').padEnd(50)}
+            </Text>
+            <Text color={isFocused ? 'white' : 'gray'}> │ </Text>
+            <Text color={isFocused ? 'white' : 'gray'}>{email.date || ''}</Text>
+          </Box>
+        );
+      })}
+    </Box>
+  );
 };

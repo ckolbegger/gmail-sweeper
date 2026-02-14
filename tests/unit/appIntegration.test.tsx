@@ -25,7 +25,7 @@ describe('App Integration', () => {
         });
 
         const { lastFrame } = render(<App />);
-        expect(lastFrame()).toContain('Loading emails...');
+        expect(lastFrame()).toContain('Loading emails (check browser for auth if needed)...');
     });
 
     it('should render error state', () => {
@@ -53,8 +53,7 @@ describe('App Integration', () => {
         expect(lastFrame()).toContain('Subject 1');
         expect(lastFrame()).toContain('Select an email');
 
-        // Selection is handled by InboxList, and App should update its state
-        // In our current InboxList, Enter key triggers onSelect
+        // Selection is handled by InboxList internally now
         stdin.write('\r');
         await new Promise(resolve => setTimeout(resolve, 50));
 

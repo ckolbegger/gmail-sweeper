@@ -4,10 +4,15 @@ import { IEmailService } from '../../types/interfaces';
 import { Email, EmailFilter, PaginatedResponse } from '../../types/index';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import * as http from 'http';
+import * as url from 'url';
+import { exec } from 'child_process';
 
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.modify'];
 const TOKEN_PATH = path.join(process.cwd(), 'token.json');
 const CREDENTIALS_PATH = path.join(process.cwd(), 'credentials.json');
+const PORT = 3000;
+const REDIRECT_URI = `http://localhost:${PORT}/oauth2callback`;
 
 export class GmailService implements IEmailService {
     private auth: OAuth2Client | null = null;
@@ -16,7 +21,7 @@ export class GmailService implements IEmailService {
     constructor() { }
 
     async isAuthenticated(): Promise<boolean> {
-        return !!this.auth;
+        return !!this.auth && !!this.gmail;
     }
 
     async authenticate(): Promise<void> {
@@ -24,26 +29,25 @@ export class GmailService implements IEmailService {
             // 1. Load credentials
             const content = await fs.readFile(CREDENTIALS_PATH, 'utf-8');
             const keys = JSON.parse(content);
-            const { client_secret, client_id, redirect_uris } = keys.installed || keys.web;
+            const web = keys.installed || keys.web;
+            const { client_secret, client_id } = web;
 
-            this.auth = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+            // Force the use of our local listener URI
+            this.auth = new google.auth.OAuth2(client_id, client_secret, REDIRECT_URI);
 
             // Setup token refresh handling
             this.auth.on('tokens', (tokens) => {
                 if (tokens.refresh_token) {
-                    // Logic to store new token would go here
-                    // fs.writeFile(TOKEN_PATH, JSON.stringify(this.auth.credentials))
+                    this.saveToken(tokens);
                 }
             });
 
-            // 2. Load token if exists
+            // 2. Load token if exists, otherwise authorize
             try {
                 const tokenContent = await fs.readFile(TOKEN_PATH, 'utf-8');
                 this.auth.setCredentials(JSON.parse(tokenContent));
             } catch (error) {
-                // Token doesn't exist, need to generate new one
-                console.error('Token not found. Run auth script.');
-                throw new Error('Authentication required');
+                await this.authorizeNewUser();
             }
 
             this.gmail = google.gmail({ version: 'v1', auth: this.auth });
@@ -52,6 +56,78 @@ export class GmailService implements IEmailService {
             console.error('Authentication failed:', error);
             throw error;
         }
+    }
+
+    private async saveToken(tokens: any): Promise<void> {
+        try {
+            const currentToken = await fs.readFile(TOKEN_PATH, 'utf-8').then(JSON.parse).catch(() => ({}));
+            const newToken = { ...currentToken, ...tokens };
+            await fs.writeFile(TOKEN_PATH, JSON.stringify(newToken));
+        } catch (error) {
+            console.error('Error saving token:', error);
+        }
+    }
+
+    private async authorizeNewUser(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            if (!this.auth) return reject(new Error('No auth client'));
+
+            const authUrl = this.auth.generateAuthUrl({
+                access_type: 'offline',
+                scope: SCOPES,
+            });
+
+            const server = http.createServer(async (req, res) => {
+                try {
+                    const requestUrl = new url.URL(req.url || '', `http://localhost:${PORT}`);
+                    
+                    if (requestUrl.pathname === '/oauth2callback') {
+                        const code = requestUrl.searchParams.get('code');
+                        
+                        res.writeHead(200, { 'Content-Type': 'text/plain' });
+                        res.end('Authentication successful! You can close this tab and return to the console.');
+                        
+                        if (code) {
+                            const { tokens } = await this.auth!.getToken(code);
+                            this.auth!.setCredentials(tokens);
+                            await this.saveToken(tokens);
+                            // Cleanup only after success
+                            setTimeout(() => server.close(), 1000);
+                            resolve();
+                        } else {
+                             reject(new Error('No code found in redirect'));
+                             server.close();
+                        }
+                    } else {
+                        // Ignore other requests (favicon, etc)
+                        res.writeHead(404);
+                        res.end();
+                    }
+                } catch (e) {
+                    res.writeHead(500);
+                    res.end('Server Error');
+                    server.close();
+                    reject(e);
+                }
+            });
+
+            server.on('error', (e) => {
+                reject(new Error(`Server error on port ${PORT}: ${e.message}`));
+            });
+
+            server.listen(PORT, () => {
+                this.openUrl(authUrl);
+            });
+        });
+    }
+
+    private openUrl(url: string) {
+        const start = (process.platform == 'darwin' ? 'open' : process.platform == 'win32' ? 'start' : 'xdg-open');
+        exec(`${start} "${url}"`, (error) => {
+            if (error) {
+                // Silently fail if we can't open browser
+            }
+        });
     }
 
     async listEmails(filter: EmailFilter): Promise<PaginatedResponse<Email>> {
@@ -74,7 +150,6 @@ export class GmailService implements IEmailService {
                 })
             );
 
-            // Filter out nulls and sort by internalDate (newest first)
             const sortedEmails = emails
                 .filter((e): e is Email => e !== null)
                 .sort((a, b) => Number(b.internalDate) - Number(a.internalDate));
@@ -82,10 +157,8 @@ export class GmailService implements IEmailService {
             return {
                 items: sortedEmails,
                 nextPageToken: response.data.nextPageToken || undefined,
-                resultSizeEstimate: response.data.resultSizeEstimate || 0
             };
         } catch (error) {
-            // Re-throw if it's already an error object from API
             throw error;
         }
     }
@@ -114,7 +187,7 @@ export class GmailService implements IEmailService {
                 from: getHeader('From'),
                 to: getHeader('To'),
                 date: getHeader('Date'),
-                body: msg.snippet || '', // Logic for body extraction would go here
+                body: msg.snippet || '', 
                 isUnread: (msg.labelIds || []).includes('UNREAD')
             };
         } catch (error) {

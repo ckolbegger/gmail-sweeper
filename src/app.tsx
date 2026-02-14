@@ -1,23 +1,53 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Text, Box, useInput } from 'ink';
 import { useGmail } from './hooks/useGmail';
 import { InboxList } from './components/Inbox/InboxList';
 import { EmailDetail } from './components/Inbox/EmailDetail';
-import { MockEmailService } from '../tests/mocks/mockEmailService';
+import { GmailService } from './services/gmail/gmailService';
 import { Email } from './types';
+import { IEmailService } from './types/interfaces';
 
 interface AppProps {
     limit?: number;
+    service?: IEmailService;
 }
 
-export default function App({ limit = 10 }: AppProps) {
-    const service = useMemo(() => new MockEmailService(), []);
+export default function App({ limit = 10, service: providedService }: AppProps) {
+    const service = useMemo(() => providedService || new GmailService(), [providedService]);
     const { emails, loading, error } = useGmail(service, { maxResults: limit });
     const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+    const [focusedIndex, setFocusedIndex] = useState(0);
+
+    // Reset focus if emails change
+    useEffect(() => {
+        if (emails && emails.length > 0) {
+            setFocusedIndex(0);
+        }
+    }, [emails]);
 
     useInput((_: string, key) => {
         if (key.escape) {
-            process.exit(0);
+            if (selectedEmail) {
+                setSelectedEmail(null);
+            } else {
+                process.exit(0);
+            }
+        }
+
+        // Only navigate if detail panel is NOT open
+        if (!selectedEmail) {
+            if (key.upArrow) {
+                setFocusedIndex(prev => Math.max(0, prev - 1));
+            }
+            if (key.downArrow) {
+                const count = emails?.length || 0;
+                setFocusedIndex(prev => Math.min(count - 1, prev + 1));
+            }
+            if (key.return) {
+                if (emails && emails[focusedIndex]) {
+                    setSelectedEmail(emails[focusedIndex]);
+                }
+            }
         }
     });
 
@@ -29,7 +59,7 @@ export default function App({ limit = 10 }: AppProps) {
 
             {loading && (
                 <Box padding={1}>
-                    <Text color="yellow">Loading emails...</Text>
+                    <Text color="yellow">Loading emails (check browser for auth if needed)...</Text>
                 </Box>
             )}
 
@@ -42,7 +72,10 @@ export default function App({ limit = 10 }: AppProps) {
             {!loading && !error && (
                 <Box flexDirection="row">
                     <Box width="40%" flexDirection="column">
-                        <InboxList emails={emails} onSelect={setSelectedEmail} />
+                        <InboxList 
+                            emails={emails} 
+                            focusedIndex={focusedIndex}
+                        />
                     </Box>
                     <Box width="60%" marginLeft={2}>
                         <EmailDetail email={selectedEmail} />
@@ -51,9 +84,12 @@ export default function App({ limit = 10 }: AppProps) {
             )}
 
             <Box marginTop={1} borderStyle="classic" borderColor="gray" paddingX={1}>
-                <Text color="gray"> [Arrows] Navigate  [Enter] View  [Esc] Exit </Text>
+                <Text color="gray"> 
+                    {selectedEmail 
+                        ? ' [Esc] Close Detail ' 
+                        : ' [Arrows] Navigate  [Enter] View  [Esc] Exit '}
+                </Text>
             </Box>
         </Box>
     );
 }
-
