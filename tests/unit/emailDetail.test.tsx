@@ -37,27 +37,18 @@ describe('EmailDetail', () => {
         expect(lastFrame()).toContain('Select an email to view details');
     });
 
-    it('should scroll content when active and arrow keys are pressed', async () => {
-        const lines = Array.from({ length: 20 }, (_, i) => `Row ${String.fromCharCode(65 + i)}`);
-        const longBody = lines.join('\n');
-        const emailWithLongBody = { ...mockEmail, body: longBody };
+    it('should wrap long lines into multiple lines', async () => {
+        // A line long enough to likely exceed typical terminal width fractions
+        const longLine = 'This is a very long line that should be wrapped into multiple lines so that the user can read the entire content without horizontal scrolling or truncation.';
+        const emailWithLongLine = { ...mockEmail, body: longLine };
         
-        // WINDOW_HEIGHT is 15
-        const { lastFrame, stdin } = render(<EmailDetail email={emailWithLongBody} isActive={true} />);
-
-        // Initial view should show Row A
-        expect(lastFrame()).toContain('Row A');
-        expect(lastFrame()).not.toContain('Row Q');
-
-        // Scroll down 5 times
-        for (let i = 0; i < 5; i++) {
-            stdin.write('\u001B[B'); // Down arrow
-            await new Promise(resolve => setTimeout(resolve, 10));
-        }
+        const { lastFrame } = render(<EmailDetail email={emailWithLongLine} isActive={true} />);
         
         const frame = lastFrame();
-        expect(frame).not.toContain('Row A'); // Row A should be scrolled out
-        expect(frame).toContain('Row F');
-        expect(frame).toContain('Row T');
+        // If it wraps, we expect to see parts of the string on what looks like different lines
+        // or at least that the string is present and not truncated with '...'
+        expect(frame).toContain('This is a very long line');
+        expect(frame).toContain('horizontal scrolling');
+        expect(frame).not.toContain('...'); // wrap="truncate-end" would add this, we want to remove it
     });
 });

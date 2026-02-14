@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { Email } from '../../types';
 
@@ -7,19 +7,60 @@ interface EmailDetailProps {
     isActive?: boolean;
 }
 
-const WINDOW_HEIGHT = 15; // Number of lines to show in the body
+const WINDOW_HEIGHT = 15;
+
+// Simple word wrap function
+function wrapText(text: string, width: number): string[] {
+    const lines: string[] = [];
+    const sourceLines = text.split('\n');
+
+    for (const sourceLine of sourceLines) {
+        if (sourceLine.length <= width) {
+            lines.push(sourceLine);
+            continue;
+        }
+
+        let currentLine = sourceLine;
+        while (currentLine.length > width) {
+            let wrapAt = currentLine.lastIndexOf(' ', width);
+            if (wrapAt === -1) wrapAt = width;
+            
+            lines.push(currentLine.substring(0, wrapAt).trimEnd());
+            currentLine = currentLine.substring(wrapAt).trimStart();
+        }
+        lines.push(currentLine);
+    }
+
+    return lines;
+}
 
 export const EmailDetail: React.FC<EmailDetailProps> = ({ email, isActive = false }) => {
     const [scrollOffset, setScrollOffset] = useState(0);
+    const [terminalWidth, setTerminalWidth] = useState(process.stdout.columns || 100);
+
+    // Approximate available width for the body (60% of term - padding/borders)
+    const availableWidth = useMemo(() => Math.floor(terminalWidth * 0.6) - 10, [terminalWidth]);
+
+    // Update terminal width on resize if needed (simplified for CLI)
+    useEffect(() => {
+        const onResize = () => setTerminalWidth(process.stdout.columns);
+        process.stdout.on('resize', onResize);
+        return () => {
+            process.stdout.off('resize', onResize);
+        };
+    }, []);
+
+    const allLines = useMemo(() => {
+        const bodyText = email?.body || email?.snippet || '';
+        return wrapText(bodyText, availableWidth);
+    }, [email, availableWidth]);
+
+    const maxOffset = Math.max(0, allLines.length - WINDOW_HEIGHT);
 
     // Reset scroll when email changes
     useEffect(() => {
         setScrollOffset(0);
     }, [email?.id]);
-
-    const bodyText = email?.body || email?.snippet || '';
-    const lines = bodyText.split('\n');
-    const maxOffset = Math.max(0, lines.length - WINDOW_HEIGHT);
 
     useInput((_, key) => {
         if (!isActive) return;
@@ -40,7 +81,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({ email, isActive = fals
         );
     }
 
-    const visibleLines = lines.slice(scrollOffset, scrollOffset + WINDOW_HEIGHT);
+    const visibleLines = allLines.slice(scrollOffset, scrollOffset + WINDOW_HEIGHT);
 
     return (
         <Box flexDirection="column" padding={1} borderStyle="single" borderColor={isActive ? 'blue' : 'gray'}>
@@ -52,12 +93,12 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({ email, isActive = fals
 
             <Box borderStyle="classic" borderColor="gray" paddingX={1} flexDirection="column">
                 {visibleLines.map((line, i) => (
-                    <Text key={i} wrap="truncate-end">{line || ' '}</Text>
+                    <Text key={i}>{line || ' '}</Text>
                 ))}
-                {lines.length > WINDOW_HEIGHT && (
+                {allLines.length > WINDOW_HEIGHT && (
                     <Box marginTop={0}>
                         <Text color="yellow">
-                            -- [{scrollOffset + 1}-{Math.min(scrollOffset + WINDOW_HEIGHT, lines.length)} of {lines.length}] --
+                            -- [{scrollOffset + 1}-{Math.min(scrollOffset + WINDOW_HEIGHT, allLines.length)} of {allLines.length}] --
                         </Text>
                     </Box>
                 )}
