@@ -71,19 +71,12 @@ export class DatabaseError extends Error {
 export class ValidationError extends Error {
   public readonly errors: Array<{ path: string; message: string }>;
 
-  constructor(
-    message: string,
-    errors: Array<{ path: string; message: string }> = []
-  ) {
+  constructor(message: string, errors: Array<{ path: string; message: string }> = []) {
     super(message);
     this.name = 'ValidationError';
     this.errors = errors;
   }
 }
-
-// ============================================================================
-// Configuration Error
-// ============================================================================
 
 export class ConfigurationError extends Error {
   constructor(message: string) {
@@ -92,9 +85,28 @@ export class ConfigurationError extends Error {
   }
 }
 
-// ============================================================================
-// Error Helpers
-// ============================================================================
+export type AiProviderErrorCode =
+  | 'CONFIG_MISSING'
+  | 'API_ERROR'
+  | 'RATE_LIMITED'
+  | 'INVALID_RESPONSE'
+  | 'NETWORK_ERROR'
+  | 'TIMEOUT';
+
+export class AiProviderError extends Error {
+  constructor(
+    public readonly code: AiProviderErrorCode,
+    message: string,
+    public readonly cause?: Error
+  ) {
+    super(message);
+    this.name = 'AiProviderError';
+  }
+
+  isRetryable(): boolean {
+    return this.code === 'RATE_LIMITED' || this.code === 'NETWORK_ERROR' || this.code === 'TIMEOUT';
+  }
+}
 
 /**
  * Check if an error is a specific error type
@@ -111,9 +123,10 @@ export function isValidationError(error: unknown): error is ValidationError {
   return error instanceof ValidationError;
 }
 
-/**
- * Get error message safely
- */
+export function isAiProviderError(error: unknown): error is AiProviderError {
+  return error instanceof AiProviderError;
+}
+
 export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
