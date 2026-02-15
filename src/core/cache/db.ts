@@ -4,15 +4,12 @@
  */
 
 // @ts-ignore - sql.js has no TypeScript declarations
-import initSqlJs from 'sql.js';
+import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
-import type {
-  Email,
-  EmailCacheOptions,
-} from '../models/index.js';
+import type { Email, EmailCacheOptions } from '../models/index.js';
 
-let SQL: any = null;
+let SQL: Awaited<ReturnType<typeof initSqlJs>> | null = null;
 
 /**
  * Initialize sql.js module (lazy initialization)
@@ -28,7 +25,7 @@ async function initSQL() {
  * T027: SQLite email cache for local storage of email metadata.
  */
 export class EmailCache {
-  private db: any;
+  private db: SqlJsDatabase | null;
   private dbPath: string;
 
   /**
@@ -196,7 +193,7 @@ export class EmailCache {
     const sortDesc = options?.sortDesc !== false; // default: true
 
     let query = 'SELECT * FROM emails WHERE 1=1';
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (options?.labelFilter) {
       query += ' AND labels_json LIKE ?';
@@ -262,9 +259,7 @@ export class EmailCache {
   getLastSync(userEmail: string): Date | null {
     this.ensureInitialized();
 
-    const stmt = this.db.prepare(
-      'SELECT last_sync FROM sync_state WHERE user_email = ?'
-    );
+    const stmt = this.db.prepare('SELECT last_sync FROM sync_state WHERE user_email = ?');
     stmt.bind([userEmail]);
 
     let lastSync: Date | null = null;

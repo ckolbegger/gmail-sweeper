@@ -115,3 +115,19 @@ export class CacheError extends GmailSweepError {
     this.name = 'CacheError';
   }
 }
+
+/**
+ * T017: AI Provider error for API failures
+ */
+export class AiProviderError extends GmailSweepError {
+  /** HTTP status code if available */
+  statusCode: number | undefined;
+
+  constructor(message: string, statusCode?: number) {
+    super(message);
+    this.name = 'AiProviderError';
+    if (statusCode !== undefined) {
+      this.statusCode = statusCode;
+    }
+  }
+}

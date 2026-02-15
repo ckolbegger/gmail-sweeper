@@ -3,7 +3,7 @@
  * Tests: load cache → display list → navigate with j/k → show preview
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import type { Email, EmailAddress, Label } from '../../src/core/models/index.js';
 import { EmailCache } from '../../src/core/cache/db.js';
 import { join } from 'path';
@@ -46,11 +46,7 @@ describe('US1 Integration: View Inbox', () => {
 
   it('should load emails from cache and display in list', async () => {
     // Arrange: Cache some emails
-    const emails = [
-      createTestEmail('1'),
-      createTestEmail('2'),
-      createTestEmail('3'),
-    ];
+    const emails = [createTestEmail('1'), createTestEmail('2'), createTestEmail('3')];
     cache.upsertEmails(emails);
 
     // Act: Load from cache
@@ -96,7 +92,7 @@ describe('US1 Integration: View Inbox', () => {
 
     navigate('down'); // Index 1
     navigate('down'); // Index 2
-    navigate('up');   // Index 1
+    navigate('up'); // Index 1
 
     // Assert: Navigation works correctly
     expect(selectedIndex).toBe(1);
@@ -116,16 +112,14 @@ describe('US1 Integration: View Inbox', () => {
     const loaded = cache.getEmails({ limit: 10 });
 
     // Assert: Can identify unread emails
-    const unreadCount = loaded.filter(e => !e.isRead).length;
+    const unreadCount = loaded.filter((e) => !e.isRead).length;
     expect(unreadCount).toBe(2);
     expect(loaded[1]?.isRead).toBe(true);
   });
 
   it('should handle large inbox with pagination', async () => {
     // Arrange: Cache 100+ emails
-    const emails = Array.from({ length: 150 }, (_, i) =>
-      createTestEmail(String(i + 1))
-    );
+    const emails = Array.from({ length: 150 }, (_, i) => createTestEmail(String(i + 1)));
     cache.upsertEmails(emails);
 
     // Act: Load with pagination

@@ -3,7 +3,7 @@
  * Tests data fetching, caching, error handling, and pagination.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { Email, EmailAddress, Label } from '../../../src/core/models/index.js';
 
 // Mock email helper
@@ -39,11 +39,7 @@ describe('useGmail', () => {
     });
 
     it('should return emails after fetch', () => {
-      const emails = [
-        createTestEmail('1'),
-        createTestEmail('2'),
-        createTestEmail('3'),
-      ];
+      const emails = [createTestEmail('1'), createTestEmail('2'), createTestEmail('3')];
 
       const state = {
         isLoading: false,
