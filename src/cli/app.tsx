@@ -9,6 +9,8 @@ import { Box, Text, useApp, useInput, useStdout, useStdin } from 'ink';
 import { EmailList } from './components/email-list.js';
 import { EmailDetail } from './components/email-detail.js';
 import { EmailPreview } from './components/email-preview.js';
+import { FilterInput } from './components/filter-input.js';
+import { useSmartFilter } from './hooks/use-smart-filter.js';
 import type { Email } from '../core/contracts/types.js';
 import type { EmailRepository } from '../core/services/email-repository.js';
 import type { GmailClient } from '../core/contracts/gmail-api.js';
@@ -24,7 +26,7 @@ type AppView = 'list' | 'detail' | 'loading' | 'error';
 
 export function App({ gmailClient, emailRepository }: AppProps): React.ReactElement {
   const { exit } = useApp();
-  
+
   // Cleanup function to close database and exit
   const cleanupAndExit = useCallback(() => {
     // Close database connection
@@ -51,7 +53,7 @@ export function App({ gmailClient, emailRepository }: AppProps): React.ReactElem
         setRawMode(false);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [view, setView] = useState<AppView>('loading');
   const [emails, setEmails] = useState<Email[]>([]);
@@ -60,6 +62,17 @@ export function App({ gmailClient, emailRepository }: AppProps): React.ReactElem
   const [errorMessage, setErrorMessage] = useState('');
   const [syncProgress, setSyncProgress] = useState('');
   const [previewScrollOffset, setPreviewScrollOffset] = useState(0);
+
+  const smartFilter = useSmartFilter(emails);
+  const displayEmails =
+    smartFilter.filteredResults?.matchingResults
+      .map((r) => {
+        const email = emails.find((e) => e.id === r.emailId);
+        return email;
+      })
+      .filter((e): e is Email => e !== undefined) || emails;
+  const filterCount = smartFilter.filteredResults?.matchingResults.length;
+  const totalCount = emails.length;
 
   // Initial sync on mount
   useEffect(() => {
@@ -117,39 +130,51 @@ export function App({ gmailClient, emailRepository }: AppProps): React.ReactElem
   }, [selectedIndex]);
 
   // Calculate preview viewport size for scrolling
-  const previewHeaderLines = 3;  // Header with border
-  const previewFooterLines = 3;  // Footer with border
-  const previewViewportLines = Math.max(5, terminalHeight - previewHeaderLines - previewFooterLines);
+  const previewHeaderLines = 3; // Header with border
+  const previewFooterLines = 3; // Footer with border
+  const previewViewportLines = Math.max(
+    5,
+    terminalHeight - previewHeaderLines - previewFooterLines
+  );
   const previewScrollAmount = Math.floor(previewViewportLines / 2);
 
-  // Keyboard shortcuts for app-level actions
   useInput((input, key) => {
     if (view === 'list') {
+      if (smartFilter.state === 'input') {
+        if (key.escape) {
+          smartFilter.clearFilter();
+        }
+        return;
+      }
+
       if (key.upArrow) {
         setSelectedIndex((prev) => Math.max(0, prev - 1));
       } else if (key.downArrow) {
-        setSelectedIndex((prev) => Math.min(emails.length - 1, prev + 1));
+        setSelectedIndex((prev) => Math.min(displayEmails.length - 1, prev + 1));
       } else if (input === '[') {
-        // Scroll preview up by half viewport
         setPreviewScrollOffset((prev) => Math.max(0, prev - previewScrollAmount));
       } else if (input === ']') {
-        // Scroll preview down by half viewport
-        const selectedEmail = emails[selectedIndex];
+        const selectedEmail = displayEmails[selectedIndex];
         if (selectedEmail) {
           const bodyLines = (selectedEmail.body.text || '').split('\n').length;
-          const maxLines = Math.max(5, terminalHeight - 17); // Match EmailPreview overhead
-          setPreviewScrollOffset((prev) => Math.min(prev + previewScrollAmount, Math.max(0, bodyLines - maxLines)));
+          const maxLines = Math.max(5, terminalHeight - 17);
+          setPreviewScrollOffset((prev) =>
+            Math.min(prev + previewScrollAmount, Math.max(0, bodyLines - maxLines))
+          );
         }
       } else if (key.return) {
-        const email = emails[selectedIndex];
+        const email = displayEmails[selectedIndex];
         if (email) {
           setSelectedEmail(email);
           setView('detail');
         }
+      } else if (input === 'f') {
+        smartFilter.activateFilter();
+      } else if (key.escape) {
+        smartFilter.clearFilter();
       } else if (input === 'q') {
         cleanupAndExit();
       } else if (input === 'r') {
-        // Refresh
         setView('loading');
         setSyncProgress('Refreshing...');
         gmailClient
@@ -202,110 +227,127 @@ export function App({ gmailClient, emailRepository }: AppProps): React.ReactElem
     return React.createElement(
       Box,
       { flexDirection: 'column', height: terminalHeight },
-      React.createElement(EmailDetail, { 
+      React.createElement(EmailDetail, {
         email: selectedEmail,
         terminalHeight: terminalHeight,
       })
     );
   }
 
-  // Split-pane list view
-  const headerLines = 3;  // Header with border
-  const footerLines = 3;  // Footer with border
-  const indicatorLines = 2; // Space for scroll indicators
+  const headerLines = 3;
+  const footerLines = 3;
+  const indicatorLines = 2;
   const availableLines = terminalHeight - headerLines - footerLines - indicatorLines;
-  const emailLineHeight = 2; // Each email takes 2 lines
+  const emailLineHeight = 2;
   const maxVisibleEmails = Math.max(3, Math.floor(availableLines / emailLineHeight));
-  
-  // Calculate pane widths (50/50 split)
-  const leftPaneWidth = Math.floor(terminalWidth / 2);
-  const rightPaneWidth = terminalWidth - leftPaneWidth - 1; // -1 for separator
 
-  // Get currently selected email for preview
-  const currentEmail = emails[selectedIndex];
+  const leftPaneWidth = Math.floor(terminalWidth / 2);
+  const rightPaneWidth = terminalWidth - leftPaneWidth - 1;
+
+  const currentEmail = displayEmails[selectedIndex];
 
   return React.createElement(
     Box,
     { flexDirection: 'column', height: terminalHeight },
-    // Header (fixed at top)
     React.createElement(
       Box,
-      { 
-        padding: 1, 
-        borderStyle: 'single', 
+      {
+        padding: 1,
+        borderStyle: 'single',
         borderBottom: true,
         flexShrink: 0,
       },
       React.createElement(Text, { bold: true, color: 'cyan' }, 'Gmail Sweep'),
-      React.createElement(Text, null, ` | ${emails.length} emails | ? for help`)
+      smartFilter.filterDescription
+        ? React.createElement(
+            Text,
+            null,
+            ` | ${smartFilter.filterDescription} | ${emails.length} emails | ? for help`
+          )
+        : React.createElement(Text, null, ` | ${emails.length} emails | ? for help`)
     ),
-    // Main content area (split pane)
-    React.createElement(
-      Box,
-      { 
-        flexDirection: 'row',
-        flexGrow: 1,
-        overflow: 'hidden',
-      },
-      // Left pane: Email list
-      React.createElement(
-        Box,
-        {
-          width: leftPaneWidth,
-          flexDirection: 'column',
-        },
-        React.createElement(EmailList, {
-          emails,
-          selectedIndex,
-          onSelect: (id) => {
-            const email = emails.find((e) => e.id === id);
-            if (email) {
-              setSelectedEmail(email);
-              setView('detail');
-            }
+    smartFilter.state === 'input' || smartFilter.state === 'loading'
+      ? React.createElement(
+          Box,
+          {
+            flexDirection: 'column',
+            flexGrow: 1,
+            padding: 1,
           },
-          onSelectionChange: setSelectedIndex,
-          maxVisible: maxVisibleEmails,
-        })
-      ),
-      // Right pane: Email preview (with left border as separator)
-      React.createElement(
-        Box,
-        {
-          width: rightPaneWidth,
-          flexDirection: 'column',
-          borderStyle: 'single',
-          borderLeft: true,
-          borderTop: false,
-          borderRight: false,
-          borderBottom: false,
-          overflow: 'hidden',
-        },
-        currentEmail 
-          ? React.createElement(EmailPreview, {
-              email: currentEmail,
-              terminalHeight: terminalHeight - headerLines - footerLines,
-              scrollOffset: previewScrollOffset,
-              width: rightPaneWidth - 2, // Account for border
+          React.createElement(FilterInput, {
+            onSubmit: (description) => smartFilter.submitFilter(description),
+            isLoading: smartFilter.state === 'loading',
+            error: smartFilter.error,
+          })
+        )
+      : React.createElement(
+          Box,
+          {
+            flexDirection: 'row',
+            flexGrow: 1,
+            overflow: 'hidden',
+          },
+          React.createElement(
+            Box,
+            {
+              width: leftPaneWidth,
+              flexDirection: 'column',
+            },
+            React.createElement(EmailList, {
+              emails: displayEmails,
+              selectedIndex,
+              onSelect: (id) => {
+                const email = displayEmails.find((e) => e.id === id);
+                if (email) {
+                  setSelectedEmail(email);
+                  setView('detail');
+                }
+              },
+              onSelectionChange: setSelectedIndex,
+              maxVisible: maxVisibleEmails,
+              filterCount,
+              totalCount,
             })
-          : React.createElement(Box, { padding: 1 },
-              React.createElement(Text, { color: 'gray' }, 'No email selected')
-            )
-      )
-    ),
-    // Footer (fixed at bottom)
+          ),
+          // Right pane: Email preview (with left border as separator)
+          React.createElement(
+            Box,
+            {
+              width: rightPaneWidth,
+              flexDirection: 'column',
+              borderStyle: 'single',
+              borderLeft: true,
+              borderTop: false,
+              borderRight: false,
+              borderBottom: false,
+              overflow: 'hidden',
+            },
+            currentEmail
+              ? React.createElement(EmailPreview, {
+                  email: currentEmail,
+                  terminalHeight: terminalHeight - headerLines - footerLines,
+                  scrollOffset: previewScrollOffset,
+                  width: rightPaneWidth - 2, // Account for border
+                })
+              : React.createElement(
+                  Box,
+                  { padding: 1 },
+                  React.createElement(Text, { color: 'gray' }, 'No email selected')
+                )
+          )
+        ),
     React.createElement(
       Box,
-      { 
-        padding: 1, 
-        borderStyle: 'single', 
+      {
+        padding: 1,
+        borderStyle: 'single',
         borderTop: true,
         flexShrink: 0,
       },
       React.createElement(
         Text,
         { color: 'gray' },
-        '↑↓ navigate | [ ] scroll preview | Enter view | r refresh | q quit'
+        '↑↓ navigate | [ ] scroll preview | Enter view | f filter | Esc clear | r refresh | q quit'
       )
     )
   );
