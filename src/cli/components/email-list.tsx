@@ -34,6 +34,12 @@ export interface EmailListProps {
   maxVisible?: number;
   /** Auto-calculate maxVisible from terminal dimensions */
   autoMaxVisible?: AutoMaxVisible;
+  /** Number of emails matching the current filter */
+  filterCount?: number;
+  /** Total number of emails before filtering */
+  totalCount?: number;
+  /** Array of filtered emails (for display purposes) */
+  filteredEmails?: Email[];
 }
 
 /**
@@ -66,8 +72,8 @@ function stripEmoji(text: string): string {
     .replace(/[\u{1F300}-\u{1F5FF}]/gu, '') // Symbols & pictographs
     .replace(/[\u{1F680}-\u{1F6FF}]/gu, '') // Transport & map symbols
     .replace(/[\u{1F1E0}-\u{1F1FF}]/gu, '') // Flags
-    .replace(/[\u{2600}-\u{26FF}]/gu, '')   // Misc symbols
-    .replace(/[\u{2700}-\u{27BF}]/gu, '')   // Dingbats
+    .replace(/[\u{2600}-\u{26FF}]/gu, '') // Misc symbols
+    .replace(/[\u{2700}-\u{27BF}]/gu, '') // Dingbats
     .replace(/[\u{1F900}-\u{1F9FF}]/gu, '') // Supplemental symbols
     .replace(/[\u{1FA00}-\u{1FA6F}]/gu, '') // Chess symbols
     .replace(/[\u{1FA70}-\u{1FAFF}]/gu, '') // Symbols and pictographs extended-a
@@ -85,7 +91,7 @@ function truncate(text: string, maxLength: number): string {
 
 /**
  * Calculate the visible range of emails based on selection
- * 
+ *
  * Standard scrolling behavior:
  * - At top: show first maxVisible items, selection moves down
  * - When selection reaches bottom of viewport: scroll down by 1
@@ -104,7 +110,7 @@ function calculateViewport(
   // Determine the viewport start based on selectedIndex
   // Keep selected item visible, scrolling only when necessary
   let start: number;
-  
+
   if (selectedIndex < 0) {
     // Shouldn't happen, but handle gracefully
     start = 0;
@@ -134,10 +140,11 @@ function calculateMaxVisible(autoMaxVisible: AutoMaxVisible): number {
   const emailLineHeight = 2;
   // Account for scroll indicators (2 lines when shown)
   const scrollIndicatorLines = 2;
-  
-  const availableHeight = terminalHeight - headerLines - footerLines - padding - scrollIndicatorLines;
+
+  const availableHeight =
+    terminalHeight - headerLines - footerLines - padding - scrollIndicatorLines;
   const maxVisible = Math.floor(availableHeight / emailLineHeight);
-  
+
   // Ensure at least 3 emails are always visible
   return Math.max(3, maxVisible);
 }
@@ -153,8 +160,9 @@ export function EmailList({
   showReadStatus = true,
   maxVisible: explicitMaxVisible,
   autoMaxVisible,
+  filterCount,
+  totalCount,
 }: EmailListProps): React.ReactElement {
-
   // Calculate maxVisible
   let maxVisible: number;
   if (explicitMaxVisible !== undefined) {
@@ -166,11 +174,14 @@ export function EmailList({
     maxVisible = 10;
   }
 
+  const isFilterActive = filterCount !== undefined && totalCount !== undefined;
+
   if (emails.length === 0) {
-    return (
-      React.createElement(Box, { padding: 1 },
-        React.createElement(Text, { color: 'gray' }, 'No emails')
-      )
+    const emptyMessage = isFilterActive ? 'No matches found' : 'No emails';
+    return React.createElement(
+      Box,
+      { padding: 1 },
+      React.createElement(Text, { color: 'gray' }, emptyMessage)
     );
   }
 
@@ -180,64 +191,100 @@ export function EmailList({
   const hasMoreAbove = start > 0;
   const hasMoreBelow = end < emails.length;
 
-  return (
-    React.createElement(Box, { flexDirection: 'column' },
-      // Scroll up indicator
-      hasMoreAbove && React.createElement(Box, {
-        paddingX: 1,
-        paddingY: 0,
-        justifyContent: 'center',
-      },
+  return React.createElement(
+    Box,
+    { flexDirection: 'column' },
+    // Filter count display
+    isFilterActive &&
+      React.createElement(
+        Box,
+        {
+          paddingX: 1,
+          paddingY: 0,
+          justifyContent: 'center',
+        },
+        React.createElement(
+          Text,
+          { color: 'cyan' },
+          `Filtered: ${filterCount}/${totalCount} emails`
+        )
+      ),
+
+    // Scroll up indicator
+    hasMoreAbove &&
+      React.createElement(
+        Box,
+        {
+          paddingX: 1,
+          paddingY: 0,
+          justifyContent: 'center',
+        },
         React.createElement(Text, { color: 'gray', dimColor: true }, '↑ ' + start + ' more')
       ),
 
-      // Email list (only visible ones)
-      visibleEmails.map((email, index) => {
-        const actualIndex = start + index;
-        const isSelected = actualIndex === selectedIndex;
-        const displayText = truncate(email.subject, 50);
-        const senderName = email.sender.name || email.sender.email;
-        const dateStr = formatDate(email.dateReceived);
-        const indent = showReadStatus ? '      ' : '   ';
-        
-        return (
-          React.createElement(Box, {
-            key: email.id,
-            flexDirection: 'column',
-          },
-            // Line 1: Subject row
-            React.createElement(Box, { height: 1 },
-              React.createElement(Text, {
-                bold: isSelected || !email.isRead,
-                color: isSelected ? 'cyan' : undefined,
-              }, 
-                // Selection indicator
-                (isSelected ? '>' : ' ') + 
-                // Read status
-                (showReadStatus ? (email.isRead ? '   ' : ' ● ') : ' ') +
-                // Subject
-                displayText
-              )
-            ),
-            
-            // Line 2: Sender/date
-            React.createElement(Box, { height: 1, marginTop: 0 },
-              React.createElement(Text, {
-                color: 'white',
-              }, indent + truncate(senderName, 25) + ' · ' + dateStr)
-            )
-          )
-        );
-      }),
+    // Email list (only visible ones)
+    visibleEmails.map((email, index) => {
+      const actualIndex = start + index;
+      const isSelected = actualIndex === selectedIndex;
+      const displayText = truncate(email.subject, 50);
+      const senderName = email.sender.name || email.sender.email;
+      const dateStr = formatDate(email.dateReceived);
+      const indent = showReadStatus ? '      ' : '   ';
 
-      // Scroll down indicator
-      hasMoreBelow && React.createElement(Box, {
-        paddingX: 1,
-        paddingY: 0,
-        justifyContent: 'center',
-      },
-        React.createElement(Text, { color: 'gray', dimColor: true }, '↓ ' + (emails.length - end) + ' more')
+      return React.createElement(
+        Box,
+        {
+          key: email.id,
+          flexDirection: 'column',
+        },
+        // Line 1: Subject row
+        React.createElement(
+          Box,
+          { height: 1 },
+          React.createElement(
+            Text,
+            {
+              bold: isSelected || !email.isRead,
+              color: isSelected ? 'cyan' : undefined,
+            },
+            // Selection indicator
+            (isSelected ? '>' : ' ') +
+              // Read status
+              (showReadStatus ? (email.isRead ? '   ' : ' ● ') : ' ') +
+              // Subject
+              displayText
+          )
+        ),
+
+        // Line 2: Sender/date
+        React.createElement(
+          Box,
+          { height: 1, marginTop: 0 },
+          React.createElement(
+            Text,
+            {
+              color: 'white',
+            },
+            indent + truncate(senderName, 25) + ' · ' + dateStr
+          )
+        )
+      );
+    }),
+
+    // Scroll down indicator
+    hasMoreBelow &&
+      React.createElement(
+        Box,
+        {
+          paddingX: 1,
+          paddingY: 0,
+          justifyContent: 'center',
+        },
+        React.createElement(
+          Text,
+          { color: 'gray', dimColor: true },
+          '↓ ' + (emails.length - end) + ' more'
+        )
       )
-    )
   );
 }
