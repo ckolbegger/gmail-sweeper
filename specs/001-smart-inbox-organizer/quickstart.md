@@ -24,6 +24,13 @@
    - `npm run app -- --auth-code "<code>" --token-path .gmail-sweeper/tokens.json`
 6. Re-run inbox browse/filter with saved token:
    - `npm run app -- --sender lead@work.com --label WORK --limit 20`
+7. Start read-only detail navigation mode:
+   - `npm run app -- --interactive --limit 20`
+   - Interactive mode runs with an Ink in-place UI (selection updates in a fixed viewport, no append-only list redraw).
+   - Optional scripted commands for testing:
+     - `npm run app -- --interactive --commands down,enter,back,quit`
+8. Fallback non-interactive output mode:
+   - `npm run app -- --limit 20`
 
 ## Saved Queries Workflow
 
@@ -39,3 +46,13 @@
   - `--sender`, `--label`, `--category`
   - `--date-from`, `--date-to` (ISO date or epoch milliseconds)
   - `--page-size`, `--page-limit`, `--limit`
+  - `--interactive`, `--commands`
+- Detail navigation commands and key bindings (read-only):
+  - `up` or `k` moves selection up
+  - `down` or `j` moves selection down
+  - `enter` or `open` opens selected email detail
+  - `back` or `b` returns to list
+  - `quit` or `q` exits interactive mode
+- In interactive mode, the screen updates in place rather than printing repeated full list output.
+- Non-interactive mode remains available for plain line-by-line output (omit `--interactive`).
+- This phase is read-only: label/archive/delete actions are intentionally deferred.

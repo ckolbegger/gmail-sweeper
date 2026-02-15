@@ -207,56 +207,112 @@
 
 ---
 
-## Phase 5: User Story 3 - Review and act on emails (Priority: P3)
+## Phase 5: User Story 3A - Review Email Details and Navigate Inbox (Priority: P3)
 
-**Goal**: Preview email contents and apply labels/archive/delete with confirmation
+**Goal**: Open individual emails in a read-only detail view and navigate between list and detail states
 
-**Independent Test**: Select emails, preview content, confirm actions and verify Gmail updates
+**Independent Test**: Select an email, open detail, navigate back to list, move selection, and open another email
 
-### Tests for User Story 3 (MANDATORY - Strict TDD) ⚠️
+### Tests for User Story 3A (MANDATORY - Strict TDD) ⚠️
 
-- [ ] T024 [P] [US3] Contract test for email detail in `tests/contract/email_detail.test.ts`
+- [x] T024 [P] [US3A] Contract test for email detail in `tests/contract/email_detail.test.ts`
   - Tests:
     - it should return full content for a valid message_id
     - it should return 404 for unknown message_id
     - it should include body and headers when available
-- [ ] T025 [P] [US3] Contract tests for actions in `tests/contract/email_actions.test.ts`
+- [x] T026 [P] [US3A] Integration test for detail navigation flow in `tests/integration/detail_navigation_flow.test.ts`
   - Tests:
-    - it should accept multiple message_ids
-    - it should reject empty message_ids
-    - it should return success after action completes
-- [ ] T026 [P] [US3] Integration test for action confirmation flow in `tests/integration/action_flow.test.ts`
+    - it should open detail for the selected inbox row
+    - it should return to inbox list while preserving previous selection
+    - it should handle missing detail payload with user-safe error output
+- [x] T058 [P] [US3A] Integration test for keyboard navigation in `tests/integration/detail_navigation_keys.test.ts`
   - Tests:
-    - it should require confirmation before applying action
-    - it should apply action to selected emails only
-    - it should reflect updated state after action
+    - it should move selection with up and down inputs
+    - it should open selected detail with enter and close detail with back
+    - it should keep list and detail state in sync after repeated navigation
 
-### Implementation for User Story 3
+### Implementation for User Story 3A
 
-- [ ] T027 [P] [US3] Implement email detail fetch in `src/adapters/gmail/get_email.ts`
+- [x] T027 [P] [US3A] Implement email detail fetch in `src/adapters/gmail/get_email.ts`
   - Tests:
     - it should fetch full body for a message_id
     - it should return a clear error for missing message
     - it should avoid caching body after session
-- [ ] T028 [P] [US3] Implement action service in `src/services/email_action_service.ts`
+- [x] T030 [US3A] Implement email preview panel in `src/tui/email_preview.ts`
+  - Tests:
+    - it should render subject, sender, and body
+    - it should update when selection changes
+- [x] T056 [P] [US3A] Implement navigation controls and selection state in `src/tui/navigation_controls.ts`
+  - Tests:
+    - it should move list selection up and down within bounds
+    - it should track current view mode as list or detail
+    - it should restore prior selection when leaving detail view
+- [x] T057 [US3A] Wire list/detail navigation workflow in `src/cli/app.ts`
+  - Tests:
+    - it should load inbox rows and open detail for selected message_id
+    - it should return to list output after closing detail
+    - it should show friendly errors when detail fetch fails
+- [x] T059 [US3A] Update quickstart for detail navigation commands in `specs/001-smart-inbox-organizer/quickstart.md`
+  - Tests:
+    - it should document how to open a message detail from the inbox list
+    - it should document list/detail navigation commands and key bindings
+    - it should keep read-only behavior explicit for this phase
+
+### Follow-Up: Upgrade US3A to Ink TUI (In-Place Rendering)
+
+- [x] T060 [P] [US3A] Integration test for Ink in-place list navigation in `tests/integration/ink_navigation_flow.test.ts`
+  - Tests:
+    - it should keep a fixed viewport while moving selection
+    - it should update only rendered state instead of appending duplicate list output
+    - it should preserve selected row while switching between list and detail panes
+- [x] T061 [P] [US3A] Implement Ink app root state container in `src/tui/app.ts`
+  - Tests:
+    - it should render inbox list with selected row highlight
+    - it should render detail pane for the selected message
+    - it should transition between list and detail view modes
+- [x] T062 [P] [US3A] Implement Ink input controller in `src/tui/input_controller.ts`
+  - Tests:
+    - it should map j/k and arrow keys to selection movement actions
+    - it should map enter to open detail and b/backspace to close detail
+    - it should map q to cleanly exit the Ink session
+- [x] T063 [US3A] Wire `--interactive` mode to launch Ink renderer in `src/cli/app.ts`
+  - Tests:
+    - it should start Ink UI after inbox data is loaded
+    - it should pass inbox rows and detail fetch callbacks into the Ink app
+    - it should return to shell prompt immediately after Ink session exits
+- [x] T064 [US3A] Add Ink renderer lifecycle adapter in `src/tui/ink_runtime.ts`
+  - Tests:
+    - it should create and unmount Ink renderer cleanly
+    - it should restore terminal state after quit
+    - it should avoid leaving open stdin handlers after exit
+- [x] T065 [US3A] Update quickstart with Ink interaction notes in `specs/001-smart-inbox-organizer/quickstart.md`
+  - Tests:
+    - it should document that interactive mode uses an in-place Ink UI
+    - it should document key bindings and expected non-scrolling behavior
+    - it should document fallback non-interactive output mode
+
+### Deferred: User Story 3B - Actions (Label/Archive/Delete)
+
+- [ ] T025 [P] [US3B] Contract tests for actions in `tests/contract/email_actions.test.ts`
+  - Tests:
+    - it should accept multiple message_ids
+    - it should reject empty message_ids
+    - it should return success after action completes
+- [ ] T028 [P] [US3B] Implement action service in `src/services/email_action_service.ts`
   - Tests:
     - it should apply label/archive/delete to selected ids
     - it should require confirmation flag before action
     - it should surface per-message failures
-- [ ] T029 [US3] Implement confirmation prompt in `src/tui/confirm_prompt.ts`
+- [ ] T029 [US3B] Implement confirmation prompt in `src/tui/confirm_prompt.ts`
   - Tests:
     - it should complete successfully
     - it should handle error conditions
-- [ ] T030 [US3] Implement email preview panel in `src/tui/email_preview.ts`
-  - Tests:
-    - it should render subject, sender, and body
-    - it should update when selection changes
-- [ ] T031 [US3] Wire bulk selection in `src/tui/selection_controls.ts`
+- [ ] T031 [US3B] Wire bulk selection in `src/tui/selection_controls.ts`
   - Tests:
     - it should select all visible emails
     - it should select and deselect individual emails
 
-**Checkpoint**: User Story 3 functional and testable independently
+**Checkpoint**: User Story 3A functional and testable independently; User Story 3B remains deferred
 
 ---
 

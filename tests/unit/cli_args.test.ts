@@ -37,6 +37,17 @@ describe('CLI argument parser', () => {
     expect(custom.limit).toBe(3);
   });
 
+  it('should parse interactive navigation flags', () => {
+    const options = parseCliArgs([
+      '--interactive',
+      '--commands',
+      'down,enter,back,quit'
+    ]);
+
+    expect(options.interactive).toBe(true);
+    expect(options.commands).toEqual(['down', 'enter', 'back', 'quit']);
+  });
+
   it('should reject unknown flags with clear errors', () => {
     expect(() => parseCliArgs(['--unknown'])).toThrow('Unknown argument: --unknown');
   });

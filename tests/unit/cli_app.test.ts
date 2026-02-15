@@ -82,4 +82,54 @@ describe('CLI inbox workflow', () => {
     expect(lines.join('\n')).toContain('Team update');
     expect(lines.join('\n')).not.toContain('Promo');
   });
+
+  it('should start Ink UI after inbox data is loaded and pass detail callback', async () => {
+    const runInkSession = vi.fn().mockResolvedValue(undefined);
+    const getEmailDetail = vi.fn().mockResolvedValue({
+      message_id: 'msg-2',
+      subject: 'Second',
+      sender: 'second@example.com',
+      received_at: Date.parse('2026-02-08T10:00:00Z'),
+      body: 'Second body',
+      headers: { subject: 'Second' },
+      labels: ['INBOX'],
+      is_read: true
+    });
+
+    const code = await runInboxCli(['--interactive'], {
+      loadConfig: () => baseConfig,
+      readAuthTokens: async () => ({
+        accessToken: 'cached-access',
+        refreshToken: 'cached-refresh'
+      }),
+      createGmailClient: () => ({ users: { messages: {} } }),
+      listInboxEmails: async () => [
+        createEmail({
+          message_id: 'msg-1',
+          subject: 'First',
+          sender: 'first@example.com',
+          received_at: Date.parse('2026-02-09T08:00:00Z')
+        }),
+        createEmail({
+          message_id: 'msg-2',
+          subject: 'Second',
+          sender: 'second@example.com',
+          received_at: Date.parse('2026-02-08T08:00:00Z')
+        })
+      ],
+      getEmailDetail,
+      runInkSession
+    });
+
+    expect(code).toBe(0);
+    expect(runInkSession).toHaveBeenCalledOnce();
+
+    const session = runInkSession.mock.calls[0]?.[0];
+    expect(session.listLines).toHaveLength(2);
+    expect(session.messageIds).toEqual(['msg-1', 'msg-2']);
+
+    const preview = await session.fetchDetailLines('msg-2');
+    expect(preview.join('\n')).toContain('Second body');
+    expect(getEmailDetail).toHaveBeenCalledWith(expect.anything(), 'msg-2', { userId: 'me' });
+  });
 });

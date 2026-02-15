@@ -4,8 +4,9 @@
  * Orchestrates batch evaluation of emails against a filter description.
  */
 
-import type { AiProvider, EmailClassification } from './ai-provider.js';
 import type { Email } from '../../src/core/entities.js';
+
+import type { AiProvider, EmailClassification } from './ai-provider.js';
 
 export type FilterStatus = 'idle' | 'loading' | 'filtered' | 'error';
 
