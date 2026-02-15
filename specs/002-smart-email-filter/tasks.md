@@ -64,7 +64,7 @@
 
 - [x] T017 [P] [US1] Unit tests for `GeminiProvider.classifyEmails()` in `tests/unit/services/ai/gemini.test.ts`
 - [x] T018 [P] [US1] Unit tests for `runSmartFilter()` in `tests/unit/services/filter/smartFilter.test.ts`
-- [ ] T019 [P] [US1] Unit tests for `useSmartFilter` hook in `tests/unit/hooks/useSmartFilter.test.ts`
+- [x] T019 [P] [US1] Unit tests for `useSmartFilter` hook in `tests/unit/hooks/useSmartFilter.test.ts`
 - [ ] T020 [P] [US1] Component tests for `FilterInput` in `tests/components/FilterInput.test.tsx`
 - [ ] T021 [US1] Integration test for full filter cycle in `tests/integration/filter-flow.test.tsx`
 
@@ -74,7 +74,7 @@
 - [ ] T023 [P] [US1] Implement `AnthropicProvider` in `src/services/ai/anthropic.ts` (Optional/Parallel)
 - [ ] T024 [P] [US1] Implement `OpenAiProvider` in `src/services/ai/openai.ts` (Optional/Parallel)
 - [x] T025 [US1] Implement `runSmartFilter()` in `src/services/filter/smartFilter.ts`
-- [ ] T026 [US1] Implement `useSmartFilter` hook in `src/hooks/useSmartFilter.ts`
+- [x] T026 [US1] Implement `useSmartFilter` hook in `src/hooks/useSmartFilter.ts`
 - [ ] T027 [US1] Create `FilterInput` component in `src/components/Shared/FilterInput.tsx`
 - [ ] T028 [US1] Update `EmailList` component to display filter status count
 - [ ] T029 [US1] Integrate filter into `src/app.tsx` with shortcut (e.g., `f`)

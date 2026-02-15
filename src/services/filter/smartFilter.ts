@@ -2,6 +2,8 @@ import { Email } from '../../types';
 import { AiProvider, EmailMetadata, EmailClassification } from '../ai/provider';
 import { calculateBatchSize } from './batchSizing';
 
+export type FilterStatus = 'idle' | 'loading' | 'complete' | 'error';
+
 export interface FilterProgress {
   matchingResults: EmailClassification[];
   evaluatedCount: number;
