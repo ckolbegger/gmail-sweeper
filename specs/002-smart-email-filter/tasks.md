@@ -77,15 +77,15 @@
 
 ### Implementation for User Story 1
 
-- [ ] T025 [P] [US1] Implement `AnthropicProvider` in `src/core/ai/anthropic.ts` — use @anthropic-ai/sdk, send classification prompt, parse JSON response into EmailClassification[]
-- [ ] T026 [P] [US1] Implement `OpenAiProvider` in `src/core/ai/openai.ts` — use openai SDK, send classification prompt, parse JSON response, support baseUrl for compatible APIs
-- [ ] T027 [US1] Implement `runSmartFilter()` in `src/core/filter/smart-filter.ts` — split emails using `calculateBatchSize()`, call provider per batch, accumulate results sorted by confidence desc, call onProgress after each batch, support AbortSignal, reject empty description
-- [ ] T028 [US1] Implement `useSmartFilter` hook in `src/cli/hooks/use-smart-filter.ts` — manage filter state (idle/input/loading/filtered/error), call `resolveAiConfig()` and `createAiProvider()`, invoke `runSmartFilter()`, handle errors preserving unfiltered view
-- [ ] T029 [US1] Implement `FilterInput` component in `src/cli/components/filter-input.tsx` — Ink TextInput for filter description, loading indicator (FR-004), error display
-- [ ] T030 [US1] Update `EmailList` component in `src/cli/components/email-list.tsx` — accept optional `filterCount`/`totalCount` props, display "Filtered: X/Y emails" when active (FR-009), display "No matches found" message
+- [x] T025 [P] [US1] Implement `AnthropicProvider` in `src/core/ai/anthropic.ts` — use @anthropic-ai/sdk, send classification prompt, parse JSON response into EmailClassification[]
+- [x] T026 [P] [US1] Implement `OpenAiProvider` in `src/core/ai/openai.ts` — use openai SDK, send classification prompt, parse JSON response, support baseUrl for compatible APIs
+- [x] T027 [US1] Implement `runSmartFilter()` in `src/core/filter/smart-filter.ts` — split emails using `calculateBatchSize()`, call provider per batch, accumulate results sorted by confidence desc, call onProgress after each batch, support AbortSignal, reject empty description
+- [x] T028 [US1] Implement `useSmartFilter` hook in `src/cli/hooks/use-smart-filter.ts` — manage filter state (idle/input/loading/filtered/error), call `resolveAiConfig()` and `createAiProvider()`, invoke `runSmartFilter()`, handle errors preserving unfiltered view
+- [x] T029 [US1] Implement `FilterInput` component in `src/cli/components/filter-input.tsx` — Ink TextInput for filter description, loading indicator (FR-004), error display
+- [x] T030 [US1] Update `EmailList` component in `src/cli/components/email-list.tsx` — accept optional `filterCount`/`totalCount` props, display "Filtered: X/Y emails" when active (FR-009), display "No matches found" message
 - [x] T031 [US1] Update `useKeyboard` hook in `src/cli/hooks/use-keyboard.ts` — add `f` key to activate filter mode (FR-001), add `Escape` key to clear filter (FR-007), disable navigation keys during filter input mode
-- [ ] T032 [US1] Integrate smart filter into `InboxApp` in `src/cli/app.tsx` — wire `useSmartFilter` hook, show `FilterInput` when in input mode, pass filtered emails to `EmailList` when filter active, show filter description in header (FR-006), restore full list on clear (FR-008)
-- [ ] T033 [US1] Update footer help text in `src/cli/app.tsx` — add `f` for filter and `Esc` to clear filter to keyboard shortcut hints
+- [x] T032 [US1] Integrate smart filter into `InboxApp` in `src/cli/app.tsx` — wire `useSmartFilter` hook, show `FilterInput` when in input mode, pass filtered emails to `EmailList` when filter active, show filter description in header (FR-006), restore full list on clear (FR-008)
+- [x] T033 [US1] Update footer help text in `src/cli/app.tsx` — add `f` for filter and `Esc` to clear filter to keyboard shortcut hints
 
 **Checkpoint**: User Story 1 fully functional — user can filter inbox by natural language, see progressive results, and return to full view
 
