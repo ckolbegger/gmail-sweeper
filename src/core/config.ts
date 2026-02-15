@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import type { AiProviderConfig } from '@/adapters/ai/provider.js';
+
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 export interface AppConfig {
@@ -59,6 +61,41 @@ function loadDotEnv(dotenvPath: string): NodeJS.ProcessEnv {
   }
   const content = readFileSync(dotenvPath, 'utf8');
   return parseDotEnv(content);
+}
+
+function parseMaxContextTokens(value: string | undefined): number {
+  if (!value) {
+    return 32000;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 32000;
+  }
+
+  return parsed;
+}
+
+export function resolveAiConfig(env: NodeJS.ProcessEnv = process.env): AiProviderConfig | null {
+  const provider = env.AI_PROVIDER;
+  const model = env.AI_MODEL;
+  const apiKey = env.AI_API_KEY;
+
+  if (!provider || !model || !apiKey) {
+    return null;
+  }
+
+  if (provider !== 'anthropic' && provider !== 'openai') {
+    return null;
+  }
+
+  return {
+    provider,
+    model,
+    apiKey,
+    baseUrl: env.AI_BASE_URL || undefined,
+    maxContextTokens: parseMaxContextTokens(env.AI_MAX_CONTEXT_TOKENS)
+  };
 }
 
 export function loadConfig(

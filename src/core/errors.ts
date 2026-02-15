@@ -21,6 +21,12 @@ export class GmailError extends AppError {
   }
 }
 
+export class AiProviderError extends AppError {
+  constructor(message: string, details?: Record<string, unknown>) {
+    super(message, 'AI_PROVIDER_ERROR', details);
+  }
+}
+
 type ErrorRecord = {
   name?: unknown;
   message?: unknown;
