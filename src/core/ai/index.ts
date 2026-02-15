@@ -17,3 +17,5 @@ export type {
 } from './provider.js';
 
 export { resolveAiConfig } from './config.js';
+
+export { buildSystemPrompt, buildUserPrompt } from './prompt.js';

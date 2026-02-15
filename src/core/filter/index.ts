@@ -1,2 +1,2 @@
 // Filter module barrel export
-// Placeholder for future filter types and functions
+export { estimateTokens, calculateBatchSize } from './batch-sizing.js';

@@ -115,3 +115,29 @@ export class CacheError extends GmailSweepError {
     this.name = 'CacheError';
   }
 }
+
+/**
+ * T017: AI provider error for LLM API failures.
+ */
+export class AiProviderError extends GmailSweepError {
+  /** Which provider failed (e.g. 'anthropic', 'openai') */
+  provider: string;
+  /** HTTP status code if available */
+  statusCode: number | undefined;
+
+  constructor(
+    message: string,
+    provider: string,
+    options?: { statusCode?: number; cause?: Error },
+  ) {
+    super(message);
+    this.name = 'AiProviderError';
+    this.provider = provider;
+    if (options?.statusCode !== undefined) {
+      this.statusCode = options.statusCode;
+    }
+    if (options?.cause !== undefined) {
+      this.cause = options.cause;
+    }
+  }
+}

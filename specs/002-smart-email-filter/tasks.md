@@ -41,17 +41,17 @@
 - [x] T007 [P] Unit tests for `toConfidenceLevel()` mapping in `tests/unit/ai/confidence.test.ts` — test thresholds: ≥0.8→high, ≥0.5→medium, <0.5→low, boundary values 0.0, 0.5, 0.8, 1.0
 - [x] T008 [P] Unit tests for `resolveAiConfig()` in `tests/unit/ai/config.test.ts` — test: reads from env vars, missing AI_PROVIDER returns null, missing AI_API_KEY returns null, AI_MAX_CONTEXT_TOKENS defaults to 32000, AI_BASE_URL optional
 - [x] T009 [P] Unit tests for `createAiProvider()` factory in `tests/unit/ai/provider.test.ts` — test: creates AnthropicProvider for 'anthropic', creates OpenAiProvider for 'openai', throws on unsupported provider
-- [ ] T010 [P] Unit tests for classification prompt template in `tests/unit/ai/prompt.test.ts` — test: builds prompt with filter description and email metadata array, output includes system instruction for JSON format, handles empty email list
-- [ ] T011 [P] Unit tests for `estimateTokens()` and `calculateBatchSize()` in `tests/unit/ai/batch-sizing.test.ts` — test: chars/4 estimation, budget allocation (70% for emails), minimum batch size of 1, large emails get smaller batches, small emails get larger batches
+- [x] T010 [P] Unit tests for classification prompt template in `tests/unit/ai/prompt.test.ts` — test: builds prompt with filter description and email metadata array, output includes system instruction for JSON format, handles empty email list
+- [x] T011 [P] Unit tests for `estimateTokens()` and `calculateBatchSize()` in `tests/unit/ai/batch-sizing.test.ts` — test: chars/4 estimation, budget allocation (70% for emails), minimum batch size of 1, large emails get smaller batches, small emails get larger batches
 
 ### Implementation
 
 - [x] T012 [P] Implement `toConfidenceLevel()` in `src/core/ai/provider.ts` — map numeric confidence to high/medium/low per thresholds
 - [x] T013 [P] Implement `AiProvider` interface, `AiProviderConfig` type, and `createAiProvider()` factory in `src/core/ai/provider.ts`
 - [x] T014 [P] Implement `resolveAiConfig()` in `src/core/ai/config.ts` — read `AI_PROVIDER`, `AI_MODEL`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MAX_CONTEXT_TOKENS` from env vars, return `AiProviderConfig | null`
-- [ ] T015 [P] Implement classification prompt template in `src/core/ai/prompt.ts` — system prompt enforcing JSON output, user prompt with filter description and email metadata array
-- [ ] T016 Implement `estimateTokens()` and `calculateBatchSize()` in `src/core/filter/batch-sizing.ts` — token estimation (chars/4), budget allocation (70% for emails, 30% reserved), minimum 1 per batch
-- [ ] T017 Add `AiProviderError` class in `src/core/errors.ts`
+- [x] T015 [P] Implement classification prompt template in `src/core/ai/prompt.ts` — system prompt enforcing JSON output, user prompt with filter description and email metadata array
+- [x] T016 Implement `estimateTokens()` and `calculateBatchSize()` in `src/core/filter/batch-sizing.ts` — token estimation (chars/4), budget allocation (70% for emails, 30% reserved), minimum 1 per batch
+- [x] T017 Add `AiProviderError` class in `src/core/errors.ts`
 
 **Checkpoint**: Foundation ready — AI provider interface, config, prompt, and batch sizing available for all stories
 
