@@ -62,7 +62,7 @@
 
 ### Tests for User Story 1 (MANDATORY - Strict TDD) ⚠️
 
-- [ ] T017 [P] [US1] Unit tests for `GeminiProvider.classifyEmails()` in `tests/unit/services/ai/gemini.test.ts`
+- [x] T017 [P] [US1] Unit tests for `GeminiProvider.classifyEmails()` in `tests/unit/services/ai/gemini.test.ts`
 - [ ] T018 [P] [US1] Unit tests for `runSmartFilter()` in `tests/unit/services/filter/smartFilter.test.ts`
 - [ ] T019 [P] [US1] Unit tests for `useSmartFilter` hook in `tests/unit/hooks/useSmartFilter.test.ts`
 - [ ] T020 [P] [US1] Component tests for `FilterInput` in `tests/components/FilterInput.test.tsx`
@@ -70,7 +70,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T022 [P] [US1] Implement `GeminiProvider` in `src/services/ai/gemini.ts`
+- [x] T022 [P] [US1] Implement `GeminiProvider` in `src/services/ai/gemini.ts`
 - [ ] T023 [P] [US1] Implement `AnthropicProvider` in `src/services/ai/anthropic.ts` (Optional/Parallel)
 - [ ] T024 [P] [US1] Implement `OpenAiProvider` in `src/services/ai/openai.ts` (Optional/Parallel)
 - [ ] T025 [US1] Implement `runSmartFilter()` in `src/services/filter/smartFilter.ts`
