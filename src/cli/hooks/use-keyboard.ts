@@ -39,30 +39,38 @@ export interface KeyboardHandlers {
   'ctrl+d'?: () => void;
 }
 
+export interface UseKeyboardOptions {
+  /** Disable navigation keys (up/down/left/right) during filter input mode */
+  disableNavigation?: boolean;
+}
+
 /**
  * Hook for handling keyboard input
  */
-export function useKeyboard(handlers: KeyboardHandlers): void {
+export function useKeyboard(handlers: KeyboardHandlers, options?: UseKeyboardOptions): void {
   useInput((input, key: Key) => {
-    // Handle arrow keys
-    if (key.upArrow && handlers.onUp) {
-      handlers.onUp();
-      return;
-    }
+    const navigationDisabled = options?.disableNavigation ?? false;
 
-    if (key.downArrow && handlers.onDown) {
-      handlers.onDown();
-      return;
-    }
+    if (!navigationDisabled) {
+      if (key.upArrow && handlers.onUp) {
+        handlers.onUp();
+        return;
+      }
 
-    if (key.leftArrow && handlers.onLeft) {
-      handlers.onLeft();
-      return;
-    }
+      if (key.downArrow && handlers.onDown) {
+        handlers.onDown();
+        return;
+      }
 
-    if (key.rightArrow && handlers.onRight) {
-      handlers.onRight();
-      return;
+      if (key.leftArrow && handlers.onLeft) {
+        handlers.onLeft();
+        return;
+      }
+
+      if (key.rightArrow && handlers.onRight) {
+        handlers.onRight();
+        return;
+      }
     }
 
     // Handle special keys

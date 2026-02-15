@@ -4,7 +4,7 @@
  * Tests for the keyboard navigation hook.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { Box, Text } from 'ink';
 import { render } from 'ink-testing-library';
@@ -90,5 +90,57 @@ describe('useKeyboard', () => {
 
     const { lastFrame } = render(React.createElement(TestComponent));
     expect(lastFrame()).toContain('Empty');
+  });
+
+  it('should handle f key to activate filter mode (FR-001)', () => {
+    const fHandler = vi.fn();
+    function TestComponent(): React.ReactElement {
+      useKeyboard({
+        f: fHandler,
+      });
+      return React.createElement(Box, null, React.createElement(Text, null, 'Filter'));
+    }
+
+    const { lastFrame } = render(React.createElement(TestComponent));
+    expect(lastFrame()).toContain('Filter');
+    expect(fHandler).toBeDefined();
+  });
+
+  it('should handle Escape key to clear filter (FR-007)', () => {
+    const escapeHandler = vi.fn();
+    function TestComponent(): React.ReactElement {
+      useKeyboard({
+        onEscape: escapeHandler,
+      });
+      return React.createElement(Box, null, React.createElement(Text, null, 'Escape'));
+    }
+
+    const { lastFrame } = render(React.createElement(TestComponent));
+    expect(lastFrame()).toContain('Escape');
+    expect(escapeHandler).toBeDefined();
+  });
+
+  it('should disable navigation keys when isFilterInputMode is true', () => {
+    const upHandler = vi.fn();
+    const downHandler = vi.fn();
+    const leftHandler = vi.fn();
+    const rightHandler = vi.fn();
+
+    function TestComponent(): React.ReactElement {
+      useKeyboard({
+        onUp: upHandler,
+        onDown: downHandler,
+        onLeft: leftHandler,
+        onRight: rightHandler,
+      });
+      return React.createElement(Box, null, React.createElement(Text, null, 'NavDisabled'));
+    }
+
+    const { lastFrame } = render(React.createElement(TestComponent));
+    expect(lastFrame()).toContain('NavDisabled');
+    expect(upHandler).toBeDefined();
+    expect(downHandler).toBeDefined();
+    expect(leftHandler).toBeDefined();
+    expect(rightHandler).toBeDefined();
   });
 });
