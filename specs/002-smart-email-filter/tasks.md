@@ -19,12 +19,12 @@
 
 **Purpose**: Install dependencies and create module scaffolding
 
-- [ ] T001 Install `openai` npm package as production dependency
-- [ ] T002 Create `src/core/ai/` directory with barrel export in `src/core/ai/index.ts`
-- [ ] T003 Create `src/core/filter/` directory with barrel export in `src/core/filter/index.ts`
-- [ ] T004 [P] Create `tests/unit/ai/` directory structure
-- [ ] T005 [P] Create `tests/unit/filter/` directory structure
-- [ ] T006 Update `.env.example` with AI configuration variables (`AI_PROVIDER`, `AI_MODEL`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MAX_CONTEXT_TOKENS`)
+- [x] T001 Install `openai` npm package as production dependency
+- [x] T002 Create `src/core/ai/` directory with barrel export in `src/core/ai/index.ts`
+- [x] T003 Create `src/core/filter/` directory with barrel export in `src/core/filter/index.ts`
+- [x] T004 [P] Create `tests/unit/ai/` directory structure
+- [x] T005 [P] Create `tests/unit/filter/` directory structure
+- [x] T006 Update `.env.example` with AI configuration variables (`AI_PROVIDER`, `AI_MODEL`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MAX_CONTEXT_TOKENS`)
 
 ---
 
