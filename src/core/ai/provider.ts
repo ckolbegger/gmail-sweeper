@@ -45,7 +45,7 @@ export function createAiProvider(config: AiProviderConfig): AiProvider {
 }
 
 class AnthropicProvider implements AiProvider {
-  constructor(private config: AiProviderConfig) {}
+  constructor(_config: AiProviderConfig) {}
 
   async classifyEmails(_request: ClassificationRequest): Promise<EmailClassification[]> {
     throw new Error('Not implemented');
@@ -53,7 +53,7 @@ class AnthropicProvider implements AiProvider {
 }
 
 class OpenAiProvider implements AiProvider {
-  constructor(private config: AiProviderConfig) {}
+  constructor(_config: AiProviderConfig) {}
 
   async classifyEmails(_request: ClassificationRequest): Promise<EmailClassification[]> {
     throw new Error('Not implemented');

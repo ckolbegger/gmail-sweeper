@@ -1,2 +1,2 @@
-export * from './smart-filter.js';
+// export * from './smart-filter.js'; // T027
 export * from './batch-sizing.js';

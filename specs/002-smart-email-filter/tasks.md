@@ -67,7 +67,7 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T018 [P] [US1] Unit tests for `AnthropicProvider.classifyEmails()` in `tests/unit/ai/anthropic.test.ts` — mock Anthropic SDK, test: sends correct prompt, parses JSON response into EmailClassification[], handles malformed response, handles API error
+- [x] T018 [P] [US1] Unit tests for `AnthropicProvider.classifyEmails()` in `tests/unit/ai/anthropic.test.ts` — mock Anthropic SDK, test: sends correct prompt, parses JSON response into EmailClassification[], handles malformed response, handles API error
 - [ ] T019 [P] [US1] Unit tests for `OpenAiProvider.classifyEmails()` in `tests/unit/ai/openai.test.ts` — mock OpenAI SDK, test: sends correct prompt, parses JSON response, handles malformed response, handles API error, respects baseUrl config
 - [ ] T020 [P] [US1] Unit tests for `runSmartFilter()` in `tests/unit/filter/smart-filter.test.ts` — mock AiProvider, test: splits emails into token-aware batches, calls onProgress after each batch, returns combined results sorted by confidence desc, respects AbortSignal cancellation, handles empty email list, rejects empty description (FR-013)
 - [ ] T021 [P] [US1] Unit tests for `useSmartFilter` hook in `tests/unit/cli/use-smart-filter.test.ts` — test: initial state is idle, activateFilter sets input mode, submitFilter triggers evaluation with loading state, successful evaluation updates filtered results, error preserves unfiltered view, clearFilter restores idle state, missing config shows error message (FR-017)
