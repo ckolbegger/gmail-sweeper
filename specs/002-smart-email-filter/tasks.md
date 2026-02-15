@@ -73,7 +73,7 @@
 - [x] T021 [P] [US1] Unit tests for `useSmartFilter` hook in `tests/unit/cli/use-smart-filter.test.ts` — test: initial state is idle, activateFilter sets input mode, submitFilter triggers evaluation with loading state, successful evaluation updates filtered results, error preserves unfiltered view, clearFilter restores idle state, missing config shows error message (FR-017)
 - [x] T022 [P] [US1] Unit tests for `FilterInput` component in `tests/unit/cli/filter-input.test.tsx` — ink-testing-library, test: renders text input, Enter submits value, displays loading indicator during evaluation (FR-004), displays error message on failure
 - [x] T023 [P] [US1] Unit tests for filter mode in `EmailList` in `tests/unit/cli/email-list.filter.test.tsx` — test: displays "Filtered: X/Y emails" count (FR-009), shows only matching emails, shows "No matches found" when empty (FR-005, acceptance scenario 4)
-- [ ] T024 [US1] Integration test for full filter cycle in `tests/integration/smart-filter.test.ts` — mock AiProvider, test: activate filter → enter description → see loading → see filtered results with count → verify non-matching hidden
+- [x] T024 [US1] Integration test for full filter cycle in `tests/integration/smart-filter.test.ts` — mock AiProvider, test: activate filter → enter description → see loading → see filtered results with count → verify non-matching hidden
 
 ### Implementation for User Story 1
 
