@@ -7,13 +7,15 @@ interface InboxListProps {
   focusedIndex: number;
   terminalWidth: number;
   terminalHeight: number;
+  dimmed?: boolean;
 }
 
 export const InboxList: React.FC<InboxListProps> = ({ 
     emails, 
     focusedIndex, 
     terminalWidth, 
-    terminalHeight 
+    terminalHeight,
+    dimmed = false
 }) => {
   // Each email now takes 2 lines. 
   // We subtract headers/footers and then divide by 2 to get visible count.
@@ -54,12 +56,13 @@ export const InboxList: React.FC<InboxListProps> = ({
           >
             {/* Line 1: Subject */}
             <Box>
-              <Text color={isFocused ? 'white' : 'blue'}>
+              <Text color={isFocused ? 'white' : 'blue'} dimColor={dimmed}>
                 {isFocused ? '❯ ' : '  '}
               </Text>
               <Text 
                 bold={isUnread} 
                 color={isFocused ? 'white' : undefined} 
+                dimColor={dimmed}
                 wrap="truncate-end"
               >
                 {email.subject || '(No Subject)'}
@@ -70,14 +73,14 @@ export const InboxList: React.FC<InboxListProps> = ({
             <Box justifyContent="space-between">
               <Text 
                 color={isFocused ? 'white' : 'gray'} 
-                dimColor={!isFocused}
+                dimColor={dimmed || !isFocused}
                 wrap="truncate-end"
               >
                 {`  ${senderStr}`}
               </Text>
               <Text 
                 color={isFocused ? 'white' : 'gray'} 
-                dimColor={!isFocused}
+                dimColor={dimmed || !isFocused}
               >
                 {dateStr}
               </Text>

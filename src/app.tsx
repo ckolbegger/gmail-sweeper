@@ -44,7 +44,7 @@ export default function App({ limit = 10, service: providedService }: AppProps) 
 
     // Filtered emails
     const displayEmails = useMemo(() => {
-        if (filterStatus === 'idle') return emails;
+        if (filterStatus === 'idle' || filterStatus === 'loading') return emails;
         
         const matchedIds = new Set(filterResults.map(r => r.emailId));
         return emails.filter(e => matchedIds.has(e.id))
@@ -156,6 +156,7 @@ export default function App({ limit = 10, service: providedService }: AppProps) 
                             focusedIndex={focusedIndex}
                             terminalWidth={terminalDimensions.columns}
                             terminalHeight={terminalDimensions.rows}
+                            dimmed={filterStatus === 'loading'}
                         />
                     </Box>
                     <Box width="60%" marginLeft={2}>

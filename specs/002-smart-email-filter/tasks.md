@@ -79,6 +79,10 @@
 - [x] T028 [US1] Update `EmailList` component to display filter status count
 - [x] T029 [US1] Integrate filter into `src/app.tsx` with shortcut (e.g., `f`)
 
+### Bug Fixes for User Story 1
+
+- [x] B004 [US1] Fix: Email list clears immediately during filter evaluation — see specs/002-smart-email-filter/US1-bug-4.md
+
 **Checkpoint**: User Story 1 fully functional
 
 ---
