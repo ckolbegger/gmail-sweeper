@@ -14,7 +14,7 @@ export interface AiProviderConfig {
  * T014: Resolve AI config from environment variables
  * @returns AiProviderConfig or null if not properly configured
  */
-export async function resolveAiConfig(): Promise<AiProviderConfig | null> {
+export function resolveAiConfig(): AiProviderConfig | null {
   const provider = process.env.AI_PROVIDER as 'anthropic' | 'openai' | undefined;
   const model = process.env.AI_MODEL;
   const baseUrl = process.env.AI_BASE_URL;
@@ -35,11 +35,16 @@ export async function resolveAiConfig(): Promise<AiProviderConfig | null> {
     return null;
   }
 
-  return {
+  const config: AiProviderConfig = {
     provider,
     model: model || (provider === 'anthropic' ? 'claude-sonnet-4-5-20250929' : 'gpt-4o'),
     apiKey,
-    baseUrl,
     maxContextTokens: maxContextTokens || 32000,
   };
+
+  if (baseUrl) {
+    config.baseUrl = baseUrl;
+  }
+
+  return config;
 }

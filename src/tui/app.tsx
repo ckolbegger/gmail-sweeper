@@ -8,8 +8,10 @@ import type { GmailClient } from '../core/gmail/client.js';
 import type { EmailCache } from '../core/cache/db.js';
 import { EmailList } from './components/EmailList.js';
 import { EmailPreview } from './components/EmailPreview.js';
+import { FilterInput } from './components/FilterInput.js';
 import { useGmail } from './hooks/useGmail.js';
 import { useKeyboard } from './hooks/useKeyboard.js';
+import { useSmartFilter } from './hooks/useSmartFilter.js';
 
 interface AppProps {
   client: GmailClient;
@@ -21,21 +23,35 @@ export function InboxApp({ client, cache }: AppProps) {
   const lastFetchedId = useRef<string | null>(null);
   const { stdout } = useStdout();
   const terminalHeight = stdout?.rows ?? 24;
-  // Reserve 3 lines for header + footer + loading indicator
+
+  const {
+    filterState,
+    filterDescription,
+    filteredEmails,
+    filterError,
+    progress,
+    activateFilter,
+    submitFilter,
+    clearFilter,
+  } = useSmartFilter();
+
   const contentHeight = Math.max(5, terminalHeight - 3);
 
+  const displayEmails = filterState === 'filtered' ? filteredEmails : emails;
+
   const keyboard = useKeyboard({
-    itemCount: emails.length,
+    itemCount: displayEmails.length,
     selectedIndex: 0,
     onSelect: () => {},
     onRefresh: refresh,
     pageSize: 10,
+    filterState,
+    onActivateFilter: activateFilter,
+    onClearFilter: clearFilter,
   });
 
-  // Derive selected email from current navigation index
-  const selectedEmail = emails[keyboard.selectedIndex];
+  const selectedEmail = displayEmails[keyboard.selectedIndex];
 
-  // Fetch full email body when selection changes
   useEffect(() => {
     if (selectedEmail && selectedEmail.id !== lastFetchedId.current) {
       if (!selectedEmail.bodyText && !selectedEmail.bodyHtml) {
@@ -45,7 +61,6 @@ export function InboxApp({ client, cache }: AppProps) {
     }
   }, [selectedEmail, fetchEmailDetail]);
 
-  // T050: Loading state
   if (isLoading && emails.length === 0) {
     return (
       <Box flexDirection="column" padding={1}>
@@ -54,7 +69,6 @@ export function InboxApp({ client, cache }: AppProps) {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <Box flexDirection="column" padding={1}>
@@ -64,13 +78,13 @@ export function InboxApp({ client, cache }: AppProps) {
     );
   }
 
-  // T048: Split-pane layout (list + preview side by side)
   return (
     <Box flexDirection="column">
       {/* Header */}
       <Box marginBottom={1}>
         <Text bold>📧 Gmail Inbox</Text>
         <Text dimColor> ({emails.length} emails)</Text>
+        {filterState === 'filtered' && <Text dimColor> | Filter: "{filterDescription}"</Text>}
       </Box>
 
       {/* Main content - split pane */}
@@ -78,22 +92,47 @@ export function InboxApp({ client, cache }: AppProps) {
         {/* Left: Email list */}
         <Box width="50%" height={contentHeight} overflow="hidden">
           <EmailList
-            emails={emails}
+            emails={displayEmails}
             selectedIndex={keyboard.selectedIndex}
             maxSubjectLength={40}
             viewportHeight={contentHeight}
+            {...(filterState === 'filtered'
+              ? { filterCount: filteredEmails.length, totalCount: emails.length }
+              : {})}
           />
         </Box>
 
         {/* Right: Email preview */}
         <Box width="50%" paddingLeft={1} height={contentHeight} overflow="hidden">
-          <EmailPreview email={selectedEmail} maxHeight={contentHeight} scrollOffset={keyboard.previewScrollOffset} />
+          <EmailPreview
+            email={selectedEmail}
+            maxHeight={contentHeight}
+            scrollOffset={keyboard.previewScrollOffset}
+          />
         </Box>
       </Box>
 
+      {/* Filter Input - at the bottom, always visible */}
+      {filterState !== 'idle' && filterState !== 'filtered' && (
+        <Box marginTop={1}>
+          <FilterInput
+            state={filterState}
+            errorMessage={filterError}
+            onSubmit={(description) => submitFilter(description, emails)}
+            onCancel={clearFilter}
+            progress={progress}
+          />
+        </Box>
+      )}
+
       {/* Footer */}
       <Box marginTop={1}>
-        <Text dimColor>j/k or ↑↓ to navigate • Enter to preview • q to quit • Ctrl+R to refresh</Text>
+        <Text dimColor>
+          {filterState === 'input' || filterState === 'loading'
+            ? 'Enter to filter • Escape to cancel'
+            : 'j/k or ↑↓ to navigate • Enter to preview • f to filter • q to quit • Ctrl+R to refresh'}
+        </Text>
+        {filterState === 'filtered' && <Text dimColor> • Esc to clear filter</Text>}
       </Box>
 
       {/* Loading indicator */}

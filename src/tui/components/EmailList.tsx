@@ -10,6 +10,8 @@ interface EmailListProps {
   selectedIndex: number;
   maxSubjectLength?: number;
   viewportHeight?: number;
+  filterCount?: number;
+  totalCount?: number;
 }
 
 /**
@@ -44,7 +46,19 @@ export function EmailList({
   selectedIndex,
   maxSubjectLength = 60,
   viewportHeight = 10,
+  filterCount,
+  totalCount,
 }: EmailListProps) {
+  const isFilterActive = filterCount !== undefined && totalCount !== undefined;
+
+  if (emails.length === 0) {
+    return (
+      <Box flexDirection="column" padding={1}>
+        {isFilterActive ? <Text>No matches found</Text> : <Text>No emails in inbox</Text>}
+      </Box>
+    );
+  }
+
   // Ensure selected index stays within bounds
   const clampedSelectedIndex = Math.max(0, Math.min(selectedIndex, emails.length - 1));
 
@@ -53,16 +67,16 @@ export function EmailList({
   const endIndex = Math.min(emails.length, startIndex + viewportHeight);
   const visibleEmails = emails.slice(startIndex, endIndex);
 
-  if (emails.length === 0) {
-    return (
-      <Box flexDirection="column" padding={1}>
-        <Text>No emails in inbox</Text>
-      </Box>
-    );
-  }
-
   return (
     <Box flexDirection="column" width="100%">
+      {/* Filter count header */}
+      {isFilterActive && (
+        <Box marginBottom={1}>
+          <Text dimColor>
+            Filtered: {filterCount}/{totalCount} emails
+          </Text>
+        </Box>
+      )}
       {visibleEmails.map((email, visibleIndex) => {
         const actualIndex = startIndex + visibleIndex;
         const isSelected = actualIndex === clampedSelectedIndex;

@@ -86,6 +86,7 @@
 - [ ] T031 [US1] Update `useKeyboard` hook in `src/tui/hooks/useKeyboard.ts` — add `f` key to activate filter mode (FR-001), add `Escape` key to clear filter (FR-007), disable navigation keys during filter input mode
 - [ ] T032 [US1] Integrate smart filter into `InboxApp` in `src/tui/app.tsx` — wire `useSmartFilter` hook, show `FilterInput` when in input mode, pass filtered emails to `EmailList` when filter active, show filter description in header (FR-006), restore full list on clear (FR-008)
 - [ ] T033 [US1] Update footer help text in `src/tui/app.tsx` — add `f` for filter and `Esc` to clear filter to keyboard shortcut hints
+- [ ] T037 [US1-B001] Fix filter input flow — When user presses `f`: (1) show input prompt with "Enter what kind of emails you want to find", (2) accept keyboard text input from user, (3) on Enter, send input to LLM via useSmartFilter, (4) display filtered results
 
 **Checkpoint**: User Story 1 fully functional — user can filter inbox by natural language, see progressive results, and return to full view
 
@@ -120,13 +121,13 @@
 
 ### Tests for User Story 3 (MANDATORY - Strict TDD) ⚠️
 
-- [ ] T037 [P] [US3] Unit tests for confidence indicator rendering in `tests/unit/tui/EmailList.confidence.test.tsx` — test: high confidence shows green indicator, medium shows yellow, low shows dim, indicator appears next to email subject
-- [ ] T038 [US3] Integration test for confidence display in `tests/integration/smart-filter-confidence.test.ts` — test: apply filter → results show confidence indicators → results ordered by confidence descending
+- [ ] T041 [P] [US3] Unit tests for confidence indicator rendering in `tests/unit/tui/EmailList.confidence.test.tsx`
+- [ ] T042 [US3] Integration test for confidence display in `tests/integration/smart-filter-confidence.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T039 [P] [US3] Update `EmailList` component in `src/tui/components/EmailList.tsx` — accept optional `confidenceMap` prop (Map<emailId, ConfidenceLevel>), render colored confidence indicator (high=green, medium=yellow, low=dim) next to email subject when filter active
-- [ ] T040 [US3] Wire confidence data from `useSmartFilter` to `EmailList` via `InboxApp` in `src/tui/app.tsx` — build confidenceMap from filter results, pass to EmailList
+- [ ] T043 [P] [US3] Update `EmailList` component in `src/tui/components/EmailList.tsx` — accept optional `confidenceMap` prop (Map<emailId, ConfidenceLevel>), render colored confidence indicator (high=green, medium=yellow, low=dim) next to email subject when filter active
+- [ ] T044 [US3] Wire confidence data from `useSmartFilter` to `EmailList` via `InboxApp` in `src/tui/app.tsx` — build confidenceMap from filter results, pass to EmailList
 
 **Checkpoint**: All user stories functional — filter, clear, and confidence indicators working
 
@@ -136,12 +137,12 @@
 
 **Purpose**: Edge cases, error hardening, and documentation
 
-- [ ] T041 [P] Unit tests for edge cases in `tests/unit/filter/smart-filter.edge.test.ts` — test: vague description ("stuff") returns best-effort results, emails with no body (only subject/sender) are evaluated, very long email metadata handled by batch sizing
-- [ ] T042 [P] Unit tests for AI error handling in `tests/unit/ai/error-handling.test.ts` — test: network timeout, rate limit (429), malformed JSON response, empty response, provider returns partial results
-- [ ] T043 Handle progressive batch display in `src/tui/app.tsx` — update EmailList during evaluation as each batch completes (FR-014), show "Evaluating batch X/Y..." in status
-- [ ] T044 Update `src/core/ai/index.ts` barrel export with all public types and functions
-- [ ] T045 Update `src/core/filter/index.ts` barrel export with all public types and functions
-- [ ] T046 Run quickstart.md validation — verify development setup instructions work end-to-end
+- [ ] T047 [P] Unit tests for edge cases in `tests/unit/filter/smart-filter.edge.test.ts`
+- [ ] T048 [P] Unit tests for AI error handling in `tests/unit/ai/error-handling.test.ts`
+- [ ] T049 Handle progressive batch display in `src/tui/app.tsx`
+- [ ] T050 Update `src/core/ai/index.ts` barrel export with all public types and functions
+- [ ] T051 Update `src/core/filter/index.ts` barrel export with all public types and functions
+- [ ] T052 Run quickstart.md validation
 
 ---
 
@@ -177,8 +178,8 @@
 - T012–T016: foundational implementations in parallel (after their tests pass)
 - T018–T023: all US1 tests in parallel
 - T025/T026: both provider implementations in parallel
-- T034/T035 and T037/T038: US2 and US3 tests can run in parallel
-- T041/T042: edge case and error handling tests in parallel
+- T034/T035 and T041/T042: US2 and US3 tests can run in parallel
+- T041/T042 and T047/T048: edge case and error handling tests in parallel
 
 ---
 

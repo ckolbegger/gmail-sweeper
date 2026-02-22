@@ -11,6 +11,9 @@ interface UseKeyboardOptions {
   onSelect: (index: number) => void;
   onRefresh?: () => void;
   pageSize?: number;
+  filterState?: 'idle' | 'input' | 'loading' | 'filtered' | 'error';
+  onActivateFilter?: () => void;
+  onClearFilter?: () => void;
 }
 
 interface UseKeyboardResult {
@@ -25,14 +28,20 @@ export function useKeyboard({
   onSelect,
   onRefresh,
   pageSize = 10,
+  filterState = 'idle',
+  onActivateFilter,
+  onClearFilter,
 }: UseKeyboardOptions): UseKeyboardResult {
   const [index, setIndex] = useState(selectedIndex);
   const [previewScrollOffset, setPreviewScrollOffset] = useState(0);
   const { exit } = useApp();
 
-  const clampIndex = useCallback((idx: number) => {
-    return Math.max(0, Math.min(idx, itemCount - 1));
-  }, [itemCount]);
+  const clampIndex = useCallback(
+    (idx: number) => {
+      return Math.max(0, Math.min(idx, itemCount - 1));
+    },
+    [itemCount]
+  );
 
   const handleKey = useCallback(
     (event: { key: string; ctrlKey?: boolean; shiftKey?: boolean }) => {
@@ -41,12 +50,12 @@ export function useKeyboard({
       switch (key) {
         case 'j':
         case 'ArrowDown':
-          setIndex(prev => clampIndex(prev + 1));
+          setIndex((prev) => clampIndex(prev + 1));
           break;
 
         case 'k':
         case 'ArrowUp':
-          setIndex(prev => clampIndex(prev - 1));
+          setIndex((prev) => clampIndex(prev - 1));
           break;
 
         case 'Enter':
@@ -62,11 +71,11 @@ export function useKeyboard({
           break;
 
         case 'PageDown':
-          setIndex(prev => clampIndex(prev + pageSize));
+          setIndex((prev) => clampIndex(prev + pageSize));
           break;
 
         case 'PageUp':
-          setIndex(prev => clampIndex(prev - pageSize));
+          setIndex((prev) => clampIndex(prev - pageSize));
           break;
 
         default:
@@ -78,6 +87,25 @@ export function useKeyboard({
 
   // Wire into Ink's input system to capture keyboard events
   useInput((input, key) => {
+    // During filter input mode, only handle Escape - let FilterInput handle other keys
+    if (filterState === 'input' || filterState === 'loading') {
+      if (key.escape) {
+        onClearFilter?.();
+      }
+    }
+
+    // 'f' to activate filter
+    if (input === 'f') {
+      onActivateFilter?.();
+      return;
+    }
+
+    // Escape clears filter when filtered
+    if (key.escape && filterState === 'filtered') {
+      onClearFilter?.();
+      return;
+    }
+
     if (input === 'q') {
       exit();
       return;
@@ -91,11 +119,11 @@ export function useKeyboard({
 
     // Preview scroll: [ up, ] down
     if (input === ']') {
-      setPreviewScrollOffset(prev => prev + 3);
+      setPreviewScrollOffset((prev) => prev + 3);
       return;
     }
     if (input === '[') {
-      setPreviewScrollOffset(prev => Math.max(0, prev - 3));
+      setPreviewScrollOffset((prev) => Math.max(0, prev - 3));
       return;
     }
 
