@@ -1,4 +1,12 @@
-export type TuiCommand = 'up' | 'down' | 'open' | 'back' | 'quit' | 'noop';
+export type TuiCommand =
+  | 'up'
+  | 'down'
+  | 'open'
+  | 'back'
+  | 'quit'
+  | 'filter'
+  | 'escape'
+  | 'noop';
 
 export interface TuiKeyInfo {
   upArrow?: boolean;
@@ -15,6 +23,8 @@ export function parseCommandToken(token: string): TuiCommand {
   if (['down', 'j'].includes(command)) return 'down';
   if (['open', 'enter', 'o'].includes(command)) return 'open';
   if (['back', 'b'].includes(command)) return 'back';
+  if (['filter', 'f'].includes(command)) return 'filter';
+  if (['escape', 'esc'].includes(command)) return 'escape';
   if (['quit', 'q', 'exit'].includes(command)) return 'quit';
   return 'noop';
 }
@@ -24,6 +34,7 @@ export function mapInputToCommand(input: string, key: TuiKeyInfo): TuiCommand {
   if (key.upArrow) return 'up';
   if (key.downArrow) return 'down';
   if (key.return) return 'open';
-  if (key.backspace || key.escape) return 'back';
+  if (key.backspace) return 'back';
+  if (key.escape) return 'escape';
   return parseCommandToken(input);
 }

@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 
+import { createAiProvider } from '@/adapters/ai/provider.js';
 import { createAuthUrl, createGmailClient } from '@/adapters/gmail/client.js';
 import { getEmailDetail, type GmailDetailClientLike } from '@/adapters/gmail/get_email.js';
 import { listInboxEmails, type GmailReadClientLike } from '@/adapters/gmail/list_emails.js';
@@ -15,18 +16,13 @@ import { runInkSession, type RunInkSessionOptions } from '@/tui/ink_runtime.js';
 type WritableLogLevel = AppConfig['logLevel'];
 
 export interface CliDeps {
-  loadConfig?: () => {
-    gmailClientId: string;
-    gmailClientSecret: string;
-    gmailRedirectUri: string;
-    logLevel: WritableLogLevel;
-    dbPath: string;
-  };
+  loadConfig?: () => AppConfig;
   readAuthTokens?: (filePath: string) => Promise<AuthTokens | null>;
   writeAuthTokens?: (filePath: string, tokens: AuthTokens) => Promise<void>;
   createAuthUrl?: (config: AppConfig) => string;
   exchangeAuthCode?: (config: AppConfig, code: string) => Promise<AuthTokens>;
   createGmailClient?: typeof createGmailClient;
+  createAiProvider?: typeof createAiProvider;
   listInboxEmails?: typeof listInboxEmails;
   getEmailDetail?: typeof getEmailDetail;
   navigationInputs?: string[];
@@ -102,6 +98,7 @@ export async function runInboxCli(argv: string[], deps: CliDeps = {}): Promise<n
   const fetchEmailDetail = deps.getEmailDetail ?? getEmailDetail;
   const launchInkSession = deps.runInkSession ?? runInkSession;
   const createClient = deps.createGmailClient ?? createGmailClient;
+  const createProvider = deps.createAiProvider ?? createAiProvider;
 
   const config = load();
 
@@ -147,6 +144,7 @@ export async function runInboxCli(argv: string[], deps: CliDeps = {}): Promise<n
   const visible = filtered.slice(0, options.limit);
   const lines = renderInboxList(visible);
   const messageIds = visible.map((email) => email.message_id);
+  const aiProvider = config.aiConfig ? createProvider(config.aiConfig) : null;
 
   writeLine(`Loaded ${emails.length} emails, showing ${visible.length}.`);
   if (options.interactive) {
@@ -157,6 +155,8 @@ export async function runInboxCli(argv: string[], deps: CliDeps = {}): Promise<n
         const detail = await fetchEmailDetail(gmail, messageId, { userId: 'me' });
         return renderEmailPreview(detail);
       },
+      emails: visible,
+      provider: aiProvider,
       scriptedCommands: deps.navigationInputs ?? options.commands,
       writeFrame: (frame) => {
         for (const line of frame) {

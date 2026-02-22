@@ -11,9 +11,12 @@ export interface AppConfig {
   gmailRedirectUri: string;
   logLevel: LogLevel;
   dbPath: string;
+  aiConfig?: AiProviderConfig | null;
 }
 
-const REQUIRED_KEYS: Array<keyof AppConfig> = [
+type RequiredConfigKey = 'gmailClientId' | 'gmailClientSecret' | 'gmailRedirectUri' | 'dbPath';
+
+const REQUIRED_KEYS: RequiredConfigKey[] = [
   'gmailClientId',
   'gmailClientSecret',
   'gmailRedirectUri',
@@ -111,7 +114,8 @@ export function loadConfig(
     gmailClientSecret: mergedEnv.GMAIL_CLIENT_SECRET ?? '',
     gmailRedirectUri: mergedEnv.GMAIL_REDIRECT_URI ?? '',
     logLevel: (mergedEnv.LOG_LEVEL as LogLevel) ?? 'info',
-    dbPath: mergedEnv.DB_PATH ?? 'data/local.db'
+    dbPath: mergedEnv.DB_PATH ?? 'data/local.db',
+    aiConfig: resolveAiConfig(mergedEnv)
   };
 
   const missing = REQUIRED_KEYS.filter((key) => !config[key]);

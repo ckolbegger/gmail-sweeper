@@ -107,4 +107,35 @@ describe('configuration loader', () => {
       await rm(tempDir, { recursive: true, force: true });
     }
   });
+
+  it('should resolve AI config from .env values', async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), 'gmail-sweeper-config-'));
+    const dotenvPath = join(tempDir, '.env');
+    await writeFile(
+      dotenvPath,
+      [
+        'GMAIL_CLIENT_ID=file-client-id',
+        'GMAIL_CLIENT_SECRET=file-client-secret',
+        'GMAIL_REDIRECT_URI=http://localhost/from-file',
+        'AI_PROVIDER=openai',
+        'AI_MODEL=gpt-4o-mini',
+        'AI_API_KEY=test-key',
+        'AI_MAX_CONTEXT_TOKENS=64000'
+      ].join('\n'),
+      'utf8'
+    );
+
+    try {
+      const config = loadConfig({}, { dotenvPath });
+      expect(config.aiConfig).toEqual({
+        provider: 'openai',
+        model: 'gpt-4o-mini',
+        apiKey: 'test-key',
+        baseUrl: undefined,
+        maxContextTokens: 64000
+      });
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
 });

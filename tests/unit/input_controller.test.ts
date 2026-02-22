@@ -20,4 +20,9 @@ describe('ink input controller', () => {
     expect(parseCommandToken('q')).toBe('quit');
     expect(mapInputToCommand('', { ctrl: true })).toBe('quit');
   });
+
+  it('should map f and Escape to smart filter commands', () => {
+    expect(parseCommandToken('f')).toBe('filter');
+    expect(mapInputToCommand('', { escape: true })).toBe('escape');
+  });
 });

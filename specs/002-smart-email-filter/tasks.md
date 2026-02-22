@@ -63,25 +63,25 @@
 
 ### Tests for User Story 1 (MANDATORY - Strict TDD)
 
-- [ ] T018 [P] [US1] Unit tests for `AnthropicProvider.classifyEmails()` in `tests/unit/anthropic_provider.test.ts`
-- [ ] T019 [P] [US1] Unit tests for `OpenAiProvider.classifyEmails()` in `tests/unit/openai_provider.test.ts`
-- [ ] T020 [P] [US1] Unit tests for `runSmartFilter()` in `tests/unit/smart_filter_service.test.ts`
-- [ ] T021 [P] [US1] Unit tests for `useSmartFilter` in `tests/unit/use_smart_filter.test.ts`
-- [ ] T022 [P] [US1] Unit tests for `FilterInput` in `tests/unit/filter_input.test.tsx`
-- [ ] T023 [P] [US1] Unit tests for filter mode in `inbox_list` in `tests/unit/inbox_list.filter.test.tsx`
-- [ ] T024 [US1] Integration test for full filter cycle in `tests/integration/smart_filter_flow.test.ts`
+- [x] T018 [P] [US1] Unit tests for `AnthropicProvider.classifyEmails()` in `tests/unit/anthropic_provider.test.ts`
+- [x] T019 [P] [US1] Unit tests for `OpenAiProvider.classifyEmails()` in `tests/unit/openai_provider.test.ts`
+- [x] T020 [P] [US1] Unit tests for `runSmartFilter()` in `tests/unit/smart_filter_service.test.ts`
+- [x] T021 [P] [US1] Unit tests for `useSmartFilter` in `tests/unit/use_smart_filter.test.ts`
+- [x] T022 [P] [US1] Unit tests for `FilterInput` in `tests/unit/filter_input.test.tsx`
+- [x] T023 [P] [US1] Unit tests for filter mode in `inbox_list` in `tests/unit/inbox_list.filter.test.tsx`
+- [x] T024 [US1] Integration test for full filter cycle in `tests/integration/smart_filter_flow.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T025 [P] [US1] Implement `AnthropicProvider` in `src/adapters/ai/anthropic.ts`
-- [ ] T026 [P] [US1] Implement `OpenAiProvider` in `src/adapters/ai/openai.ts`
-- [ ] T027 [US1] Implement `runSmartFilter()` in `src/services/smart_filter_service.ts`
-- [ ] T028 [US1] Implement `useSmartFilter` in `src/tui/use_smart_filter.ts`
-- [ ] T029 [US1] Implement `FilterInput` in `src/tui/filter_input.tsx`
-- [ ] T030 [US1] Update inbox list rendering with filter counts/empty state in `src/tui/inbox_list.tsx`
-- [ ] T031 [US1] Update keyboard handling for `f`/`Esc` in `src/tui/input_controller.ts`
-- [ ] T032 [US1] Integrate smart filter state/UI in `src/tui/app.tsx`
-- [ ] T033 [US1] Update footer/help text in `src/tui/app.tsx` for filter shortcuts
+- [x] T025 [P] [US1] Implement `AnthropicProvider` in `src/adapters/ai/anthropic.ts`
+- [x] T026 [P] [US1] Implement `OpenAiProvider` in `src/adapters/ai/openai.ts`
+- [x] T027 [US1] Implement `runSmartFilter()` in `src/services/smart_filter_service.ts`
+- [x] T028 [US1] Implement `useSmartFilter` in `src/tui/use_smart_filter.ts`
+- [x] T029 [US1] Implement `FilterInput` in `src/tui/filter_input.tsx`
+- [x] T030 [US1] Update inbox list rendering with filter counts/empty state in `src/tui/inbox_list.tsx`
+- [x] T031 [US1] Update keyboard handling for `f`/`Esc` in `src/tui/input_controller.ts`
+- [x] T032 [US1] Integrate smart filter state/UI in `src/tui/app.tsx`
+- [x] T033 [US1] Update footer/help text in `src/tui/app.tsx` for filter shortcuts
 
 **Checkpoint**: User Story 1 functional and independently testable.
 
@@ -136,6 +136,10 @@
 - [ ] T044 Finalize `src/adapters/ai/index.ts` public exports
 - [ ] T045 Finalize `src/services/index.ts` public exports
 - [ ] T046 Run quickstart validation from `specs/002-smart-email-filter/quickstart.md`
+- [x] T047 [P] Regression tests for filter-input behavior bug `specs/002-smart-email-filter/US1-bug-1.md` in `tests/unit/input_controller.filter_mode.test.ts` and `tests/integration/smart_filter_typing_flow.test.ts`
+- [x] T048 Fix filter-input behavior bug `specs/002-smart-email-filter/US1-bug-1.md` by isolating text-entry mode in `src/tui/app.ts`/`src/tui/input_controller.ts`
+- [x] T049 [P] Regression tests for AI config wiring bug `specs/002-smart-email-filter/US1-bug-2.md` in `tests/unit/cli_ai_config_wiring.test.ts` and `tests/integration/smart_filter_configured_env_flow.test.ts`
+- [x] T050 Fix AI config wiring bug `specs/002-smart-email-filter/US1-bug-2.md` by wiring `resolveAiConfig()` + `createAiProvider()` through `src/cli/app.ts` into TUI deps
 
 ---
 

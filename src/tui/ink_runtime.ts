@@ -1,6 +1,8 @@
 import { render } from 'ink';
 import { createElement } from 'react';
 
+import type { AiProvider } from '@/adapters/ai/provider.js';
+import type { Email } from '@/core/entities.js';
 import { applyTuiCommand, createTuiAppState, InkInboxApp, renderTuiScreen } from '@/tui/app.js';
 import { parseCommandToken } from '@/tui/input_controller.js';
 
@@ -8,6 +10,8 @@ export interface RunInkSessionOptions {
   listLines: string[];
   messageIds: string[];
   fetchDetailLines: (messageId: string) => Promise<string[]>;
+  emails?: Email[];
+  provider?: AiProvider | null;
   viewportRows?: number;
   scriptedCommands?: string[];
   onFrame?: (frame: string[]) => void;
@@ -48,6 +52,8 @@ function defaultCreateRenderer(options: RunInkSessionOptions): InkRendererInstan
       listLines: options.listLines,
       messageIds: options.messageIds,
       fetchDetailLines: options.fetchDetailLines,
+      emails: options.emails,
+      provider: options.provider,
       viewportRows: options.viewportRows ?? inferViewportRows(),
       onExit: () => resolveExit?.()
     }),
@@ -76,7 +82,9 @@ async function runScriptedInkSession(options: RunInkSessionOptions): Promise<voi
   for (const token of options.scriptedCommands ?? []) {
     state = await applyTuiCommand(state, parseCommandToken(token), {
       messageIds: options.messageIds,
-      fetchDetailLines: options.fetchDetailLines
+      fetchDetailLines: options.fetchDetailLines,
+      emails: options.emails,
+      provider: options.provider
     });
     emitFrame(renderTuiScreen(options.listLines, state));
 
