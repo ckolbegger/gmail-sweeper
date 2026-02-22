@@ -54,6 +54,12 @@ export function useSmartFilter({
 
   const submitFilter = useCallback(
     (description: string) => {
+      if (!description.trim()) {
+        setStatus('error');
+        setError('Filter description cannot be empty');
+        return;
+      }
+
       setFilterDescription(description);
       setStatus('loading');
       setError(null);
@@ -61,7 +67,7 @@ export function useSmartFilter({
       const config = resolveAiConfig();
       if (!config) {
         setStatus('error');
-        setError('AI provider not configured');
+        setError('AI provider not configured. Set AI_PROVIDER and AI_API_KEY environment variables.');
         return;
       }
 

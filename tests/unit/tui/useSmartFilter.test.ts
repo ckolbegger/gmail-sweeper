@@ -270,6 +270,53 @@ describe('useSmartFilter', () => {
     expect(result.current.progress).toBeNull();
   });
 
+  it('submitFilter with empty string sets error before AI config check', () => {
+    const { result } = renderHook(() =>
+      useSmartFilter({ emails: [makeEmail('1')] }),
+    );
+
+    act(() => {
+      result.current.submitFilter('');
+    });
+
+    expect(result.current.status).toBe('error');
+    expect(result.current.error).toBe('Filter description cannot be empty');
+    expect(mockResolveAiConfig).not.toHaveBeenCalled();
+  });
+
+  it('submitFilter with whitespace-only string sets error before AI config check', () => {
+    const { result } = renderHook(() =>
+      useSmartFilter({ emails: [makeEmail('1')] }),
+    );
+
+    act(() => {
+      result.current.submitFilter('   ');
+    });
+
+    expect(result.current.status).toBe('error');
+    expect(result.current.error).toBe('Filter description cannot be empty');
+    expect(mockResolveAiConfig).not.toHaveBeenCalled();
+  });
+
+  it('missing AI config error includes actionable guidance', async () => {
+    mockResolveAiConfig.mockReturnValue(null);
+
+    const { result } = renderHook(() =>
+      useSmartFilter({ emails: [makeEmail('1')] }),
+    );
+
+    act(() => {
+      result.current.activateFilter();
+    });
+
+    await act(async () => {
+      result.current.submitFilter('test filter');
+    });
+
+    expect(result.current.status).toBe('error');
+    expect(result.current.error).toContain('Set AI_PROVIDER and AI_API_KEY environment variables');
+  });
+
   it('missing AI config shows error message (FR-017)', async () => {
     mockResolveAiConfig.mockReturnValue(null);
 

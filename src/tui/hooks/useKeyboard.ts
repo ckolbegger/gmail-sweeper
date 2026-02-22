@@ -2,7 +2,7 @@
  * T042: useKeyboard hook - handles vim-style keyboard navigation (j/k, arrows, Enter, Page, Home/End).
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useInput, useApp } from 'ink';
 
 interface UseKeyboardOptions {
@@ -11,6 +11,9 @@ interface UseKeyboardOptions {
   onSelect: (index: number) => void;
   onRefresh?: () => void;
   pageSize?: number;
+  onActivateFilter?: () => void;
+  onClearFilter?: () => void;
+  isFilterInputActive?: boolean;
 }
 
 interface UseKeyboardResult {
@@ -25,10 +28,18 @@ export function useKeyboard({
   onSelect,
   onRefresh,
   pageSize = 10,
+  onActivateFilter,
+  onClearFilter,
+  isFilterInputActive = false,
 }: UseKeyboardOptions): UseKeyboardResult {
   const [index, setIndex] = useState(selectedIndex);
   const [previewScrollOffset, setPreviewScrollOffset] = useState(0);
   const { exit } = useApp();
+
+  // Clamp index when itemCount changes (e.g. filter applied/cleared)
+  useEffect(() => {
+    setIndex(prev => Math.min(prev, Math.max(0, itemCount - 1)));
+  }, [itemCount]);
 
   const clampIndex = useCallback((idx: number) => {
     return Math.max(0, Math.min(idx, itemCount - 1));
@@ -78,8 +89,28 @@ export function useKeyboard({
 
   // Wire into Ink's input system to capture keyboard events
   useInput((input, key) => {
+    // When filter input is active, only handle Escape to cancel/clear
+    if (isFilterInputActive) {
+      if (key.escape) {
+        onClearFilter?.();
+      }
+      return;
+    }
+
     if (input === 'q') {
       exit();
+      return;
+    }
+
+    // Escape to clear filter
+    if (key.escape) {
+      onClearFilter?.();
+      return;
+    }
+
+    // f to activate filter (FR-001)
+    if (input === 'f') {
+      onActivateFilter?.();
       return;
     }
 
