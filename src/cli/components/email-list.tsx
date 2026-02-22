@@ -17,6 +17,10 @@ export interface EmailListProps {
   sort?: { field: SortField; direction: 'asc' | 'desc' };
   onSort?: (field: SortField) => void;
   maxVisibleRows?: number;
+  /** Number of emails after filtering (for display) */
+  filterCount?: number;
+  /** Total emails before filtering (for display) */
+  totalCount?: number;
 }
 
 function charDisplayWidth(char: string): number {
@@ -61,7 +65,7 @@ export function toAscii(value: string): string {
   return value.replace(/[^\x20-\x7E]/g, '').trimStart();
 }
 
-export function EmailList({ emails, selectedId, onSelect, sort, maxVisibleRows }: EmailListProps) {
+export function EmailList({ emails, selectedId, onSelect, sort, maxVisibleRows, filterCount, totalCount }: EmailListProps) {
   const [selectedIndex, setSelectedIndex] = useState(() => {
     const idx = emails.findIndex((e) => e.id === selectedId);
     return idx >= 0 ? idx : 0;
@@ -125,6 +129,15 @@ export function EmailList({ emails, selectedId, onSelect, sort, maxVisibleRows }
 
   // Handle empty state
   if (displayedEmails.length === 0) {
+    // Show "No matches found" if filter is active
+    if (filterCount !== undefined && totalCount !== undefined && totalCount > 0) {
+      return (
+        <Box flexDirection="column" paddingX={1}>
+          <Text dimColor>No matches found</Text>
+          <Text dimColor>Filtered: 0/{totalCount} emails</Text>
+        </Box>
+      );
+    }
     return (
       <Box paddingX={1}>
         <Text dimColor>No emails found</Text>
@@ -215,6 +228,12 @@ export function EmailList({ emails, selectedId, onSelect, sort, maxVisibleRows }
 
   return (
     <Box flexDirection="column">
+      {/* Show filter count if active */}
+      {filterCount !== undefined && totalCount !== undefined && (
+        <Box paddingX={1} borderStyle="single" borderBottom>
+          <Text dimColor>Filtered: {filterCount}/{totalCount} emails</Text>
+        </Box>
+      )}
       {headers}
       {list}
     </Box>

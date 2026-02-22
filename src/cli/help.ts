@@ -14,6 +14,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     commands: [
       { key: '↑ / ↓', description: 'Move selection in email list' },
       { key: '[ / ]', description: 'Scroll email body in detail pane' },
+      { key: '.', description: 'Refresh emails from Gmail' },
       { key: 'q', description: 'Quit application' },
       { key: '?', description: 'Toggle this help panel' },
     ],
@@ -34,6 +35,7 @@ export const HELP_SECTIONS: HelpSection[] = [
       { key: 'f', description: 'Filter by sender' },
       { key: 'l', description: 'Filter by label' },
       { key: 'c', description: 'Filter by category' },
+      { key: 'a', description: 'AI-powered natural language filter' },
       { key: 'r', description: 'Toggle unread-only filter' },
       { key: 'x', description: 'Clear all filters' },
     ],

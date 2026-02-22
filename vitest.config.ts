@@ -21,6 +21,9 @@ export default defineConfig({
     },
     setupFiles: ['./tests/setup.ts'],
     testTimeout: 10000,
+    deps: {
+      interopDefault: true,
+    },
   },
   resolve: {
     alias: {

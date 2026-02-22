@@ -70,3 +70,13 @@ export class ConfigurationError extends GmailSweepError {
     this.name = 'ConfigurationError';
   }
 }
+
+/**
+ * AI Provider errors
+ */
+export class AiProviderError extends GmailSweepError {
+  constructor(message: string, cause?: Error) {
+    super(message, cause);
+    this.name = 'AiProviderError';
+  }
+}

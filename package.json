@@ -9,10 +9,10 @@
   },
   "scripts": {
     "dev": "tsx watch src/cli/index.ts",
-    "build": "tsc",
-    "test": "vitest",
+    "build": "tsc && tsc-alias",
+    "test": "vitest run",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
+    "test:coverage": "vitest run --coverage",
     "lint": "eslint src tests",
     "lint:fix": "eslint src tests --fix",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
@@ -21,13 +21,16 @@
     "compile": "pkg dist/cli/index.js --output gmail-sweep"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
     "@napi-rs/keyring": "^1.2.0",
     "better-sqlite3": "^11.7.0",
     "chalk": "^5.4.1",
     "googleapis": "^144.0.0",
     "ink": "^4.4.1",
+    "ink-text-input": "^5.0.1",
     "ollama": "^0.5.2",
     "open": "^10.1.0",
+    "openai": "^6.22.0",
     "react": "^18.3.1",
     "zod": "^3.24.1"
   },
@@ -45,6 +48,7 @@
     "ink-testing-library": "^4.0.0",
     "pkg": "^5.8.1",
     "prettier": "^3.4.2",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.18.2",

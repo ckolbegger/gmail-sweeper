@@ -5,14 +5,16 @@
  */
 
 import { Box, Text, render, useApp, useInput, useStdout } from 'ink';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 import { mkdirSync } from 'node:fs';
 import { EmailList } from './components/email-list.js';
 import { EmailDetail } from './components/email-detail.js';
+import { FilterInput } from './components/filter-input.js';
 import type { Email } from '../core/models/email.js';
 import { useKeyboard } from './hooks/use-keyboard.js';
+import { useSmartFilter } from './hooks/use-smart-filter.js';
 import { getDatabase } from '../core/persistence/database.js';
 import { EmailRepository } from '../core/services/email-repository.js';
 import { GmailClient } from '../core/services/gmail-client.js';
@@ -22,7 +24,7 @@ import type { GmailClientConfig } from '../core/contracts/gmail-api.js';
 import { HELP_SECTIONS } from './help.js';
 
 type AppView = 'loading' | 'auth' | 'email-list' | 'error';
-type FilterMode = 'sender' | 'label' | 'category';
+type FilterMode = 'sender' | 'label' | 'category' | 'ai';
 
 export function App() {
   const { exit } = useApp();
@@ -49,6 +51,14 @@ export function App() {
   const [filterInput, setFilterInput] = useState('');
   const [detailScrollOffset, setDetailScrollOffset] = useState(0);
   const [showHelp, setShowHelp] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Refs for refresh functionality
+  const emailRepositoryRef = useRef<EmailRepository | null>(null);
+  const gmailClientRef = useRef<GmailClient | null>(null);
+
+  // Smart filter hook for AI-powered filtering
+  const smartFilter = useSmartFilter();
 
   const emailSorter = useMemo(() => new EmailSorter(), []);
   const emailFilter = useMemo(() => new EmailFilter(), []);
@@ -107,6 +117,34 @@ export function App() {
     [hydrateFromLocalStore]
   );
 
+  // Refresh emails from Gmail
+  const handleRefresh = useCallback(async () => {
+    if (isRefreshing) return;
+    if (!emailRepositoryRef.current || !gmailClientRef.current) {
+      setStatusMessage('Cannot refresh: not connected to Gmail');
+      return;
+    }
+
+    setIsRefreshing(true);
+    setStatusMessage('Refreshing emails...');
+
+    try {
+      const isAuthenticated = await gmailClientRef.current.auth.isAuthenticated();
+      if (!isAuthenticated) {
+        setStatusMessage('Not authenticated with Gmail. Run: gmail-sweep auth');
+        return;
+      }
+
+      const loadedEmails = await syncFromGmail(emailRepositoryRef.current, gmailClientRef.current);
+      setEmails(loadedEmails);
+      setStatusMessage(`Refreshed: ${loadedEmails.length} emails`);
+    } catch (err) {
+      setStatusMessage(err instanceof Error ? err.message : 'Refresh failed');
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing, syncFromGmail]);
+
   // Initialize app and load emails
   useEffect(() => {
     let active = true;
@@ -120,6 +158,7 @@ export function App() {
 
         const db = getDatabase({ path: dbPath });
         const emailRepository = new EmailRepository(db);
+        emailRepositoryRef.current = emailRepository;
         let loadedEmails = await hydrateFromLocalStore(emailRepository);
 
         const config = readGmailConfig();
@@ -140,6 +179,7 @@ export function App() {
         }
 
         const gmailClient = new GmailClient(config);
+        gmailClientRef.current = gmailClient;
         const isAuthenticated = await gmailClient.auth.isAuthenticated();
 
         if (isAuthenticated) {
@@ -188,6 +228,28 @@ export function App() {
   }, []);
 
   const displayedEmails = useMemo(() => {
+    // If smart filter is active with results, use those
+    if (smartFilter.state === 'filtered' && smartFilter.filteredEmails.length >= 0) {
+      let result = smartFilter.filteredEmails;
+
+      if (filters.unreadOnly) {
+        result = emailFilter.filterByReadStatus(result, false);
+      }
+
+      switch (sort.field) {
+        case 'date':
+          return emailSorter.sortByDate(result, sort.direction);
+        case 'sender':
+          return emailSorter.sortBySender(result, sort.direction);
+        case 'subject':
+          return emailSorter.sortBySubject(result, sort.direction);
+        case 'label':
+          return emailSorter.sortByLabel(result, sort.direction);
+        case 'category':
+          return emailSorter.sortByCategory(result, sort.direction);
+      }
+    }
+
     let result = emails;
 
     if (filters.sender) {
@@ -220,7 +282,7 @@ export function App() {
       case 'category':
         return emailSorter.sortByCategory(result, sort.direction);
     }
-  }, [emails, filters, sort, emailFilter, emailSorter]);
+  }, [emails, filters, sort, emailFilter, emailSorter, smartFilter.state, smartFilter.filteredEmails]);
 
   const selectedEmail = useMemo(
     () =>
@@ -238,6 +300,8 @@ export function App() {
   );
   const hasFooterDetail =
     filterMode !== null ||
+    smartFilter.state === 'filtered' ||
+    smartFilter.state === 'loading' ||
     Boolean(filters.sender) ||
     Boolean(filters.label) ||
     Boolean(filters.category) ||
@@ -291,6 +355,9 @@ export function App() {
     }
 
     if (key.escape) {
+      if (filterMode === 'ai') {
+        smartFilter.clearFilter();
+      }
       setFilterInput('');
       setFilterMode(null);
       return;
@@ -335,6 +402,18 @@ export function App() {
           exit();
         },
         description: 'Quit',
+      },
+      {
+        key: '.',
+        handler: () => {
+          if (filterMode || showHelp || isRefreshing) {
+            return false;
+          }
+
+          void handleRefresh();
+          return;
+        },
+        description: 'Refresh emails from Gmail',
       },
       {
         key: 'd',
@@ -436,6 +515,19 @@ export function App() {
         description: 'Filter by category',
       },
       {
+        key: 'a',
+        handler: () => {
+          if (filterMode || showHelp) {
+            return false;
+          }
+
+          smartFilter.activateFilter();
+          setFilterMode('ai');
+          return;
+        },
+        description: 'AI-powered filter',
+      },
+      {
         key: 'r',
         handler: () => {
           if (filterMode || showHelp) {
@@ -455,6 +547,7 @@ export function App() {
           }
 
           setFilters({ unreadOnly: false });
+          smartFilter.clearFilter();
           return;
         },
         description: 'Clear filters',
@@ -557,18 +650,31 @@ export function App() {
         ) : (
           <>
             {/* Email list */}
-            <Box width="65%" height={mainPaneHeight} borderStyle="single" borderRight>
-              <EmailList
-                emails={displayedEmails}
-                selectedId={selectedEmailId}
-                onSelect={handleSelectEmail}
-                sort={sort}
-                maxVisibleRows={listRowsForEmails}
-              />
+            <Box width="55%" height={mainPaneHeight} borderStyle="single" borderRight>
+              {filterMode === 'ai' && smartFilter.state !== 'filtered' ? (
+                <FilterInput
+                  onSubmit={(value) => {
+                    void smartFilter.submitFilter(value, emails);
+                  }}
+                  isLoading={smartFilter.state === 'loading'}
+                  error={smartFilter.error}
+                  progress={smartFilter.progress}
+                />
+              ) : (
+                <EmailList
+                  emails={displayedEmails}
+                  selectedId={selectedEmailId}
+                  onSelect={handleSelectEmail}
+                  sort={sort}
+                  maxVisibleRows={listRowsForEmails}
+                  filterCount={smartFilter.state === 'filtered' ? smartFilter.filteredEmails.length : undefined}
+                  totalCount={smartFilter.state === 'filtered' ? emails.length : undefined}
+                />
+              )}
             </Box>
 
             {/* Email detail */}
-            <Box width="35%" height={mainPaneHeight}>
+            <Box width="45%" height={mainPaneHeight}>
               <EmailDetail
                 email={selectedEmail}
                 maxBodyLines={detailBodyLines}
@@ -582,7 +688,20 @@ export function App() {
 
       {/* Footer */}
       <Box paddingX={1} paddingY={1} borderStyle="single" borderTop flexDirection="column">
-        {filterMode && (
+        {statusMessage && statusMessage !== 'Initializing...' && (
+          <Text dimColor>{statusMessage}</Text>
+        )}
+        {filterMode === 'ai' && smartFilter.state === 'filtered' && smartFilter.description && (
+          <Text dimColor>
+            AI filter: "{smartFilter.description}" ({smartFilter.filteredEmails.length}/{emails.length} emails)
+          </Text>
+        )}
+        {filterMode === 'ai' && smartFilter.state === 'loading' && (
+          <Text dimColor>
+            AI filter: evaluating...
+          </Text>
+        )}
+        {filterMode && filterMode !== 'ai' && (
           <Text>
             {filterMode} filter: {filterInput || ' '}
             <Text dimColor> (Enter apply, Esc cancel)</Text>
@@ -599,7 +718,7 @@ export function App() {
             </Text>
           )}
         <Text dimColor>
-          ↑↓ Navigate • [/] Detail scroll • d/s/u/b/g Sort • f/l/c Filter • r Unread • x Clear • ?
+          ↑↓ Navigate • [/] Detail scroll • . Refresh • d/s/u/b/g Sort • f/l/c/a Filter • r Unread • x Clear • ?
           Help • q Quit
         </Text>
       </Box>
