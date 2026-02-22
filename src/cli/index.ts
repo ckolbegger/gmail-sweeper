@@ -106,7 +106,7 @@ async function authCommand(): Promise<void> {
   }
 }
 
-async function syncCommand(options: { full?: boolean } = {}): Promise<void> {
+async function syncCommand(options: { full?: boolean; since?: string } = {}): Promise<void> {
   console.log('🔄 Gmail Sweep Sync\n');
 
   if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET) {
@@ -131,14 +131,60 @@ async function syncCommand(options: { full?: boolean } = {}): Promise<void> {
   await db.initialize();
   const emailRepository = new EmailRepository(db);
 
+  // Parse since date
+  let sinceDate: Date | undefined;
+  if (options.since) {
+    // Try to parse as relative time (e.g., "7d", "30d", "1w", "1m")
+    const relativeMatch = options.since.match(/^(\d+)([dwm])$/i);
+    if (relativeMatch) {
+      const amount = parseInt(relativeMatch[1], 10);
+      const unit = relativeMatch[2].toLowerCase();
+      sinceDate = new Date();
+      switch (unit) {
+        case 'd':
+          sinceDate.setDate(sinceDate.getDate() - amount);
+          break;
+        case 'w':
+          sinceDate.setDate(sinceDate.getDate() - amount * 7);
+          break;
+        case 'm':
+          sinceDate.setMonth(sinceDate.getMonth() - amount);
+          break;
+      }
+    } else {
+      // Try to parse as ISO date
+      sinceDate = new Date(options.since);
+      if (isNaN(sinceDate.getTime())) {
+        console.error('❌ Invalid --since date format. Use ISO date (2024-01-01) or relative (7d, 1w, 1m)');
+        process.exit(1);
+      }
+    }
+  }
+
   try {
-    console.log(options.full ? 'Performing full sync...\n' : 'Performing incremental sync...\n');
+    // Get count estimate first
+    let query: string | undefined;
+    if (sinceDate) {
+      const afterDate = Math.floor(sinceDate.getTime() / 1000);
+      query = `after:${afterDate}`;
+    }
+    
+    console.log('📊 Getting email count estimate...');
+    const estimatedCount = await gmailClient.getEmailCountEstimate(query);
+    console.log(`   Estimated emails to sync: ${estimatedCount.toLocaleString()}\n`);
+
+    if (sinceDate) {
+      console.log(`⏰ Syncing emails since ${sinceDate.toISOString()}...\n`);
+    } else {
+      console.log(options.full ? 'Performing full sync...\n' : 'Performing incremental sync...\n');
+    }
 
     const startTime = Date.now();
-      const result = await gmailClient.fullSync({
+    const result = await gmailClient.fullSync({
       batchSize: 100,
+      since: sinceDate,
       onProgress: (progress) => {
-        process.stdout.write(`\r📧 Synced ${progress.processedCount} emails...`);
+        process.stdout.write(`\r📧 Synced ${progress.processedCount}/${progress.totalCount} emails...`);
       },
     });
 
@@ -209,7 +255,9 @@ async function main(): Promise<void> {
 
     case 'sync':
       const full = args.includes('--full') || args.includes('-f');
-      await syncCommand({ full });
+      const sinceIndex = args.findIndex(arg => arg === '--since' || arg === '-s');
+      const since = sinceIndex >= 0 && sinceIndex < args.length - 1 ? args[sinceIndex + 1] : undefined;
+      await syncCommand({ full, since });
       break;
 
     case 'help':
@@ -225,6 +273,7 @@ Commands:
   auth              Authenticate with Gmail (one-time setup)
   sync              Sync emails with Gmail
     --full, -f      Perform full sync instead of incremental
+    --since, -s     Sync only emails since date (e.g., --since 7d, --since 2024-01-01)
   help              Show this help message
 
 Environment Variables:

@@ -86,6 +86,7 @@
 - [x] T031 [US1] Update `useKeyboard` hook in `src/cli/hooks/use-keyboard.ts` — add `f` key to activate filter mode (FR-001), add `Escape` key to clear filter (FR-007), disable navigation keys during filter input mode
 - [x] T032 [US1] Integrate smart filter into `InboxApp` in `src/cli/app.tsx` — wire `useSmartFilter` hook, show `FilterInput` when in input mode, pass filtered emails to `EmailList` when filter active, show filter description in header (FR-006), restore full list on clear (FR-008)
 - [x] T033 [US1] Update footer help text in `src/cli/app.tsx` — add `f` for filter and `Esc` to clear filter to keyboard shortcut hints
+- [ ] B001 [US1] Fix error display when AI configuration is missing — modify `src/cli/app.tsx` to show `FilterInput` when `state === 'error'`, add unit test for error display in `tests/unit/cli/app.smart-filter.test.tsx`
 
 **Checkpoint**: User Story 1 fully functional — user can filter inbox by natural language, see progressive results, and return to full view
 
@@ -217,6 +218,36 @@ Task: "Implement OpenAiProvider in src/core/ai/openai.ts"
 3. Add User Story 2 → Test clear filter → Demo
 4. Add User Story 3 → Test confidence indicators → Demo
 5. Polish → Edge cases, error handling, documentation
+
+---
+
+## Known Bugs / Future Enhancements
+
+### BUG-001: TUI Email List Pagination
+
+**Problem**: The TUI currently only displays the first 50 emails loaded from the database. Users cannot view emails beyond this limit.
+
+**Current Behavior**:
+- `App.tsx` loads emails with `emailRepository.list({ limit: 50 })`
+- No mechanism exists to view emails 51+
+
+**Expected Behavior**:
+- Support pagination through email list in blocks of 50
+- Use **Ctrl+Down** to load and display the next block of 50 emails
+- Use **Ctrl+Up** to load and display the previous block of 50 emails
+- Update selection index appropriately when switching blocks
+- Show visual indicator of current block (e.g., "Showing 101-150 of 587 emails")
+
+**Implementation Notes**:
+- Modify `src/cli/app.tsx` to track current offset/page
+- Pass offset to `emailRepository.list({ limit: 50, offset: currentOffset })`
+- Add keyboard handlers for Ctrl+Down and Ctrl+Up in `useInput`
+- Update footer to show pagination info
+- Ensure selection is reset or adjusted when changing blocks
+
+**Test Requirements**:
+- Unit tests for pagination logic
+- Integration tests for keyboard navigation between blocks
 
 ---
 

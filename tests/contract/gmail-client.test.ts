@@ -876,6 +876,24 @@ describe('GmailClient Contract Tests', () => {
         expect(firstCall).toHaveProperty('batchSize');
       });
 
+      it('should report total count greater than or equal to processed count', async () => {
+        const progressHandler = vi.fn();
+
+        await client.fullSync({
+          batchSize: 10,
+          onProgress: progressHandler,
+        });
+
+        expect(progressHandler).toHaveBeenCalled();
+        // Check that total is reported and is meaningful
+        const calls = progressHandler.mock.calls;
+        for (const call of calls) {
+          const progress = call[0] as SyncProgress;
+          expect(progress.total).toBeGreaterThan(0);
+          expect(progress.processed).toBeLessThanOrEqual(progress.total);
+        }
+      });
+
       it('should perform incremental sync using history ID', async () => {
         const result = await client.incrementalSync({ historyId: '1234567890' });
 

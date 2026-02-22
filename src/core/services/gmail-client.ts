@@ -311,11 +311,36 @@ export class GmailClientImpl implements GmailClient {
   }
 
   /**
+   * Get an estimate of total emails matching a query without fetching them all.
+   */
+  async getEmailCountEstimate(query?: string): Promise<number> {
+    await this.initialize();
+
+    try {
+      const response = await this.executeWithRetry(
+        () =>
+          this.gmail!.users.messages.list({
+            userId: 'me',
+            maxResults: 1,
+            q: query,
+          }),
+        'getEmailCountEstimate'
+      );
+
+      return response.data.resultSizeEstimate || 0;
+    } catch (error) {
+      logger.error('Failed to get email count estimate', error);
+      throw error;
+    }
+  }
+
+  /**
    * Perform full sync of all emails
    */
   async fullSync(options: {
     batchSize?: number;
     onProgress?: (progress: SyncProgress) => void;
+    since?: Date;
   }): Promise<SyncResult> {
     await this.initialize();
 
@@ -325,13 +350,22 @@ export class GmailClientImpl implements GmailClient {
     let processedCount = 0;
     let hasMore = true;
 
-    logger.info('Starting full sync');
+    // Build query for date filtering
+    let query: string | undefined;
+    if (options.since) {
+      const afterDate = Math.floor(options.since.getTime() / 1000);
+      query = `after:${afterDate}`;
+      logger.info(`Starting full sync since ${options.since.toISOString()}`);
+    } else {
+      logger.info('Starting full sync');
+    }
 
     try {
       while (hasMore) {
         const result = await this.listEmails({
           maxResults: batchSize,
           pageToken,
+          q: query,
         });
 
         emails.push(...result.items);

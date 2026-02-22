@@ -94,7 +94,13 @@ export interface GmailClient {
   fullSync(options: {
     batchSize?: number;
     onProgress?: (progress: SyncProgress) => void;
+    since?: Date;
   }): Promise<SyncResult>;
+
+  /**
+   * Get an estimate of total emails matching a query without fetching them all.
+   */
+  getEmailCountEstimate(query?: string): Promise<number>;
 
   /**
    * Incremental sync using Gmail History API.
