@@ -1,5 +1,5 @@
-import type { Email } from '@/core/contracts/types.js';
-import type { AiProvider, EmailClassification } from '@/core/ai/provider.js';
+import type { Email } from '../contracts/types.js';
+import type { AiProvider, EmailClassification } from '../ai/provider.js';
 import { calculateBatchSize } from './batch-sizing.js';
 
 export interface FilterProgress {

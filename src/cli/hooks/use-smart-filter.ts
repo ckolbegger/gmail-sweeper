@@ -1,10 +1,10 @@
 import { useState, useCallback, useRef } from "react";
-import type { Email } from "@/core/contracts/types.js";
-import type { AiProvider } from "@/core/ai/provider.js";
-import type { FilterResult } from "@/core/filter/smart-filter.js";
-import { runSmartFilter } from "@/core/filter/smart-filter.js";
-import { resolveAiConfig } from "@/core/ai/config.js";
-import { createAiProvider } from "@/core/ai/provider.js";
+import type { Email } from "../../core/contracts/types.js";
+import type { AiProvider } from "../../core/ai/provider.js";
+import type { FilterResult } from "../../core/filter/smart-filter.js";
+import { runSmartFilter } from "../../core/filter/smart-filter.js";
+import { resolveAiConfig } from "../../core/ai/config.js";
+import { createAiProvider } from "../../core/ai/provider.js";
 
 export type FilterState = "idle" | "input" | "loading" | "filtered" | "error";
 
