@@ -1,3 +1,8 @@
+---
+name: tdd-task
+description: Implement a single task using strict TDD workflow with automated testing, fixing, and progress tracking.
+---
+
 # TDD Task Implementor
 
 **Type:** Project Managed Skill
