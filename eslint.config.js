@@ -42,6 +42,7 @@ export default [
         require: 'readonly',
         NodeJS: 'readonly',
         AbortSignal: 'readonly',
+        AbortController: 'readonly',
       },
     },
     plugins: {
