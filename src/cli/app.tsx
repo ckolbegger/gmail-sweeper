@@ -266,7 +266,7 @@ export function App({ gmailClient, emailRepository }: AppProps): React.ReactElem
           )
         : React.createElement(Text, null, ` | ${emails.length} emails | ? for help`)
     ),
-    smartFilter.state === 'input' || smartFilter.state === 'loading'
+    smartFilter.state === 'input' || smartFilter.state === 'loading' || smartFilter.state === 'error'
       ? React.createElement(
           Box,
           {
