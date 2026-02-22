@@ -7,7 +7,7 @@
 import 'dotenv/config.js';
 import { createInterface } from 'readline';
 import { open } from 'fs/promises';
-import { Command } from 'commander';
+import { Command, InvalidArgumentError } from 'commander';
 import { loadConfig, createDefaultConfig, DEFAULT_CONFIG_DIR } from '../core/config.js';
 import type { Config } from '../core/models/index.js';
 
@@ -26,6 +26,10 @@ export interface CLIOptions {
   confirm?: boolean;
   /** Debug mode */
   debug?: boolean;
+  /** Maximum number of emails to load */
+  maxEmails?: number;
+  /** Maximum context window tokens for AI batch sizing */
+  maxContextTokens?: number;
 }
 
 /**
@@ -41,6 +45,16 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): CLIOptions {
     .option('-a, --account <email>', 'Gmail account email address')
     .option('-c, --config-dir <path>', 'Configuration directory path', DEFAULT_CONFIG_DIR)
     .option('--no-confirm', 'Skip confirmation prompts for destructive actions')
+    .option('-n, --max-emails <count>', 'Maximum number of emails to load (default: 50)', (v: string) => {
+      const n = parseInt(v, 10);
+      if (isNaN(n) || n < 1) throw new InvalidArgumentError('must be a positive integer');
+      return n;
+    })
+    .option('--max-context-tokens <count>', 'Maximum context window tokens for AI batch sizing (default: 32000)', (v: string) => {
+      const n = parseInt(v, 10);
+      if (isNaN(n) || n < 1) throw new InvalidArgumentError('must be a positive integer');
+      return n;
+    })
     .option('-d, --debug', 'Enable debug output')
     .helpOption('-h, --help', 'Display help information')
     .allowUnknownOption(false)
@@ -62,6 +76,8 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): CLIOptions {
     configDir?: string;
     confirm?: boolean;
     debug?: boolean;
+    maxEmails?: number;
+    maxContextTokens?: number;
   }>();
 
   const result: CLIOptions = {};
@@ -76,6 +92,12 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): CLIOptions {
   }
   if (opts.debug !== undefined) {
     result.debug = opts.debug;
+  }
+  if (opts.maxEmails !== undefined) {
+    result.maxEmails = opts.maxEmails;
+  }
+  if (opts.maxContextTokens !== undefined) {
+    result.maxContextTokens = opts.maxContextTokens;
   }
   return result;
 }
@@ -196,6 +218,7 @@ async function main(): Promise<void> {
       ...config,
       gmailAccount: account,
       confirmDestructive: options.confirm ?? config.confirmDestructive,
+      initialLoadSize: options.maxEmails ?? config.initialLoadSize,
     };
 
     if (options.debug) {
@@ -220,7 +243,14 @@ async function main(): Promise<void> {
     const cache = new EmailCache(dbPath);
 
     // Launch TUI application
-    await launchTUI(client, cache);
+    const tuiOptions: Parameters<typeof launchTUI>[0] = { client, cache };
+    if (options.maxEmails !== undefined) {
+      tuiOptions.maxEmails = options.maxEmails;
+    }
+    if (options.maxContextTokens !== undefined) {
+      tuiOptions.maxContextTokens = options.maxContextTokens;
+    }
+    await launchTUI(tuiOptions);
   } catch (error) {
     if (error instanceof Error) {
       // Commander.js help/version exits

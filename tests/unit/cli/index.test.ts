@@ -59,6 +59,46 @@ describe('CLI', () => {
       expect(args.configDir).toBe('/tmp/config');
       expect(args.debug).toBe(true);
     });
+
+    it('should parse --max-emails flag', () => {
+      const args = parseArgs(['--max-emails', '100']);
+      expect(args.maxEmails).toBe(100);
+    });
+
+    it('should parse -n shorthand for max-emails', () => {
+      const args = parseArgs(['-n', '25']);
+      expect(args.maxEmails).toBe(25);
+    });
+
+    it('should parse --max-context-tokens flag', () => {
+      const args = parseArgs(['--max-context-tokens', '8000']);
+      expect(args.maxContextTokens).toBe(8000);
+    });
+
+    it('should leave maxEmails undefined when not provided', () => {
+      const args = parseArgs([]);
+      expect(args.maxEmails).toBeUndefined();
+    });
+
+    it('should throw on non-numeric --max-emails', () => {
+      expect(() => parseArgs(['--max-emails', 'abc'])).toThrow();
+    });
+
+    it('should throw on --max-emails 0', () => {
+      expect(() => parseArgs(['--max-emails', '0'])).toThrow();
+    });
+
+    it('should throw on negative --max-emails', () => {
+      expect(() => parseArgs(['--max-emails', '-1'])).toThrow();
+    });
+
+    it('should throw on non-numeric --max-context-tokens', () => {
+      expect(() => parseArgs(['--max-context-tokens', 'abc'])).toThrow();
+    });
+
+    it('should throw on --max-context-tokens 0', () => {
+      expect(() => parseArgs(['--max-context-tokens', '0'])).toThrow();
+    });
   });
 
   describe('T035: validateAccount', () => {
