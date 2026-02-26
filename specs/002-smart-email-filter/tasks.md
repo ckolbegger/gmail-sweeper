@@ -102,12 +102,12 @@
 
 ### Tests for User Story 2 (MANDATORY - Strict TDD) ⚠️
 
-- [ ] T034 [P] [US2] Unit tests for clear filter edge cases in `tests/unit/tui/useSmartFilter.clear.test.ts` — test: clear during loading cancels in-progress evaluation (AbortSignal), clear removes filter description from display, clear when no filter active is a no-op (acceptance scenario 3), clear restores original email order
-- [ ] T035 [US2] Integration test for clear filter in `tests/integration/smart-filter-clear.test.ts` — test: apply filter → verify filtered → clear → verify full list restored and no filter description shown
+- [x] T034 [P] [US2] Unit tests for clear filter edge cases in `tests/unit/tui/useSmartFilter.clear.test.ts` — test: clear during loading cancels in-progress evaluation (AbortSignal), clear removes filter description from display, clear when no filter active is a no-op (acceptance scenario 3), clear restores original email order
+- [x] T035 [US2] Integration test for clear filter in `tests/integration/smart-filter-clear.test.ts` — test: apply filter → verify filtered → clear → verify full list restored and no filter description shown
 
 ### Implementation for User Story 2
 
-- [ ] T036 [US2] Implement cancellation-on-clear in `src/tui/hooks/useSmartFilter.ts` — when clearFilter called during loading, abort in-flight evaluation via AbortController, ensure no-op when no filter active
+- [x] T036 [US2] Implement cancellation-on-clear in `src/tui/hooks/useSmartFilter.ts` — when clearFilter called during loading, abort in-flight evaluation via AbortController, ensure no-op when no filter active
 
 **Checkpoint**: User Story 2 complete — clear filter works in all states (idle, loading, filtered, error)
 
