@@ -11,7 +11,8 @@ import { render } from 'ink-testing-library';
 import { App } from '../../../src/cli/app.js';
 import type { Email } from '../../../src/core/contracts/types.js';
 import type { GmailClient } from '../../../src/core/contracts/gmail-api.js';
-import type { EmailRepository } from '../../../src/core/services/email-repository.js';
+import type { EmailRepository, ListOptions } from '../../../src/core/services/email-repository.js';
+import type { MockedFunction } from 'vitest';
 
 function createEmail(overrides: Partial<Email> = {}): Email {
   return {
@@ -67,7 +68,7 @@ describe('App - Pagination (BUG-001)', () => {
         createEmail({ id: `email-${i}`, subject: `Email ${i}` })
       );
 
-      (mockEmailRepository.list as any).mockResolvedValue({
+      (mockEmailRepository.list as MockedFunction<typeof mockEmailRepository.list>).mockResolvedValue({
         items: emails,
         total: 100,
         offset: 0,
@@ -85,9 +86,10 @@ describe('App - Pagination (BUG-001)', () => {
       await new Promise((resolve) => setTimeout(resolve, 150));
 
       // Verify list was called with offset 0 at some point
-      const calls = (mockEmailRepository.list as any).mock.calls;
+      const mockList = mockEmailRepository.list as MockedFunction<typeof mockEmailRepository.list>;
+      const calls = mockList.mock.calls;
       const callWithOffsetZero = calls.find(
-        (call: any[]) => call[0]?.offset === 0
+        (call: [ListOptions]) => call[0]?.offset === 0
       );
       expect(callWithOffsetZero).toBeDefined();
     });
@@ -99,7 +101,7 @@ describe('App - Pagination (BUG-001)', () => {
         createEmail({ id: `email-${i}`, subject: `Email ${i}` })
       );
 
-      (mockEmailRepository.list as any).mockResolvedValue({
+      (mockEmailRepository.list as MockedFunction<typeof mockEmailRepository.list>).mockResolvedValue({
         items: emails,
         total: 150,
         offset: 0,
@@ -127,7 +129,7 @@ describe('App - Pagination (BUG-001)', () => {
       const mockGmailClient = createMockGmailClient();
       const mockEmailRepository = createMockEmailRepository();
 
-      (mockEmailRepository.list as any).mockResolvedValue({
+      (mockEmailRepository.list as MockedFunction<typeof mockEmailRepository.list>).mockResolvedValue({
         items: Array.from({ length: 50 }, (_, i) =>
           createEmail({ id: `email-${i}`, subject: `Email ${i}` })
         ),
@@ -154,7 +156,7 @@ describe('App - Pagination (BUG-001)', () => {
       const mockGmailClient = createMockGmailClient();
       const mockEmailRepository = createMockEmailRepository();
 
-      (mockEmailRepository.list as any).mockResolvedValue({
+      (mockEmailRepository.list as MockedFunction<typeof mockEmailRepository.list>).mockResolvedValue({
         items: Array.from({ length: 25 }, (_, i) =>
           createEmail({ id: `email-${i}`, subject: `Email ${i}` })
         ),
@@ -184,7 +186,8 @@ describe('App - Pagination (BUG-001)', () => {
         createEmail({ id: `email-${i + 50}`, subject: `Email ${i + 50}` })
       );
 
-      (mockEmailRepository.list as any)
+      const mockList = mockEmailRepository.list as MockedFunction<typeof mockEmailRepository.list>;
+      mockList
         .mockResolvedValueOnce({
           items: Array.from({ length: 50 }, (_, i) =>
             createEmail({ id: `email-${i}`, subject: `Email ${i}` })
@@ -217,6 +220,8 @@ describe('App - Pagination (BUG-001)', () => {
       // Note: Keyboard navigation tests for Ctrl+Up/Ctrl+Down are skipped
       // because ink-testing-library doesn't properly parse these ANSI sequences.
       // The functionality is verified through manual testing.
+      // Avoid unused variable warning
+      expect(stdin).toBeDefined();
     });
   });
 
@@ -225,7 +230,7 @@ describe('App - Pagination (BUG-001)', () => {
       const mockGmailClient = createMockGmailClient();
       const mockEmailRepository = createMockEmailRepository();
 
-      (mockEmailRepository.list as any).mockResolvedValue({
+      (mockEmailRepository.list as MockedFunction<typeof mockEmailRepository.list>).mockResolvedValue({
         items: Array.from({ length: 50 }, (_, i) =>
           createEmail({ id: `email-${i}`, subject: `Email ${i}` })
         ),
@@ -256,7 +261,7 @@ describe('App - Pagination (BUG-001)', () => {
       const mockGmailClient = createMockGmailClient();
       const mockEmailRepository = createMockEmailRepository();
 
-      (mockEmailRepository.list as any).mockResolvedValue({
+      (mockEmailRepository.list as MockedFunction<typeof mockEmailRepository.list>).mockResolvedValue({
         items: [],
         total: 0,
         offset: 0,
@@ -274,9 +279,10 @@ describe('App - Pagination (BUG-001)', () => {
       await new Promise((resolve) => setTimeout(resolve, 150));
 
       // Verify list was called with limit parameter
-      const calls = (mockEmailRepository.list as any).mock.calls;
+      const mockList2 = mockEmailRepository.list as MockedFunction<typeof mockEmailRepository.list>;
+      const calls = mockList2.mock.calls;
       const callWithLimit = calls.find(
-        (call: any[]) => call[0]?.limit === 50
+        (call: [ListOptions]) => call[0]?.limit === 50
       );
       expect(callWithLimit).toBeDefined();
     });

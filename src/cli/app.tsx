@@ -157,7 +157,49 @@ export function App({ gmailClient, emailRepository }: AppProps): React.ReactElem
         return;
       }
 
-      if (key.upArrow) {
+      if (key.upArrow && key.ctrl) {
+        // Ctrl+Up: Previous page
+        const prevOffset = Math.max(0, paginationOffset - PAGE_SIZE);
+        if (prevOffset !== paginationOffset) {
+          setView('loading');
+          setSyncProgress('Loading...');
+          emailRepository
+            .list({ limit: PAGE_SIZE, offset: prevOffset })
+            .then((result) => {
+              setEmails(result.items);
+              setPaginationOffset(prevOffset);
+              setTotalEmailCount(result.total);
+              setSelectedIndex(0);
+              setSyncProgress('');
+              setView('list');
+            })
+            .catch((err) => {
+              setErrorMessage(err.message);
+              setView('error');
+            });
+        }
+      } else if (key.downArrow && key.ctrl) {
+        // Ctrl+Down: Next page
+        const nextOffset = paginationOffset + PAGE_SIZE;
+        if (nextOffset < totalEmailCount) {
+          setView('loading');
+          setSyncProgress('Loading...');
+          emailRepository
+            .list({ limit: PAGE_SIZE, offset: nextOffset })
+            .then((result) => {
+              setEmails(result.items);
+              setPaginationOffset(nextOffset);
+              setTotalEmailCount(result.total);
+              setSelectedIndex(0);
+              setSyncProgress('');
+              setView('list');
+            })
+            .catch((err) => {
+              setErrorMessage(err.message);
+              setView('error');
+            });
+        }
+      } else if (key.upArrow) {
         setSelectedIndex((prev) => Math.max(0, prev - 1));
       } else if (key.downArrow) {
         setSelectedIndex((prev) => Math.min(displayEmails.length - 1, prev + 1));
@@ -203,48 +245,6 @@ export function App({ gmailClient, emailRepository }: AppProps): React.ReactElem
             setErrorMessage(err.message);
             setView('error');
           });
-      } else if (key.downArrow && key.ctrl) {
-        // Ctrl+Down: Next page
-        const nextOffset = paginationOffset + PAGE_SIZE;
-        if (nextOffset < totalEmailCount) {
-          setView('loading');
-          setSyncProgress('Loading...');
-          emailRepository
-            .list({ limit: PAGE_SIZE, offset: nextOffset })
-            .then((result) => {
-              setEmails(result.items);
-              setPaginationOffset(nextOffset);
-              setTotalEmailCount(result.total);
-              setSelectedIndex(0);
-              setSyncProgress('');
-              setView('list');
-            })
-            .catch((err) => {
-              setErrorMessage(err.message);
-              setView('error');
-            });
-        }
-      } else if (key.upArrow && key.ctrl) {
-        // Ctrl+Up: Previous page
-        const prevOffset = Math.max(0, paginationOffset - PAGE_SIZE);
-        if (prevOffset !== paginationOffset) {
-          setView('loading');
-          setSyncProgress('Loading...');
-          emailRepository
-            .list({ limit: PAGE_SIZE, offset: prevOffset })
-            .then((result) => {
-              setEmails(result.items);
-              setPaginationOffset(prevOffset);
-              setTotalEmailCount(result.total);
-              setSelectedIndex(0);
-              setSyncProgress('');
-              setView('list');
-            })
-            .catch((err) => {
-              setErrorMessage(err.message);
-              setView('error');
-            });
-        }
       }
     } else if (view === 'detail') {
       if (key.escape || input === 'q') {

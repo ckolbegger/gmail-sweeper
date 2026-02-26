@@ -5,7 +5,7 @@
  * Covers: filter activation, input display, filtered results display, and clear functionality.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { App } from '../../../src/cli/app.js';
@@ -65,7 +65,7 @@ describe('App - Smart Filter Integration', () => {
       const mockEmailRepository = createMockEmailRepository();
       const emails = [createEmail({ id: '1', subject: 'Email 1' })];
 
-      (mockEmailRepository.list as any).mockResolvedValue({
+      (mockEmailRepository.list as MockedFunction<typeof mockEmailRepository.list>).mockResolvedValue({
         items: emails,
         nextPageToken: undefined,
       });
@@ -94,7 +94,7 @@ describe('App - Smart Filter Integration', () => {
         createEmail({ id: '2', subject: 'Email 2' }),
       ];
 
-      (mockEmailRepository.list as any).mockResolvedValue({
+      (mockEmailRepository.list as MockedFunction<typeof mockEmailRepository.list>).mockResolvedValue({
         items: emails,
         total: 2,
         offset: 0,
@@ -123,7 +123,7 @@ describe('App - Smart Filter Integration', () => {
       const mockEmailRepository = createMockEmailRepository();
       const emails = [createEmail({ id: '1', subject: 'Email 1' })];
 
-      (mockEmailRepository.list as any).mockResolvedValue({
+      (mockEmailRepository.list as MockedFunction<typeof mockEmailRepository.list>).mockResolvedValue({
         items: emails,
         nextPageToken: undefined,
       });
@@ -151,7 +151,7 @@ describe('App - Smart Filter Integration', () => {
       const mockEmailRepository = createMockEmailRepository();
       const emails = [createEmail({ id: '1', subject: 'Email 1' })];
 
-      (mockEmailRepository.list as any).mockResolvedValue({
+      (mockEmailRepository.list as MockedFunction<typeof mockEmailRepository.list>).mockResolvedValue({
         items: emails,
         total: 1,
         offset: 0,
@@ -184,7 +184,7 @@ describe('App - Smart Filter Integration', () => {
         createEmail({ id: '2', subject: 'Email 2' }),
       ];
 
-      (mockEmailRepository.list as any).mockResolvedValue({
+      (mockEmailRepository.list as MockedFunction<typeof mockEmailRepository.list>).mockResolvedValue({
         items: emails,
         total: 2,
         offset: 0,
@@ -223,7 +223,7 @@ describe('App - Smart Filter Integration', () => {
       const mockEmailRepository = createMockEmailRepository();
       const emails = [createEmail({ id: '1', subject: 'Email 1' })];
 
-      (mockEmailRepository.list as any).mockResolvedValue({
+      (mockEmailRepository.list as MockedFunction<typeof mockEmailRepository.list>).mockResolvedValue({
         items: emails,
         nextPageToken: undefined,
       });
