@@ -18,24 +18,24 @@ vi.mock('../../src/services/ai/provider', async () => {
 
 describe('Smart Filter Integration', () => {
     const mockEmails: any = [
-        { 
-            id: '1', 
-            subject: 'Receipt 1', 
-            from: 'a@b.com', 
-            snippet: '...', 
-            internalDate: '1', 
+        {
+            id: '1',
+            subject: 'Receipt 1',
+            from: 'a@b.com',
+            snippet: '...',
+            internalDate: '1',
             body: '...',
             labelIds: ['INBOX'],
             to: 'me@test.com',
             date: 'now',
             isUnread: false
         },
-        { 
-            id: '2', 
-            subject: 'Newsletter', 
-            from: 'c@d.com', 
-            snippet: '...', 
-            internalDate: '2', 
+        {
+            id: '2',
+            subject: 'Newsletter',
+            from: 'c@d.com',
+            snippet: '...',
+            internalDate: '2',
             body: '...',
             labelIds: ['INBOX'],
             to: 'me@test.com',
@@ -90,5 +90,15 @@ describe('Smart Filter Integration', () => {
         expect(frame).toContain('Receipt 1');
         expect(frame).not.toContain('Newsletter');
         expect(frame).toContain('Filtered: 1/2');
+
+        // 5. Press Escape to clear filter
+        stdin.write('\x1B'); // \x1B is escape character
+        await wait(200);
+
+        // 6. Verify filter is cleared
+        const finalFrame = lastFrame();
+        expect(finalFrame).not.toContain('Filtered:');
+        expect(finalFrame).toContain('Receipt 1');
+        expect(finalFrame).toContain('Newsletter');
     });
 });

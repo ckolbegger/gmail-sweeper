@@ -8,14 +8,14 @@ export function useSmartFilter(emails: Email[], provider: AiProvider | null) {
   const [results, setResults] = useState<EmailClassification[]>([]);
   const [progress, setProgress] = useState<FilterProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
+
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const applyFilter = useCallback(async (description: string) => {
     if (!provider) {
-        setError('AI Provider not initialized');
-        setStatus('error');
-        return;
+      setError('AI Provider not initialized');
+      setStatus('error');
+      return;
     }
 
     // Cancel any ongoing filter
@@ -35,8 +35,8 @@ export function useSmartFilter(emails: Email[], provider: AiProvider | null) {
         emails,
         provider,
         onProgress: (p) => {
-            setProgress(p);
-            setResults(p.matchingResults);
+          setProgress(p);
+          setResults(p.matchingResults);
         },
         signal: abortControllerRef.current.signal
       });
@@ -63,11 +63,22 @@ export function useSmartFilter(emails: Email[], provider: AiProvider | null) {
     };
   }, []);
 
+  const clearFilter = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setStatus('idle');
+    setResults([]);
+    setProgress(null);
+    setError(null);
+  }, []);
+
   return {
     status,
     results,
     progress,
     error,
-    applyFilter
+    applyFilter,
+    clearFilter
   };
 }

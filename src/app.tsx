@@ -19,21 +19,22 @@ interface AppProps {
 export default function App({ limit = 10, service: providedService }: AppProps) {
     const service = useMemo(() => providedService || new GmailService(), [providedService]);
     const { emails, loading, error: fetchError } = useGmail(service, { maxResults: limit });
-    
+
     // AI Provider
     const aiProvider = useMemo(() => {
         const config = resolveAiConfig();
         return config ? createAiProvider(config) : null;
     }, []);
 
-    const { 
-        status: filterStatus, 
-        results: filterResults, 
-        applyFilter, 
-        progress: filterProgress, 
-        error: filterError 
+    const {
+        status: filterStatus,
+        results: filterResults,
+        applyFilter,
+        clearFilter,
+        progress: filterProgress,
+        error: filterError
     } = useSmartFilter(emails, aiProvider);
-    
+
     const [isFiltering, setIsFiltering] = useState(false);
     const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
     const [focusedIndex, setFocusedIndex] = useState(0);
@@ -45,7 +46,7 @@ export default function App({ limit = 10, service: providedService }: AppProps) 
     // Filtered emails
     const displayEmails = useMemo(() => {
         if (filterStatus === 'idle' || filterStatus === 'loading') return emails;
-        
+
         const matchedIds = new Set(filterResults.map(r => r.emailId));
         return emails.filter(e => matchedIds.has(e.id))
             .sort((a, b) => {
@@ -81,6 +82,8 @@ export default function App({ limit = 10, service: providedService }: AppProps) 
         if (key.escape) {
             if (selectedEmail) {
                 setSelectedEmail(null);
+            } else if (filterStatus !== 'idle') {
+                clearFilter();
             } else {
                 process.exit(0);
             }
@@ -151,8 +154,8 @@ export default function App({ limit = 10, service: providedService }: AppProps) 
             {!loading && !error && (
                 <Box flexDirection="row" flexGrow={1} overflow="hidden">
                     <Box width="40%" flexDirection="column">
-                        <InboxList 
-                            emails={displayEmails} 
+                        <InboxList
+                            emails={displayEmails}
                             focusedIndex={focusedIndex}
                             terminalWidth={terminalDimensions.columns}
                             terminalHeight={terminalDimensions.rows}
@@ -160,9 +163,9 @@ export default function App({ limit = 10, service: providedService }: AppProps) 
                         />
                     </Box>
                     <Box width="60%" marginLeft={2}>
-                        <EmailDetail 
-                            email={selectedEmail} 
-                            isActive={!!selectedEmail} 
+                        <EmailDetail
+                            email={selectedEmail}
+                            isActive={!!selectedEmail}
                             terminalWidth={terminalDimensions.columns}
                             terminalHeight={terminalDimensions.rows}
                         />
@@ -171,9 +174,9 @@ export default function App({ limit = 10, service: providedService }: AppProps) 
             )}
 
             <Box marginTop={1} borderStyle="classic" borderColor="gray" paddingX={1} flexShrink={0}>
-                <Text color="gray"> 
-                    {selectedEmail 
-                        ? ' [Esc] Close Detail  [Arrows] Scroll ' 
+                <Text color="gray">
+                    {selectedEmail
+                        ? ' [Esc] Close Detail  [Arrows] Scroll '
                         : ' [Arrows] Navigate  [Enter] View  [f] Filter  [Esc] Exit '}
                 </Text>
             </Box>

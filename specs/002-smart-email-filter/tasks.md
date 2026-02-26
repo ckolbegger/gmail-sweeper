@@ -93,12 +93,12 @@
 
 ### Tests for User Story 2 (MANDATORY - Strict TDD) ⚠️
 
-- [ ] T030 [P] [US2] Unit tests for cancellation and reset in `tests/unit/hooks/useSmartFilter.clear.test.ts`
+- [x] T030 [P] [US2] Unit tests for cancellation and reset in `tests/unit/hooks/useSmartFilter.clear.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T031 [US2] Implement evaluation cancellation using `AbortSignal` in `useSmartFilter`
-- [ ] T032 [US2] Wire `Escape` key to clear filter in `src/app.tsx`
+- [x] T031 [US2] Implement evaluation cancellation using `AbortSignal` in `useSmartFilter`
+- [x] T032 [US2] Wire `Escape` key to clear filter in `src/app.tsx`
 
 **Checkpoint**: User Story 2 complete
 
