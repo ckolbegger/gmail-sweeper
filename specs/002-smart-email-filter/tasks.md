@@ -19,12 +19,12 @@
 
 **Purpose**: Install dependencies and create module scaffolding
 
-- [ ] T001 Install production/runtime deps: `openai`, `@anthropic-ai/sdk`, `react`, `@types/react`, `ink-testing-library`
-- [ ] T002 Update TypeScript config for TSX (`jsx: react-jsx`) in `tsconfig.json`
-- [ ] T003 Create `src/adapters/ai/` with barrel export in `src/adapters/ai/index.ts`
-- [ ] T004 Create `src/services/smart_filter_service.ts`, `src/services/batch_sizing.ts`, and `src/services/index.ts`
-- [ ] T005 [P] Create TUI TSX scaffolding files `src/tui/filter_input.tsx` and `src/tui/use_smart_filter.ts`
-- [ ] T006 Create `.env.example` with AI configuration variables (`AI_PROVIDER`, `AI_MODEL`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MAX_CONTEXT_TOKENS`)
+- [x] T001 Install production/runtime deps: `openai`, `@anthropic-ai/sdk`, `react`, `@types/react`, `ink-testing-library`
+- [x] T002 Update TypeScript config for TSX (`jsx: react-jsx`) in `tsconfig.json`
+- [x] T003 Create `src/adapters/ai/` with barrel export in `src/adapters/ai/index.ts`
+- [x] T004 Create `src/services/smart_filter_service.ts`, `src/services/batch_sizing.ts`, and `src/services/index.ts`
+- [x] T005 [P] Create TUI TSX scaffolding files `src/tui/filter_input.tsx` and `src/tui/use_smart_filter.ts`
+- [x] T006 Create `.env.example` with AI configuration variables (`AI_PROVIDER`, `AI_MODEL`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MAX_CONTEXT_TOKENS`)
 
 ---
 
@@ -36,20 +36,20 @@
 
 ### Tests (MANDATORY - Strict TDD)
 
-- [ ] T007 [P] Unit tests for `toConfidenceLevel()` mapping in `tests/unit/ai_confidence.test.ts`
-- [ ] T008 [P] Unit tests for `resolveAiConfig()` in `tests/unit/ai_config.test.ts`
-- [ ] T009 [P] Unit tests for `createAiProvider()` factory in `tests/unit/ai_provider_factory.test.ts`
-- [ ] T010 [P] Unit tests for classification prompt builder in `tests/unit/ai_prompt.test.ts`
-- [ ] T011 [P] Unit tests for `estimateTokens()` and `calculateBatchSize()` in `tests/unit/batch_sizing.test.ts`
+- [x] T007 [P] Unit tests for `toConfidenceLevel()` mapping in `tests/unit/ai_confidence.test.ts`
+- [x] T008 [P] Unit tests for `resolveAiConfig()` in `tests/unit/ai_config.test.ts`
+- [x] T009 [P] Unit tests for `createAiProvider()` factory in `tests/unit/ai_provider_factory.test.ts`
+- [x] T010 [P] Unit tests for classification prompt builder in `tests/unit/ai_prompt.test.ts`
+- [x] T011 [P] Unit tests for `estimateTokens()` and `calculateBatchSize()` in `tests/unit/batch_sizing.test.ts`
 
 ### Implementation
 
-- [ ] T012 [P] Implement `toConfidenceLevel()`, provider types, and `createAiProvider()` in `src/adapters/ai/provider.ts`
-- [ ] T013 [P] Implement `resolveAiConfig()` in `src/core/config.ts` (optional AI config; null when not configured)
-- [ ] T014 [P] Implement classification prompt template in `src/adapters/ai/prompt.ts`
-- [ ] T015 Implement `estimateTokens()` and `calculateBatchSize()` in `src/services/batch_sizing.ts`
-- [ ] T016 Add `AiProviderError` in `src/core/errors.ts`
-- [ ] T017 Export adapter/service modules via `src/adapters/ai/index.ts` and `src/services/index.ts`
+- [x] T012 [P] Implement `toConfidenceLevel()`, provider types, and `createAiProvider()` in `src/adapters/ai/provider.ts`
+- [x] T013 [P] Implement `resolveAiConfig()` in `src/core/config.ts` (optional AI config; null when not configured)
+- [x] T014 [P] Implement classification prompt template in `src/adapters/ai/prompt.ts`
+- [x] T015 Implement `estimateTokens()` and `calculateBatchSize()` in `src/services/batch_sizing.ts`
+- [x] T016 Add `AiProviderError` in `src/core/errors.ts`
+- [x] T017 Export adapter/service modules via `src/adapters/ai/index.ts` and `src/services/index.ts`
 
 **Checkpoint**: Foundation ready — provider interface, config, prompt, and batch sizing are available.
 
@@ -95,12 +95,12 @@
 
 ### Tests for User Story 2 (MANDATORY - Strict TDD)
 
-- [ ] T034 [P] [US2] Unit tests for clear edge cases in `tests/unit/use_smart_filter.clear.test.ts`
-- [ ] T035 [US2] Integration test for clear flow in `tests/integration/smart_filter_clear.test.ts`
+- [x] T034 [P] [US2] Unit tests for clear edge cases in `tests/unit/use_smart_filter.clear.test.ts`
+- [x] T035 [US2] Integration test for clear flow in `tests/integration/smart_filter_clear.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T036 [US2] Implement cancellation-on-clear in `src/tui/use_smart_filter.ts` with `AbortController`
+- [x] T036 [US2] Implement cancellation-on-clear in `src/tui/use_smart_filter.ts` with `AbortController`
 
 **Checkpoint**: User Story 2 complete.
 
@@ -114,13 +114,13 @@
 
 ### Tests for User Story 3 (MANDATORY - Strict TDD)
 
-- [ ] T037 [P] [US3] Unit tests for confidence indicator rendering in `tests/unit/inbox_list.confidence.test.tsx`
-- [ ] T038 [US3] Integration test for confidence display in `tests/integration/smart_filter_confidence.test.ts`
+- [x] T037 [P] [US3] Unit tests for confidence indicator rendering in `tests/unit/inbox_list.confidence.test.tsx`
+- [x] T038 [US3] Integration test for confidence display in `tests/integration/smart_filter_confidence.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T039 [P] [US3] Add confidence indicator rendering in `src/tui/inbox_list.tsx`
-- [ ] T040 [US3] Wire confidence map from filter state to list rendering in `src/tui/app.tsx`
+- [x] T039 [P] [US3] Add confidence indicator rendering in `src/tui/inbox_list.tsx`
+- [x] T040 [US3] Wire confidence map from filter state to list rendering in `src/tui/app.tsx`
 
 **Checkpoint**: All user stories complete for smart filtering.
 
@@ -130,12 +130,12 @@
 
 **Purpose**: Edge cases, error hardening, and documentation
 
-- [ ] T041 [P] Unit tests for edge cases in `tests/unit/smart_filter_edge.test.ts`
-- [ ] T042 [P] Unit tests for AI error handling in `tests/unit/ai_error_handling.test.ts`
-- [ ] T043 Progressive batch status updates in `src/tui/app.tsx` ("Evaluating batch X/Y")
-- [ ] T044 Finalize `src/adapters/ai/index.ts` public exports
-- [ ] T045 Finalize `src/services/index.ts` public exports
-- [ ] T046 Run quickstart validation from `specs/002-smart-email-filter/quickstart.md`
+- [x] T041 [P] Unit tests for edge cases in `tests/unit/smart_filter_edge.test.ts`
+- [x] T042 [P] Unit tests for AI error handling in `tests/unit/ai_error_handling.test.ts`
+- [x] T043 Progressive batch status updates in `src/tui/app.tsx` ("Evaluating batch X/Y")
+- [x] T044 Finalize `src/adapters/ai/index.ts` public exports
+- [x] T045 Finalize `src/services/index.ts` public exports
+- [x] T046 Run quickstart validation from `specs/002-smart-email-filter/quickstart.md`
 - [x] T047 [P] Regression tests for filter-input behavior bug `specs/002-smart-email-filter/US1-bug-1.md` in `tests/unit/input_controller.filter_mode.test.ts` and `tests/integration/smart_filter_typing_flow.test.ts`
 - [x] T048 Fix filter-input behavior bug `specs/002-smart-email-filter/US1-bug-1.md` by isolating text-entry mode in `src/tui/app.ts`/`src/tui/input_controller.ts`
 - [x] T049 [P] Regression tests for AI config wiring bug `specs/002-smart-email-filter/US1-bug-2.md` in `tests/unit/cli_ai_config_wiring.test.ts` and `tests/integration/smart_filter_configured_env_flow.test.ts`

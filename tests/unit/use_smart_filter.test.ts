@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createEmail, type Email } from '@/core/entities.js';
 import type { EmailClassification } from '@/adapters/ai/provider.js';
+import { createEmail, type Email } from '@/core/entities.js';
 import * as smartFilterHook from '@/tui/use_smart_filter.js';
 
 interface SmartFilterState {

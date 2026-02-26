@@ -62,6 +62,9 @@ function formatSummary(matchingCount: number, totalEmails: number): string {
 }
 
 export function useSmartFilter(options: UseSmartFilterOptions): SmartFilterController {
+  let activeAbortController: AbortController | null = null;
+  let activeRequestId = 0;
+
   const controller: SmartFilterController = {
     state: buildDefaultState(options.emails),
     beginInput: () => undefined,
@@ -111,6 +114,12 @@ export function useSmartFilter(options: UseSmartFilterOptions): SmartFilterContr
       return;
     }
 
+    activeRequestId += 1;
+    const requestId = activeRequestId;
+    activeAbortController?.abort();
+    const abortController = new AbortController();
+    activeAbortController = abortController;
+
     applyState({
       ...controller.state,
       status: 'loading',
@@ -124,8 +133,13 @@ export function useSmartFilter(options: UseSmartFilterOptions): SmartFilterContr
       const result = await executeFilter({
         description,
         emails: options.emails,
-        provider: options.provider
+        provider: options.provider,
+        signal: abortController.signal
       });
+
+      if (abortController.signal.aborted || requestId !== activeRequestId) {
+        return;
+      }
 
       applyState({
         ...controller.state,
@@ -139,6 +153,10 @@ export function useSmartFilter(options: UseSmartFilterOptions): SmartFilterContr
         confidenceByEmailId: buildConfidenceMap(result.matchingResults)
       });
     } catch (error) {
+      if (abortController.signal.aborted || requestId !== activeRequestId) {
+        return;
+      }
+
       const mapped = mapError(error);
       const message =
         error instanceof ValidationError
@@ -152,10 +170,17 @@ export function useSmartFilter(options: UseSmartFilterOptions): SmartFilterContr
         status: 'error',
         errorMessage: message
       });
+    } finally {
+      if (activeAbortController === abortController) {
+        activeAbortController = null;
+      }
     }
   };
 
   controller.clear = () => {
+    activeRequestId += 1;
+    activeAbortController?.abort();
+    activeAbortController = null;
     applyState(buildDefaultState(options.emails));
   };
 

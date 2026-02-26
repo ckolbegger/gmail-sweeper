@@ -1,5 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { appendFileSync } from 'node:fs';
+
+import Anthropic from '@anthropic-ai/sdk';
 
 import { buildClassificationPrompt } from '@/adapters/ai/prompt.js';
 import type {

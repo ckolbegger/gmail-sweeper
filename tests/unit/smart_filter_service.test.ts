@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createEmail, type Email } from '@/core/entities.js';
 import type { EmailClassification } from '@/adapters/ai/provider.js';
+import { createEmail, type Email } from '@/core/entities.js';
 import * as smartFilterService from '@/services/smart_filter_service.js';
 
 const EMAILS: Email[] = [

@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createEmail, type Email } from '@/core/entities.js';
 import * as tuiApp from '@/tui/app.js';
-import * as inputController from '@/tui/input_controller.js';
 import { renderInboxList } from '@/tui/inbox_list.js';
+import * as inputController from '@/tui/input_controller.js';
 
 const EMAILS: Email[] = [
   createEmail({

@@ -1,7 +1,6 @@
 ---
 name: tdd-task-parallel
-description: Implement one task with strict TDD in parallel-safe mode: run task-scoped tests only, avoid commits/progress updates, and report shared-file follow-ups.
-arguments: <task_id> [--progress-file <path>] [--max-attempts <n>]
+description: "Implement one task with strict TDD in parallel-safe mode: run task-scoped tests only, avoid commits/progress updates, and report shared-file follow-ups."
 ---
 
 # TDD Task Implementor (Parallel-Safe)

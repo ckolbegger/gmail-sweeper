@@ -13,8 +13,6 @@ import { renderEmailPreview } from '@/tui/email_preview.js';
 import { renderInboxList } from '@/tui/inbox_list.js';
 import { runInkSession, type RunInkSessionOptions } from '@/tui/ink_runtime.js';
 
-type WritableLogLevel = AppConfig['logLevel'];
-
 export interface CliDeps {
   loadConfig?: () => AppConfig;
   readAuthTokens?: (filePath: string) => Promise<AuthTokens | null>;

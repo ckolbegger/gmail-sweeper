@@ -6,6 +6,7 @@ import type { Email } from '@/core/entities.js';
 import { mapError } from '@/core/errors.js';
 import { runSmartFilter as runSmartFilterService } from '@/services/smart_filter_service.js';
 import { buildFilterInputLines } from '@/tui/filter_input.js';
+import { formatConfidenceIndicator } from '@/tui/inbox_list.js';
 import type { TuiCommand, TuiKeyInfo } from '@/tui/input_controller.js';
 import { mapInputToCommand } from '@/tui/input_controller.js';
 import {
@@ -24,6 +25,7 @@ export interface TuiCommandDeps {
   emails?: Email[];
   provider?: AiProvider | null;
   runSmartFilter?: typeof runSmartFilterService;
+  onStateUpdate?: (state: TuiAppState) => void;
 }
 
 interface SmartFilterUiState {
@@ -33,6 +35,8 @@ interface SmartFilterUiState {
   errorMessage?: string;
   summaryLine: string;
   visibleIndexes: number[] | null;
+  confidenceBySourceIndex: Record<number, number>;
+  requestId: number;
 }
 
 export interface TuiAppState {
@@ -91,7 +95,9 @@ function createSmartFilterUiState(): SmartFilterUiState {
     description: '',
     errorMessage: undefined,
     summaryLine: '',
-    visibleIndexes: null
+    visibleIndexes: null,
+    confidenceBySourceIndex: {},
+    requestId: 0
   };
 }
 
@@ -169,7 +175,10 @@ function clearSmartFilter(state: TuiAppState, deps: TuiCommandDeps): TuiAppState
     ...state,
     navigation: withNavigationListSize(state.navigation, deps.messageIds.length),
     statusLine: 'Smart filter cleared.',
-    smartFilter: createSmartFilterUiState()
+    smartFilter: {
+      ...createSmartFilterUiState(),
+      requestId: state.smartFilter.requestId + 1
+    }
   };
 }
 
@@ -202,29 +211,51 @@ async function submitSmartFilter(state: TuiAppState, deps: TuiCommandDeps): Prom
   }
 
   const runSmartFilter = deps.runSmartFilter ?? runSmartFilterService;
+  const requestId = state.smartFilter.requestId + 1;
   const loadingState: TuiAppState = {
     ...state,
     smartFilter: {
       ...state.smartFilter,
       status: 'loading',
       description,
-      errorMessage: undefined
+      errorMessage: undefined,
+      summaryLine: '',
+      requestId
     },
     statusLine: 'Evaluating smart filter...'
   };
+  deps.onStateUpdate?.(loadingState);
 
   try {
     const result = await runSmartFilter({
       description,
       emails: deps.emails,
-      provider: deps.provider
+      provider: deps.provider,
+      onProgress: (progress) => {
+        deps.onStateUpdate?.({
+          ...loadingState,
+          statusLine: `Evaluating batch ${progress.currentBatch}/${progress.totalBatches}...`,
+          smartFilter: {
+            ...loadingState.smartFilter,
+            summaryLine: `Evaluating batch ${progress.currentBatch}/${progress.totalBatches}...`
+          }
+        });
+      }
     });
     const indexById = new Map<string, number>(
       deps.messageIds.map((messageId, index) => [messageId, index])
     );
-    const visibleIndexes = result.matchingResults
+    const sortedMatches = [...result.matchingResults].sort((left, right) => right.confidence - left.confidence);
+    const visibleIndexes = sortedMatches
       .map((entry) => indexById.get(entry.emailId))
       .filter((index): index is number => index !== undefined);
+    const confidenceBySourceIndex: Record<number, number> = {};
+    for (const entry of sortedMatches) {
+      const sourceIndex = indexById.get(entry.emailId);
+      if (sourceIndex !== undefined) {
+        confidenceBySourceIndex[sourceIndex] = entry.confidence;
+      }
+    }
     const summaryLine = `Filtered: ${visibleIndexes.length}/${deps.messageIds.length} emails`;
 
     return {
@@ -237,7 +268,8 @@ async function submitSmartFilter(state: TuiAppState, deps: TuiCommandDeps): Prom
         draft: '',
         description,
         summaryLine,
-        visibleIndexes
+        visibleIndexes,
+        confidenceBySourceIndex
       }
     };
   } catch (error) {
@@ -250,7 +282,8 @@ async function submitSmartFilter(state: TuiAppState, deps: TuiCommandDeps): Prom
         ...loadingState.smartFilter,
         status: 'error',
         errorMessage: mapped.message,
-        visibleIndexes: null
+        visibleIndexes: null,
+        confidenceBySourceIndex: {}
       }
     };
   }
@@ -397,7 +430,14 @@ export function renderTuiScreen(listLines: string[], state: TuiAppState): string
   const activeListLines =
     state.smartFilter.visibleIndexes === null
       ? listLines
-      : state.smartFilter.visibleIndexes.map((index) => listLines[index] ?? '(unknown message)');
+      : state.smartFilter.visibleIndexes.map((index) => {
+          const line = listLines[index] ?? '(unknown message)';
+          const confidence = state.smartFilter.confidenceBySourceIndex[index];
+          if (confidence === undefined) {
+            return line;
+          }
+          return `${line} ${formatConfidenceIndicator(confidence)}`;
+        });
   const body =
     state.navigation.viewMode === 'list'
       ? selectViewportWindow(
@@ -438,7 +478,12 @@ export function InkInboxApp(props: InkInboxAppProps): unknown {
       fetchDetailLines: props.fetchDetailLines,
       emails: props.emails,
       provider: props.provider,
-      runSmartFilter: props.runSmartFilter
+      runSmartFilter: props.runSmartFilter,
+      onStateUpdate: (nextState) => {
+        setState((currentState) =>
+          nextState.smartFilter.requestId < currentState.smartFilter.requestId ? currentState : nextState
+        );
+      }
     }),
     [props.emails, props.fetchDetailLines, props.messageIds, props.provider, props.runSmartFilter]
   );
@@ -446,7 +491,9 @@ export function InkInboxApp(props: InkInboxAppProps): unknown {
   const dispatchCommand = useCallback(
     (command: TuiCommand, rawInput = '') => {
       void applyTuiCommand(state, command, commandDeps, rawInput).then((nextState) => {
-        setState(nextState);
+        setState((currentState) =>
+          nextState.smartFilter.requestId < currentState.smartFilter.requestId ? currentState : nextState
+        );
         if (nextState.shouldExit) {
           props.onExit?.();
           exit();

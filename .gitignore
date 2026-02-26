@@ -1,1 +1,21 @@
 .env
+
+# Build and dependencies
+node_modules/
+dist/
+
+# Local runtime/debug artifacts
+debug.log
+.gmail-sweeper/tokens.json
+
+# Codex local state (keep project skills tracked under .codex/skills/)
+.codex/auth.json
+.codex/config.toml
+.codex/history.jsonl
+.codex/log/
+.codex/models_cache.json
+.codex/prompts/
+.codex/rules/
+.codex/sessions/
+.codex/tmp/
+.codex/version.json
