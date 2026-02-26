@@ -90,8 +90,8 @@ describe('Split-Pane Layout', () => {
     const frame = lastFrame();
     // Should show at least the first email
     expect(frame).toContain('Email 1');
-    // Header should show email count
-    expect(frame).toContain('2 emails');
+    // Header should show pagination count "1-2 of 2"
+    expect(frame).toContain('1-2 of 2');
   });
 
   it('should show email preview for selected email on the right side', async () => {

@@ -1,4 +1,6 @@
 import type { AiProviderConfig } from './config.js';
+import { AnthropicProvider } from './anthropic.js';
+import { OpenAiProvider } from './openai.js';
 
 export type ConfidenceLevel = 'high' | 'medium' | 'low';
 
@@ -44,18 +46,4 @@ export function createAiProvider(config: AiProviderConfig): AiProvider {
   }
 }
 
-class AnthropicProvider implements AiProvider {
-  constructor(_config: AiProviderConfig) {}
-
-  async classifyEmails(_request: ClassificationRequest): Promise<EmailClassification[]> {
-    throw new Error('Not implemented');
-  }
-}
-
-class OpenAiProvider implements AiProvider {
-  constructor(_config: AiProviderConfig) {}
-
-  async classifyEmails(_request: ClassificationRequest): Promise<EmailClassification[]> {
-    throw new Error('Not implemented');
-  }
-}
+export { AnthropicProvider, OpenAiProvider };

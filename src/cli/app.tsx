@@ -62,6 +62,9 @@ export function App({ gmailClient, emailRepository }: AppProps): React.ReactElem
   const [errorMessage, setErrorMessage] = useState('');
   const [syncProgress, setSyncProgress] = useState('');
   const [previewScrollOffset, setPreviewScrollOffset] = useState(0);
+  const [paginationOffset, setPaginationOffset] = useState(0);
+  const [totalEmailCount, setTotalEmailCount] = useState(0);
+  const PAGE_SIZE = 50;
 
   const smartFilter = useSmartFilter(emails);
   const displayEmails =
@@ -73,6 +76,11 @@ export function App({ gmailClient, emailRepository }: AppProps): React.ReactElem
       .filter((e): e is Email => e !== undefined) || emails;
   const filterCount = smartFilter.filteredResults?.matchingResults.length;
   const totalCount = emails.length;
+
+  // Calculate pagination display range
+  const currentPageStart = paginationOffset + 1;
+  const currentPageEnd = Math.min(paginationOffset + PAGE_SIZE, totalEmailCount);
+  const paginationRangeText = `${currentPageStart}-${currentPageEnd} of ${totalEmailCount}`;
 
   // Initial sync on mount
   useEffect(() => {
@@ -87,9 +95,10 @@ export function App({ gmailClient, emailRepository }: AppProps): React.ReactElem
         }
 
         // Try to load emails from local database first
-        const localEmails = await emailRepository.list({ limit: 50 });
+        const localEmails = await emailRepository.list({ limit: PAGE_SIZE, offset: 0 });
         if (localEmails.items.length > 0) {
           setEmails(localEmails.items);
+          setTotalEmailCount(localEmails.total);
           setView('list');
         }
 
@@ -108,8 +117,9 @@ export function App({ gmailClient, emailRepository }: AppProps): React.ReactElem
         }
 
         // Reload from database
-        const updatedEmails = await emailRepository.list({ limit: 50 });
+        const updatedEmails = await emailRepository.list({ limit: PAGE_SIZE, offset: paginationOffset });
         setEmails(updatedEmails.items);
+        setTotalEmailCount(updatedEmails.total);
         setSyncProgress('');
         setView('list');
 
@@ -183,8 +193,9 @@ export function App({ gmailClient, emailRepository }: AppProps): React.ReactElem
             for (const email of result.emails) {
               await emailRepository.save(email);
             }
-            const updated = await emailRepository.list({ limit: 50 });
+            const updated = await emailRepository.list({ limit: PAGE_SIZE, offset: paginationOffset });
             setEmails(updated.items);
+            setTotalEmailCount(updated.total);
             setSyncProgress('');
             setView('list');
           })
@@ -192,6 +203,48 @@ export function App({ gmailClient, emailRepository }: AppProps): React.ReactElem
             setErrorMessage(err.message);
             setView('error');
           });
+      } else if (key.downArrow && key.ctrl) {
+        // Ctrl+Down: Next page
+        const nextOffset = paginationOffset + PAGE_SIZE;
+        if (nextOffset < totalEmailCount) {
+          setView('loading');
+          setSyncProgress('Loading...');
+          emailRepository
+            .list({ limit: PAGE_SIZE, offset: nextOffset })
+            .then((result) => {
+              setEmails(result.items);
+              setPaginationOffset(nextOffset);
+              setTotalEmailCount(result.total);
+              setSelectedIndex(0);
+              setSyncProgress('');
+              setView('list');
+            })
+            .catch((err) => {
+              setErrorMessage(err.message);
+              setView('error');
+            });
+        }
+      } else if (key.upArrow && key.ctrl) {
+        // Ctrl+Up: Previous page
+        const prevOffset = Math.max(0, paginationOffset - PAGE_SIZE);
+        if (prevOffset !== paginationOffset) {
+          setView('loading');
+          setSyncProgress('Loading...');
+          emailRepository
+            .list({ limit: PAGE_SIZE, offset: prevOffset })
+            .then((result) => {
+              setEmails(result.items);
+              setPaginationOffset(prevOffset);
+              setTotalEmailCount(result.total);
+              setSelectedIndex(0);
+              setSyncProgress('');
+              setView('list');
+            })
+            .catch((err) => {
+              setErrorMessage(err.message);
+              setView('error');
+            });
+        }
       }
     } else if (view === 'detail') {
       if (key.escape || input === 'q') {
@@ -262,9 +315,9 @@ export function App({ gmailClient, emailRepository }: AppProps): React.ReactElem
         ? React.createElement(
             Text,
             null,
-            ` | ${smartFilter.filterDescription} | ${emails.length} emails | ? for help`
+            ` | ${smartFilter.filterDescription} | ${paginationRangeText} | ? for help`
           )
-        : React.createElement(Text, null, ` | ${emails.length} emails | ? for help`)
+        : React.createElement(Text, null, ` | ${paginationRangeText} | ? for help`)
     ),
     smartFilter.state === 'input' || smartFilter.state === 'loading' || smartFilter.state === 'error'
       ? React.createElement(
@@ -347,7 +400,7 @@ export function App({ gmailClient, emailRepository }: AppProps): React.ReactElem
       React.createElement(
         Text,
         { color: 'gray' },
-        '↑↓ navigate | [ ] scroll preview | Enter view | f filter | Esc clear | r refresh | q quit'
+        '↑↓ navigate | Ctrl+↑↓ page | [ ] scroll | Enter view | f filter | Esc clear | r refresh | q quit'
       )
     )
   );
