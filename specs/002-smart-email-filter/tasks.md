@@ -63,29 +63,31 @@
 
 **Independent Test**: Enter a filter description against a known set of emails, verify matching emails appear and non-matching are hidden, with "Filtered: X/Y emails" shown
 
-### Tests for User Story 1 (MANDATORY - Strict TDD) ⚠️
+**Approach**: Each task follows TDD — write tests first, verify they fail, then implement until green.
 
-> **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+- [x] T018 [P] [US1] TDD `AnthropicProvider.classifyEmails()` — tests in `tests/unit/ai/anthropic.test.ts`, impl in `src/core/ai/anthropic.ts`. Mock Anthropic SDK, test: sends correct prompt, parses JSON response into EmailClassification[], handles malformed response, handles API error. Implement using @anthropic-ai/sdk, send classification prompt, parse JSON response.
+- [x] T019 [P] [US1] TDD `OpenAiProvider.classifyEmails()` — tests in `tests/unit/ai/openai.test.ts`, impl in `src/core/ai/openai.ts`. Mock OpenAI SDK, test: sends correct prompt, parses JSON response, handles malformed response, handles API error, respects baseUrl config. Implement using openai SDK, support baseUrl for compatible APIs.
+- [x] T020 [P] [US1] TDD `runSmartFilter()` — tests in `tests/unit/filter/smart-filter.test.ts`, impl in `src/core/filter/smart-filter.ts`. Mock AiProvider, test: splits emails into token-aware batches, calls onProgress after each batch, returns combined results sorted by confidence desc, respects AbortSignal cancellation, handles empty email list, rejects empty description (FR-013). Implement using `calculateBatchSize()`, call provider per batch, accumulate results.
+- [x] T021 [P] [US1] TDD `useSmartFilter` hook — tests in `tests/unit/tui/useSmartFilter.test.ts`, impl in `src/tui/hooks/useSmartFilter.ts`. Test: initial state is idle, activateFilter sets input mode, submitFilter triggers evaluation with loading state, successful evaluation updates filtered results, error preserves unfiltered view, clearFilter restores idle state, missing config shows error message (FR-017). Implement state machine (idle/input/loading/filtered/error), call `resolveAiConfig()` and `createAiProvider()`, invoke `runSmartFilter()`.
+- [x] T022 [P] [US1] TDD `FilterInput` component — tests in `tests/unit/tui/FilterInput.test.tsx`, impl in `src/tui/components/FilterInput.tsx`. ink-testing-library, test: renders text input, Enter submits value, displays loading indicator during evaluation (FR-004), displays error message on failure. Implement Ink TextInput for filter description, loading indicator, error display.
+- [x] T023 [P] [US1] TDD `EmailList` filter mode — tests in `tests/unit/tui/EmailList.filter.test.tsx`, update `src/tui/components/EmailList.tsx`. Test: displays "Filtered: X/Y emails" count (FR-009), shows only matching emails, shows "No matches found" when empty (FR-005, acceptance scenario 4). Add optional `filterCount`/`totalCount` props.
+- [x] T024 [US1] Update `useKeyboard` hook in `src/tui/hooks/useKeyboard.ts` — add `f` key to activate filter mode (FR-001), add `Escape` key to clear filter (FR-007), disable navigation keys during filter input mode
+- [x] T025 [US1] Integrate smart filter into `InboxApp` in `src/tui/app.tsx` — wire `useSmartFilter` hook, show `FilterInput` when in input mode, pass filtered emails to `EmailList` when filter active, show filter description in header (FR-006), restore full list on clear (FR-008), update footer help text with `f` for filter and `Esc` to clear
+- [x] T026 [US1] Integration test for full filter cycle in `tests/integration/smart-filter.test.ts` — mock AiProvider, test: activate filter → enter description → see loading → see filtered results with count → verify non-matching hidden
 
-- [ ] T018 [P] [US1] Unit tests for `AnthropicProvider.classifyEmails()` in `tests/unit/ai/anthropic.test.ts` — mock Anthropic SDK, test: sends correct prompt, parses JSON response into EmailClassification[], handles malformed response, handles API error
-- [ ] T019 [P] [US1] Unit tests for `OpenAiProvider.classifyEmails()` in `tests/unit/ai/openai.test.ts` — mock OpenAI SDK, test: sends correct prompt, parses JSON response, handles malformed response, handles API error, respects baseUrl config
-- [ ] T020 [P] [US1] Unit tests for `runSmartFilter()` in `tests/unit/filter/smart-filter.test.ts` — mock AiProvider, test: splits emails into token-aware batches, calls onProgress after each batch, returns combined results sorted by confidence desc, respects AbortSignal cancellation, handles empty email list, rejects empty description (FR-013)
-- [ ] T021 [P] [US1] Unit tests for `useSmartFilter` hook in `tests/unit/tui/useSmartFilter.test.ts` — test: initial state is idle, activateFilter sets input mode, submitFilter triggers evaluation with loading state, successful evaluation updates filtered results, error preserves unfiltered view, clearFilter restores idle state, missing config shows error message (FR-017)
-- [ ] T022 [P] [US1] Unit tests for `FilterInput` component in `tests/unit/tui/FilterInput.test.tsx` — ink-testing-library, test: renders text input, Enter submits value, displays loading indicator during evaluation (FR-004), displays error message on failure
-- [ ] T023 [P] [US1] Unit tests for filter mode in `EmailList` in `tests/unit/tui/EmailList.filter.test.tsx` — test: displays "Filtered: X/Y emails" count (FR-009), shows only matching emails, shows "No matches found" when empty (FR-005, acceptance scenario 4)
-- [ ] T024 [US1] Integration test for full filter cycle in `tests/integration/smart-filter.test.ts` — mock AiProvider, test: activate filter → enter description → see loading → see filtered results with count → verify non-matching hidden
+### Enhancements
 
-### Implementation for User Story 1
+- [x] T026a [US1] TDD filter progress indicator — tests in `tests/unit/tui/FilterInput.test.tsx` and `tests/unit/tui/useSmartFilter.test.ts`, update `src/tui/hooks/useSmartFilter.ts`, `src/tui/components/FilterInput.tsx`, `src/tui/app.tsx`. Add progress state (evaluatedCount/totalCount/percent) to useSmartFilter by wiring onProgress callback to runSmartFilter. Update FilterInput to show progress next to spinner: "7/70 — 10% complete". Tests: hook exposes progress during loading, progress updates after each batch, FilterInput renders progress text when provided, shows "Evaluating..." when no progress yet.
+- [x] T026b [P] TDD `--max-emails` CLI arg — Add `-n, --max-emails <count>` option to CLI (`src/cli/index.ts`), wire through `launchTUI` → `InboxApp` → `useGmail` as `initialLoadSize`. Also add `--max-context-tokens <count>` CLI arg to override `AI_MAX_CONTEXT_TOKENS` env var. Tests: CLI parsing in `tests/unit/cli/index.test.ts`, integration plumbing in `tests/unit/tui/useGmail.test.ts`. Three sub-tasks:
+  - T026b-1 [P] CLI arg parsing: Add `--max-emails` and `--max-context-tokens` to `parseArgs()` and `CLIOptions` in `src/cli/index.ts`, tests in `tests/unit/cli/index.test.ts`
+  - T026b-2 [P] TUI plumbing: Add `maxEmails` prop to `launchTUI()` in `src/tui/index.tsx`, `InboxApp` in `src/tui/app.tsx`, pass as `initialLoadSize` to `useGmail`. Add `maxContextTokens` prop to `InboxApp` and pass to `useSmartFilter`. Tests in `tests/unit/tui/useGmail.test.ts`
+  - T026b-3 Wire CLI → TUI: Connect parsed CLI args to `launchTUI()` call in `main()` of `src/cli/index.ts`
 
-- [ ] T025 [P] [US1] Implement `AnthropicProvider` in `src/core/ai/anthropic.ts` — use @anthropic-ai/sdk, send classification prompt, parse JSON response into EmailClassification[]
-- [ ] T026 [P] [US1] Implement `OpenAiProvider` in `src/core/ai/openai.ts` — use openai SDK, send classification prompt, parse JSON response, support baseUrl for compatible APIs
-- [ ] T027 [US1] Implement `runSmartFilter()` in `src/core/filter/smart-filter.ts` — split emails using `calculateBatchSize()`, call provider per batch, accumulate results sorted by confidence desc, call onProgress after each batch, support AbortSignal, reject empty description
-- [ ] T028 [US1] Implement `useSmartFilter` hook in `src/tui/hooks/useSmartFilter.ts` — manage filter state (idle/input/loading/filtered/error), call `resolveAiConfig()` and `createAiProvider()`, invoke `runSmartFilter()`, handle errors preserving unfiltered view
-- [ ] T029 [US1] Implement `FilterInput` component in `src/tui/components/FilterInput.tsx` — Ink TextInput for filter description, loading indicator (FR-004), error display
-- [ ] T030 [US1] Update `EmailList` component in `src/tui/components/EmailList.tsx` — accept optional `filterCount`/`totalCount` props, display "Filtered: X/Y emails" when active (FR-009), display "No matches found" message
-- [ ] T031 [US1] Update `useKeyboard` hook in `src/tui/hooks/useKeyboard.ts` — add `f` key to activate filter mode (FR-001), add `Escape` key to clear filter (FR-007), disable navigation keys during filter input mode
-- [ ] T032 [US1] Integrate smart filter into `InboxApp` in `src/tui/app.tsx` — wire `useSmartFilter` hook, show `FilterInput` when in input mode, pass filtered emails to `EmailList` when filter active, show filter description in header (FR-006), restore full list on clear (FR-008)
-- [ ] T033 [US1] Update footer help text in `src/tui/app.tsx` — add `f` for filter and `Esc` to clear filter to keyboard shortcut hints
+### Bug Fixes
+
+- [x] T018-BUG-1 [US1] Fix empty filter description not rejected before AI config check — `src/tui/hooks/useSmartFilter.ts`, `tests/unit/tui/useSmartFilter.test.ts`. See `specs/002-smart-email-filter/US1-bug-1.md`.
+- [x] T018-BUG-2 [US1] Fix "AI provider not configured" error lacks configuration guidance — `src/tui/hooks/useSmartFilter.ts`, `tests/unit/tui/useSmartFilter.test.ts`. See `specs/002-smart-email-filter/US1-bug-2.md`.
+- [x] T018-BUG-3 [US1] Fix selection index not reset when switching between filtered/unfiltered views — `src/tui/hooks/useKeyboard.ts`, `tests/unit/tui/useKeyboard.test.ts`. See `specs/002-smart-email-filter/US1-bug-3.md`.
 
 **Checkpoint**: User Story 1 fully functional — user can filter inbox by natural language, see progressive results, and return to full view
 
@@ -97,16 +99,10 @@
 
 **Independent Test**: Apply a smart filter, verify filtered results, press Escape, verify all emails restored and filter description removed
 
-> **Note**: Core clear functionality is implemented in US1 (T028 clearFilter, T031 Escape key, T032 restore full list). This phase covers the edge cases and acceptance scenarios specific to the clear operation.
+> **Note**: Core clear functionality is implemented in US1 (T021 useSmartFilter clearFilter, T024 Escape key, T025 restore full list). This phase covers the edge cases and acceptance scenarios specific to the clear operation.
 
-### Tests for User Story 2 (MANDATORY - Strict TDD) ⚠️
-
-- [ ] T034 [P] [US2] Unit tests for clear filter edge cases in `tests/unit/tui/useSmartFilter.clear.test.ts` — test: clear during loading cancels in-progress evaluation (AbortSignal), clear removes filter description from display, clear when no filter active is a no-op (acceptance scenario 3), clear restores original email order
-- [ ] T035 [US2] Integration test for clear filter in `tests/integration/smart-filter-clear.test.ts` — test: apply filter → verify filtered → clear → verify full list restored and no filter description shown
-
-### Implementation for User Story 2
-
-- [ ] T036 [US2] Implement cancellation-on-clear in `src/tui/hooks/useSmartFilter.ts` — when clearFilter called during loading, abort in-flight evaluation via AbortController, ensure no-op when no filter active
+- [x] T027 [US2] TDD clear filter edge cases — tests in `tests/unit/tui/useSmartFilter.clear.test.ts`, impl cancellation-on-clear in `src/tui/hooks/useSmartFilter.ts`. Test: clear during loading cancels in-progress evaluation (AbortSignal), clear removes filter description from display, clear when no filter active is a no-op (acceptance scenario 3), clear restores original email order. Implement AbortController cancellation on clearFilter.
+- [x] T028 [US2] Integration test for clear filter in `tests/integration/smart-filter-clear.test.ts` — test: apply filter → verify filtered → clear → verify full list restored and no filter description shown
 
 **Checkpoint**: User Story 2 complete — clear filter works in all states (idle, loading, filtered, error)
 
@@ -118,15 +114,8 @@
 
 **Independent Test**: Apply a filter, verify each result displays a confidence indicator, verify results sorted by confidence (highest first)
 
-### Tests for User Story 3 (MANDATORY - Strict TDD) ⚠️
-
-- [ ] T037 [P] [US3] Unit tests for confidence indicator rendering in `tests/unit/tui/EmailList.confidence.test.tsx` — test: high confidence shows green indicator, medium shows yellow, low shows dim, indicator appears next to email subject
-- [ ] T038 [US3] Integration test for confidence display in `tests/integration/smart-filter-confidence.test.ts` — test: apply filter → results show confidence indicators → results ordered by confidence descending
-
-### Implementation for User Story 3
-
-- [ ] T039 [P] [US3] Update `EmailList` component in `src/tui/components/EmailList.tsx` — accept optional `confidenceMap` prop (Map<emailId, ConfidenceLevel>), render colored confidence indicator (high=green, medium=yellow, low=dim) next to email subject when filter active
-- [ ] T040 [US3] Wire confidence data from `useSmartFilter` to `EmailList` via `InboxApp` in `src/tui/app.tsx` — build confidenceMap from filter results, pass to EmailList
+- [ ] T029 [US3] TDD confidence indicator rendering — tests in `tests/unit/tui/EmailList.confidence.test.tsx`, update `src/tui/components/EmailList.tsx`. Test: high confidence shows green indicator, medium shows yellow, low shows dim, indicator appears next to email subject. Add optional `confidenceMap` prop (Map<emailId, ConfidenceLevel>), render colored indicators when filter active.
+- [ ] T030 [US3] Wire confidence data and integration test — wire `useSmartFilter` confidence data to `EmailList` via `InboxApp` in `src/tui/app.tsx`, integration test in `tests/integration/smart-filter-confidence.test.ts`: apply filter → results show confidence indicators → results ordered by confidence descending
 
 **Checkpoint**: All user stories functional — filter, clear, and confidence indicators working
 
@@ -136,12 +125,10 @@
 
 **Purpose**: Edge cases, error hardening, and documentation
 
-- [ ] T041 [P] Unit tests for edge cases in `tests/unit/filter/smart-filter.edge.test.ts` — test: vague description ("stuff") returns best-effort results, emails with no body (only subject/sender) are evaluated, very long email metadata handled by batch sizing
-- [ ] T042 [P] Unit tests for AI error handling in `tests/unit/ai/error-handling.test.ts` — test: network timeout, rate limit (429), malformed JSON response, empty response, provider returns partial results
-- [ ] T043 Handle progressive batch display in `src/tui/app.tsx` — update EmailList during evaluation as each batch completes (FR-014), show "Evaluating batch X/Y..." in status
-- [ ] T044 Update `src/core/ai/index.ts` barrel export with all public types and functions
-- [ ] T045 Update `src/core/filter/index.ts` barrel export with all public types and functions
-- [ ] T046 Run quickstart.md validation — verify development setup instructions work end-to-end
+- [ ] T031 [P] TDD edge cases and error handling — tests in `tests/unit/filter/smart-filter.edge.test.ts` and `tests/unit/ai/error-handling.test.ts`. Edge cases: vague description ("stuff") returns best-effort results, emails with no body (only subject/sender) are evaluated, very long email metadata handled by batch sizing. Error handling: network timeout, rate limit (429), malformed JSON response, empty response, provider returns partial results.
+- [ ] T032 Handle progressive batch display in `src/tui/app.tsx` — update EmailList during evaluation as each batch completes (FR-014), show "Evaluating batch X/Y..." in status
+- [ ] T033 Update barrel exports — `src/core/ai/index.ts` and `src/core/filter/index.ts` with all public types and functions
+- [ ] T034 Run quickstart.md validation — verify development setup instructions work end-to-end
 
 ---
 
@@ -159,43 +146,41 @@
 ### User Story Dependencies
 
 - **User Story 1 (P1)**: Can start after Foundational (Phase 2) — no dependencies on other stories
-- **User Story 2 (P1)**: Depends on US1 core implementation (T028 useSmartFilter, T031 Escape key)
+- **User Story 2 (P1)**: Depends on US1 core implementation (T021 useSmartFilter, T024 Escape key)
 - **User Story 3 (P2)**: Depends on US1 filter results being available — can run parallel with US2
 
 ### Within Each User Story
 
-- Tests MUST be written and FAIL before implementation
-- Provider interface before provider implementations
-- Core filter logic before TUI integration
+- Each task follows TDD: Write Test → Fail → Implement → Pass
+- Core logic before TUI integration
 - Hook before component
 - Component before app integration
 
 ### Parallel Opportunities
 
-- T004/T005: test directories created in parallel
-- T007–T011: all foundational tests in parallel
-- T012–T016: foundational implementations in parallel (after their tests pass)
-- T018–T023: all US1 tests in parallel
-- T025/T026: both provider implementations in parallel
-- T034/T035 and T037/T038: US2 and US3 tests can run in parallel
-- T041/T042: edge case and error handling tests in parallel
+- T018/T019: Both provider TDD tasks in parallel (different files)
+- T020/T021/T022/T023: Core filter, hook, FilterInput, EmailList TDD in parallel (different files)
+- T029/T030: US3 tasks can overlap with US2 (T027/T028)
 
 ---
 
 ## Parallel Example: User Story 1
 
 ```bash
-# Launch all US1 tests together (MANDATORY - write FIRST):
-Task: "Unit tests for AnthropicProvider in tests/unit/ai/anthropic.test.ts"
-Task: "Unit tests for OpenAiProvider in tests/unit/ai/openai.test.ts"
-Task: "Unit tests for runSmartFilter in tests/unit/filter/smart-filter.test.ts"
-Task: "Unit tests for useSmartFilter hook in tests/unit/tui/useSmartFilter.test.ts"
-Task: "Unit tests for FilterInput in tests/unit/tui/FilterInput.test.tsx"
-Task: "Unit tests for EmailList filter mode in tests/unit/tui/EmailList.filter.test.tsx"
+# Batch 1: Provider implementations (parallel, no dependencies)
+Task: "TDD AnthropicProvider — tests/unit/ai/anthropic.test.ts + src/core/ai/anthropic.ts"
+Task: "TDD OpenAiProvider — tests/unit/ai/openai.test.ts + src/core/ai/openai.ts"
 
-# Then launch parallel implementations:
-Task: "Implement AnthropicProvider in src/core/ai/anthropic.ts"
-Task: "Implement OpenAiProvider in src/core/ai/openai.ts"
+# Batch 2: Core logic + TUI components (parallel, no dependencies between them)
+Task: "TDD runSmartFilter — tests/unit/filter/smart-filter.test.ts + src/core/filter/smart-filter.ts"
+Task: "TDD useSmartFilter hook — tests/unit/tui/useSmartFilter.test.ts + src/tui/hooks/useSmartFilter.ts"
+Task: "TDD FilterInput — tests/unit/tui/FilterInput.test.tsx + src/tui/components/FilterInput.tsx"
+Task: "TDD EmailList filter mode — tests/unit/tui/EmailList.filter.test.tsx + src/tui/components/EmailList.tsx"
+
+# Batch 3: Integration (sequential, depends on batch 1+2)
+Task: "Update useKeyboard hook"
+Task: "Integrate into InboxApp"
+Task: "Integration test for full filter cycle"
 ```
 
 ---
@@ -204,15 +189,15 @@ Task: "Implement OpenAiProvider in src/core/ai/openai.ts"
 
 ### MVP First (User Story 1 Only)
 
-1. Complete Phase 1: Setup
-2. Complete Phase 2: Foundational (CRITICAL — blocks all stories)
+1. Complete Phase 1: Setup ✅
+2. Complete Phase 2: Foundational ✅
 3. Complete Phase 3: User Story 1
 4. **STOP and VALIDATE**: Test full filter cycle end-to-end
 5. Demo: user can filter inbox by natural language
 
 ### Incremental Delivery
 
-1. Setup + Foundational → Foundation ready
+1. Setup + Foundational → Foundation ready ✅
 2. Add User Story 1 → Test independently → Demo (MVP!)
 3. Add User Story 2 → Test clear filter → Demo
 4. Add User Story 3 → Test confidence indicators → Demo
@@ -224,8 +209,8 @@ Task: "Implement OpenAiProvider in src/core/ai/openai.ts"
 
 - [P] tasks = different files, no dependencies
 - [Story] label maps task to specific user story for traceability
+- Each task is self-contained TDD: tests + implementation together
 - Each user story should be independently completable and testable
-- Verify tests fail before implementing
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently
 - Constitution II mandates: Write Test → Fail → Write Code → Pass → Refactor
