@@ -2,10 +2,13 @@
  * Email List TUI Component
  *
  * Displays a list of emails with keyboard navigation.
+ *
+ * T039: Supports confidence indicators when smart filter is active.
  */
 
 import { Box, Text, useInput } from 'ink';
 import type { Email } from '../../core/models/email.js';
+import type { ConfidenceLevel } from '../../core/ai/provider.js';
 import { useEffect, useMemo, useState } from 'react';
 
 export type SortField = 'date' | 'sender' | 'subject' | 'label' | 'category';
@@ -21,6 +24,8 @@ export interface EmailListProps {
   filterCount?: number;
   /** Total emails before filtering (for display) */
   totalCount?: number;
+  /** Confidence levels for emails when smart filter is active (T039) */
+  confidenceMap?: Map<string, ConfidenceLevel>;
 }
 
 function charDisplayWidth(char: string): number {
@@ -65,7 +70,31 @@ export function toAscii(value: string): string {
   return value.replace(/[^\x20-\x7E]/g, '').trimStart();
 }
 
-export function EmailList({ emails, selectedId, onSelect, sort, maxVisibleRows, filterCount, totalCount }: EmailListProps) {
+/**
+ * Render confidence indicator based on confidence level.
+ * T039: High=green, Medium=yellow, Low=dim
+ */
+function ConfidenceIndicator({ level }: { level: ConfidenceLevel }) {
+  switch (level) {
+    case 'high':
+      return <Text color="green">●</Text>;
+    case 'medium':
+      return <Text color="yellow">●</Text>;
+    case 'low':
+      return <Text dimColor>○</Text>;
+  }
+}
+
+export function EmailList({
+  emails,
+  selectedId,
+  onSelect,
+  sort,
+  maxVisibleRows,
+  filterCount,
+  totalCount,
+  confidenceMap,
+}: EmailListProps) {
   const [selectedIndex, setSelectedIndex] = useState(() => {
     const idx = emails.findIndex((e) => e.id === selectedId);
     return idx >= 0 ? idx : 0;
@@ -196,6 +225,7 @@ export function EmailList({ emails, selectedId, onSelect, sort, maxVisibleRows, 
         const absoluteIndex = windowStart + index;
         const isSelected = absoluteIndex === selectedIndex;
         const isUnread = !email.isRead;
+        const confidence = confidenceMap?.get(email.id);
 
         return (
           <Box key={email.id} flexDirection="row" paddingX={1} borderStyle={undefined}>
@@ -204,6 +234,13 @@ export function EmailList({ emails, selectedId, onSelect, sort, maxVisibleRows, 
                 {isSelected
                   ? `> ${truncateDisplay(toAscii(email.subject), 36)}`
                   : `  ${truncateDisplay(toAscii(email.subject), 36)}`}
+                {/* T039: Show confidence indicator when available */}
+                {confidence !== undefined && (
+                  <>
+                    {' '}
+                    <ConfidenceIndicator level={confidence} />
+                  </>
+                )}
               </Text>
             </Box>
             <Box width={25}>

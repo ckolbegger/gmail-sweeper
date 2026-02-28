@@ -3,12 +3,15 @@
  *
  * React hook for managing smart filter state and operations.
  * Handles AI-powered email filtering with natural language descriptions.
+ *
+ * T036: Supports cancellation via AbortController when clearing filter.
+ * T040: Returns classifications with confidence levels for UI display.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import type { Email } from '@/core/models/email.js';
 import { runSmartFilter } from '@/core/filter/smart-filter.js';
-import { createAiProvider, type AiProvider } from '@/core/ai/provider.js';
+import { createAiProvider, type AiProvider, type EmailClassification } from '@/core/ai/provider.js';
 import { resolveAiConfig } from '@/core/ai/config.js';
 
 export type SmartFilterState = 'idle' | 'input' | 'loading' | 'filtered' | 'error';
@@ -22,6 +25,8 @@ export interface UseSmartFilterReturn {
   state: SmartFilterState;
   description: string | null;
   filteredEmails: Email[];
+  /** Classifications with confidence levels (T040) */
+  classifications: EmailClassification[];
   error: string | null;
   progress: FilterProgress | null;
   activateFilter: () => void;
@@ -40,13 +45,19 @@ export interface UseSmartFilterReturn {
  * - any -> idle (clearFilter)
  *
  * FR-017: Missing config shows error message
+ * T036: Clearing during loading aborts in-flight evaluation
+ * T040: Returns classifications for confidence display
  */
 export function useSmartFilter(): UseSmartFilterReturn {
   const [state, setState] = useState<SmartFilterState>('idle');
   const [description, setDescription] = useState<string | null>(null);
   const [filteredEmails, setFilteredEmails] = useState<Email[]>([]);
+  const [classifications, setClassifications] = useState<EmailClassification[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<FilterProgress | null>(null);
+
+  // Track AbortController for cancelling in-flight operations
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const activateFilter = useCallback(() => {
     setState('input');
@@ -75,6 +86,11 @@ export function useSmartFilter(): UseSmartFilterReturn {
     setError(null);
     setProgress({ current: 0, total: emails.length });
 
+    // Create AbortController for cancellation support (T036)
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    const currentSignal = abortController.signal;
+
     try {
       const provider: AiProvider = createAiProvider(config);
       const result = await runSmartFilter({
@@ -82,25 +98,48 @@ export function useSmartFilter(): UseSmartFilterReturn {
         description: desc,
         provider,
         maxContextTokens: config.maxContextTokens,
+        signal: currentSignal,
         onProgress: (processed, total) => {
-          setProgress({ current: processed, total });
+          // Only update progress if not aborted
+          if (!currentSignal.aborted) {
+            setProgress({ current: processed, total });
+          }
         },
       });
 
-      setFilteredEmails(result.filteredEmails);
-      setProgress(null);
-      setState('filtered');
+      // Only update state if not aborted (T036)
+      if (!currentSignal.aborted) {
+        setFilteredEmails(result.filteredEmails);
+        setClassifications(result.classifications); // T040: Store classifications
+        setProgress(null);
+        setState('filtered');
+      }
     } catch (err) {
-      setProgress(null);
-      setError(err instanceof Error ? err.message : 'Smart filter failed');
-      setState('error');
+      // Only set error if not aborted (T036)
+      if (!currentSignal.aborted) {
+        setProgress(null);
+        setError(err instanceof Error ? err.message : 'Smart filter failed');
+        setState('error');
+      }
+    } finally {
+      // Clear the ref if this is still the current controller
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null;
+      }
     }
   }, []);
 
   const clearFilter = useCallback(() => {
+    // Abort any in-flight operation (T036)
+    if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = null;
+
     setState('idle');
     setDescription(null);
     setFilteredEmails([]);
+    setClassifications([]); // T040: Clear classifications
     setError(null);
     setProgress(null);
   }, []);
@@ -109,6 +148,7 @@ export function useSmartFilter(): UseSmartFilterReturn {
     state,
     description,
     filteredEmails,
+    classifications, // T040: Return classifications
     error,
     progress,
     activateFilter,

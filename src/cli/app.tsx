@@ -22,6 +22,7 @@ import { EmailSorter } from '../core/services/email-sorter.js';
 import { EmailFilter } from '../core/services/email-filter.js';
 import type { GmailClientConfig } from '../core/contracts/gmail-api.js';
 import { HELP_SECTIONS } from './help.js';
+import { toConfidenceLevel, type ConfidenceLevel } from '../core/ai/provider.js';
 
 type AppView = 'loading' | 'auth' | 'email-list' | 'error';
 type FilterMode = 'sender' | 'label' | 'category' | 'ai';
@@ -226,6 +227,20 @@ export function App() {
   const handleSelectEmail = useCallback((email: Email) => {
     setSelectedEmailId(email.id);
   }, []);
+
+  // T040: Build confidence map from smart filter classifications
+  const confidenceMap = useMemo(() => {
+    if (smartFilter.state !== 'filtered' || smartFilter.classifications.length === 0) {
+      return undefined;
+    }
+
+    const map = new Map<string, ConfidenceLevel>();
+    for (const classification of smartFilter.classifications) {
+      const level = toConfidenceLevel(classification.confidence);
+      map.set(classification.emailId, level);
+    }
+    return map;
+  }, [smartFilter.state, smartFilter.classifications]);
 
   const displayedEmails = useMemo(() => {
     // If smart filter is active with results, use those
@@ -669,6 +684,7 @@ export function App() {
                   maxVisibleRows={listRowsForEmails}
                   filterCount={smartFilter.state === 'filtered' ? smartFilter.filteredEmails.length : undefined}
                   totalCount={smartFilter.state === 'filtered' ? emails.length : undefined}
+                  confidenceMap={confidenceMap}
                 />
               )}
             </Box>
@@ -693,7 +709,7 @@ export function App() {
         )}
         {filterMode === 'ai' && smartFilter.state === 'filtered' && smartFilter.description && (
           <Text dimColor>
-            AI filter: "{smartFilter.description}" ({smartFilter.filteredEmails.length}/{emails.length} emails)
+            AI filter: &ldquo;{smartFilter.description}&rdquo; ({smartFilter.filteredEmails.length}/{emails.length} emails)
           </Text>
         )}
         {filterMode === 'ai' && smartFilter.state === 'loading' && (
