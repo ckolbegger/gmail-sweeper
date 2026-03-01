@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { Email } from '../../core/contracts/types.js';
+import { formatEmailBody, type LinkSegment } from '../utils/email-body-formatter.js';
 
 export interface EmailDetailProps {
   /** Email to display */
@@ -27,6 +28,127 @@ function formatFullDate(date: Date): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+/**
+ * Map link positions from formatted text to wrapped line coordinates
+ * 
+ * Takes links with absolute positions in the formatted (unwrapped) text and maps
+ * them to their positions within each wrapped line. Links that span multiple
+ * wrapped lines will appear in the result for each line they touch.
+ * 
+ * @param links - Array of link segments with absolute positions in formatted text
+ * @param wrappedLines - Array of wrapped lines (output from wrapText)
+
+ * @returns Map from line index to array of links on that line (with adjusted positions)
+ */
+export function adjustLinksForWrapping(
+  links: LinkSegment[],
+  wrappedLines: string[]
+): Map<number, LinkSegment[]> {
+  const result = new Map<number, LinkSegment[]>();
+
+  // Return empty map if no links
+  if (links.length === 0) {
+    return result;
+  }
+
+  // Build cumulative position map: for each position in the original text,
+  // determine which wrapped line it falls on and at what position within that line
+  const lineBoundaries: Array<{ start: number; end: number }> = [];
+  let currentPosition = 0;
+
+  for (const line of wrappedLines) {
+    const lineLength = line.length;
+    lineBoundaries.push({
+      start: currentPosition,
+      end: currentPosition + lineLength
+    });
+    currentPosition += lineLength;
+  }
+
+  // For each link, determine which wrapped lines it appears on
+  for (const link of links) {
+    const linkStart = link.start;
+    const linkEnd = link.end;
+
+    // Find all wrapped lines that this link intersects with
+    for (let lineIndex = 0; lineIndex < lineBoundaries.length; lineIndex++) {
+      const boundary = lineBoundaries[lineIndex];
+      const lineText = wrappedLines[lineIndex];
+
+      // Check if link overlaps with this line
+      // Link overlaps if: linkStart < lineEnd AND linkEnd > lineStart
+      if (linkStart < boundary.end && linkEnd > boundary.start) {
+        // Calculate adjusted positions relative to this line
+        const adjustedStart = Math.max(0, linkStart - boundary.start);
+        const adjustedEnd = Math.min(lineText.length, linkEnd - boundary.start);
+
+        // Create adjusted link segment
+        const adjustedLink: LinkSegment = {
+          start: adjustedStart,
+          end: adjustedEnd,
+          text: lineText.slice(adjustedStart, adjustedEnd),
+          url: link.url
+        };
+
+        // Add to result map
+        if (!result.has(lineIndex)) {
+          result.set(lineIndex, []);
+        }
+        result.get(lineIndex)!.push(adjustedLink);
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Render a line with colored link segments
+ * 
+ * Splits the line into text and link segments, rendering links in cyan color.
+ * Returns a React element containing Text components for each segment.
+ */
+export function renderLineWithLinks(line: string, links: LinkSegment[]): React.ReactElement {
+  if (links.length === 0) {
+    // No links on this line - render as plain text
+    return React.createElement(Text, null, line || ' ');
+  }
+
+  // Sort links by start position to process them in order
+  const sortedLinks = [...links].sort((a, b) => a.start - b.start);
+  
+  const children: React.ReactElement[] = [];
+  let currentPosition = 0;
+
+  for (const link of sortedLinks) {
+    // Add text before this link (if any)
+    if (link.start > currentPosition) {
+      const textBefore = line.slice(currentPosition, link.start);
+      children.push(React.createElement(Text, { key: `text-${currentPosition}` }, textBefore));
+    }
+    
+    // Add the link text with cyan color
+    children.push(
+      React.createElement(
+        Text, 
+        { key: `link-${link.start}`, color: 'cyan' }, 
+        link.text
+      )
+    );
+    
+    currentPosition = link.end;
+  }
+
+  // Add any remaining text after the last link
+  if (currentPosition < line.length) {
+    const textAfter = line.slice(currentPosition);
+    children.push(React.createElement(Text, { key: `text-${currentPosition}` }, textAfter));
+  }
+
+  // Wrap all children in a fragment-like container using span
+  return React.createElement(Text, null, ...children);
 }
 
 /**
@@ -91,7 +213,12 @@ export function EmailDetail({ email, terminalHeight = 24 }: EmailDetailProps): R
   const maxVisibleLines = Math.max(5, terminalHeight - minOverhead);
   
   const bodyContent = email.body.text || email.snippet || '(No content)';
-  const wrappedBody = wrapText(bodyContent, 78);
+  const maxContentWidth = 78; // Can use terminal width if available
+  const formattedBody = formatEmailBody(bodyContent, {
+    maxWidth: maxContentWidth,
+    htmlBody: email.body.html,
+  });
+  const wrappedBody = wrapText(formattedBody, maxContentWidth);
   
   // Calculate visible body lines
   const totalBodyLines = wrappedBody.length;

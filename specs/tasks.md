@@ -59,16 +59,16 @@ As a user viewing an email in the detail pane, I want links to be rendered in a 
 **Objective:** Create helper function to render a line with colored link segments.
 
 **Acceptance Criteria:**
-- [ ] **TDD Step 1:** Write failing tests for `renderLineWithLinks()`:
-  - [ ] Test: Line with no links renders plain text (no color)
-  - [ ] Test: Single link renders in cyan color
-  - [ ] Test: Multiple links on same line all have cyan color
-  - [ ] Test: Mixed content (text + link + text) renders with correct segments
-  - [ ] Test: Plain text segments have no color prop set
-- [ ] **TDD Step 2:** Implement `renderLineWithLinks()` function
-- [ ] **TDD Step 3:** All tests pass
-- [ ] Returns `React.ReactElement` with proper Text components
-- [ ] Uses `color: 'cyan'` for link segments
+- [x] **TDD Step 1:** Write failing tests for `renderLineWithLinks()`:
+  - [x] Test: Line with no links renders plain text (no color)
+  - [x] Test: Single link renders in cyan color
+  - [x] Test: Multiple links on same line all have cyan color
+  - [x] Test: Mixed content (text + link + text) renders with correct segments
+  - [x] Test: Plain text segments have no color prop set
+- [x] **TDD Step 2:** Implement `renderLineWithLinks()` function
+- [x] **TDD Step 3:** All tests pass
+- [x] Returns `React.ReactElement` with proper Text components
+- [x] Uses `color: 'cyan'` for link segments
 
 **Implementation Notes:**
 - Split line into segments: [text][link][text][link]...
@@ -86,14 +86,14 @@ As a user viewing an email in the detail pane, I want links to be rendered in a 
 **Objective:** Map link positions from formatted text to wrapped line coordinates.
 
 **Acceptance Criteria:**
-- [ ] **TDD Step 1:** Write failing tests for `adjustLinksForWrapping()`:
-  - [ ] Test: Single link on first wrapped line has correct adjusted position
-  - [ ] Test: Link spanning multiple wrapped lines appears on each line
-  - [ ] Test: Multiple links on same wrapped line
-  - [ ] Test: No links returns empty map
-  - [ ] Test: Link at exact line boundary
-- [ ] **TDD Step 2:** Implement `adjustLinksForWrapping()` function
-- [ ] **TDD Step 3:** All tests pass
+- [x] **TDD Step 1:** Write failing tests for `adjustLinksForWrapping()`:
+  - [x] Test: Single link on first wrapped line has correct adjusted position
+  - [x] Test: Link spanning multiple wrapped lines appears on each line
+  - [x] Test: Multiple links on same wrapped line
+  - [x] Test: No links returns empty map
+  - [x] Test: Link at exact line boundary
+- [x] **TDD Step 2:** Implement `adjustLinksForWrapping()` function
+- [x] **TDD Step 3:** All tests pass
 - [ ] Returns `Map<number, LinkSegment[]>` (line index → links on that line)
 
 **Implementation Notes:**
@@ -219,8 +219,8 @@ export function formatEmailBodyWithLinks(textBody: string, options: FormatOption
 ## Progress Tracking
 
 - [x] T001: Add `formatEmailBodyWithLinks()` with Position Tracking
-- [ ] T002: Add `renderLineWithLinks()` Helper
-- [ ] T003: Add `adjustLinksForWrapping()` Helper
+- [x] T002: Add `renderLineWithLinks()` Helper
+- [x] T003: Add `adjustLinksForWrapping()` Helper
 - [ ] T004: Integrate Colored Links into EmailDetail Component
 - [ ] T005: Integration Tests for End-to-End Flow
 - [ ] T006: Final Verification & Polish

@@ -1,0 +1,9 @@
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://api.moonshot.ai/anthropic",
+    "ANTHROPIC_AUTH_TOKEN": "sk-q6jb4Bwdh86iksA4w3BUJIrKfWmyuY6wUI13fDSwHkX8zYFc",
+    "ANTHROPIC_MODEL": "kimi-k2.5",
+    "API_TIMEOUT_MS": "3000000"
+  },
+  "model": "GLM-4.7"
+}
