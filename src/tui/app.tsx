@@ -2,7 +2,7 @@
  * T041/T048/T050: Main TUI app shell - coordinates email list, preview, and keyboard navigation.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Box, Text, useStdout } from 'ink';
 import type { GmailClient } from '../core/gmail/client.js';
 import type { EmailCache } from '../core/cache/db.js';
@@ -12,6 +12,8 @@ import { FilterInput } from './components/FilterInput.js';
 import { useGmail } from './hooks/useGmail.js';
 import { useKeyboard } from './hooks/useKeyboard.js';
 import { useSmartFilter } from './hooks/useSmartFilter.js';
+import { useEmailActions } from './hooks/useEmailActions.js';
+import { ConfirmationPrompt } from './components/ConfirmationPrompt.js';
 
 interface AppProps {
   client: GmailClient;
@@ -20,9 +22,40 @@ interface AppProps {
 
 export function InboxApp({ client, cache }: AppProps) {
   const { emails, isLoading, error, fetchEmailDetail, refresh } = useGmail({ client, cache });
+  const [removedEmailIds, setRemovedEmailIds] = useState<Set<string>>(new Set());
   const lastFetchedId = useRef<string | null>(null);
   const { stdout } = useStdout();
   const terminalHeight = stdout?.rows ?? 24;
+
+  // Filter out removed emails from display
+  const displayEmails = emails.filter((email) => !removedEmailIds.has(email.id));
+
+  const handleEmailRemoved = useCallback((emailId: string) => {
+    setRemovedEmailIds((prev) => new Set([...prev, emailId]));
+  }, []);
+
+  const {
+    state: actionState,
+    archiveEmail,
+    deleteEmail,
+    confirmDelete,
+    cancelDelete,
+    clearLastAction,
+  } = useEmailActions({
+    client,
+    onEmailRemoved: handleEmailRemoved,
+    onSuccess: refresh,
+  });
+
+  // Clear action status message after 3 seconds
+  useEffect(() => {
+    if (actionState.lastAction) {
+      const timer = setTimeout(() => {
+        clearLastAction();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [actionState.lastAction, clearLastAction]);
 
   const {
     filterState,
@@ -37,10 +70,13 @@ export function InboxApp({ client, cache }: AppProps) {
 
   const contentHeight = Math.max(5, terminalHeight - 3);
 
-  const displayEmails = filterState === 'filtered' ? filteredEmails : emails;
+  const filteredDisplayEmails =
+    filterState === 'filtered'
+      ? filteredEmails.filter((email) => !removedEmailIds.has(email.id))
+      : displayEmails;
 
   const keyboard = useKeyboard({
-    itemCount: displayEmails.length,
+    itemCount: filteredDisplayEmails.length,
     selectedIndex: 0,
     onSelect: () => {},
     onRefresh: refresh,
@@ -48,9 +84,15 @@ export function InboxApp({ client, cache }: AppProps) {
     filterState,
     onActivateFilter: activateFilter,
     onClearFilter: clearFilter,
+    getSelectedEmailId: () => filteredDisplayEmails[keyboard.selectedIndex]?.id,
+    onArchive: archiveEmail,
+    onDelete: deleteEmail,
+    onConfirmDelete: confirmDelete,
+    onCancelDelete: cancelDelete,
+    confirmationState: actionState.showDeleteConfirmation ? 'confirming' : 'idle',
   });
 
-  const selectedEmail = displayEmails[keyboard.selectedIndex];
+  const selectedEmail = filteredDisplayEmails[keyboard.selectedIndex];
 
   useEffect(() => {
     if (selectedEmail && selectedEmail.id !== lastFetchedId.current) {
@@ -83,7 +125,7 @@ export function InboxApp({ client, cache }: AppProps) {
       {/* Header */}
       <Box marginBottom={1}>
         <Text bold>📧 Gmail Inbox</Text>
-        <Text dimColor> ({emails.length} emails)</Text>
+        <Text dimColor> ({displayEmails.length} emails)</Text>
         {filterState === 'filtered' && <Text dimColor> | Filter: "{filterDescription}"</Text>}
       </Box>
 
@@ -92,7 +134,7 @@ export function InboxApp({ client, cache }: AppProps) {
         {/* Left: Email list */}
         <Box width="50%" height={contentHeight} overflow="hidden">
           <EmailList
-            emails={displayEmails}
+            emails={filteredDisplayEmails}
             selectedIndex={keyboard.selectedIndex}
             maxSubjectLength={40}
             viewportHeight={contentHeight}
@@ -125,15 +167,37 @@ export function InboxApp({ client, cache }: AppProps) {
         </Box>
       )}
 
+      {/* Delete confirmation prompt */}
+      <ConfirmationPrompt
+        visible={actionState.showDeleteConfirmation}
+        emailSubject={selectedEmail?.subject ?? ''}
+      />
+
       {/* Footer */}
       <Box marginTop={1}>
         <Text dimColor>
           {filterState === 'input' || filterState === 'loading'
             ? 'Enter to filter • Escape to cancel'
-            : 'j/k or ↑↓ to navigate • Enter to preview • f to filter • q to quit • Ctrl+R to refresh'}
+            : 'j/k or ↑↓ to navigate • Enter to preview • e to archive • # to delete • f to filter • q to quit'}
         </Text>
         {filterState === 'filtered' && <Text dimColor> • Esc to clear filter</Text>}
       </Box>
+
+      {/* Action status message */}
+      {actionState.lastAction && (
+        <Box marginTop={1}>
+          {actionState.lastAction.type === 'success' ? (
+            <Text color="green">
+              {actionState.lastAction.action === 'archive' ? '✓ Email archived' : '✓ Email deleted'}
+            </Text>
+          ) : (
+            <Text color="red">
+              ✗ {actionState.lastAction.action === 'archive' ? 'Archive' : 'Delete'} failed:{' '}
+              {actionState.lastAction.error}
+            </Text>
+          )}
+        </Box>
+      )}
 
       {/* Loading indicator */}
       {isLoading && emails.length > 0 && (

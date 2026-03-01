@@ -2,10 +2,18 @@
  * T043: useGmail hook - handles email fetching, caching, pagination, and error states.
  */
 
+import { appendFileSync } from 'fs';
+import { homedir } from 'os';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Email } from '../../core/models/index.js';
 import type { GmailClient } from '../../core/gmail/client.js';
 import type { EmailCache } from '../../core/cache/db.js';
+
+function debugLog(message: string) {
+  const timestamp = new Date().toISOString();
+  const logPath = `${homedir()}/gmail-sweep-debug.log`;
+  appendFileSync(logPath, `[${timestamp}] ${message}\n`);
+}
 
 interface UseGmailOptions {
   client?: GmailClient;
@@ -27,11 +35,7 @@ interface UseGmailResult extends UseGmailState {
   fetchEmailDetail: (emailId: string) => Promise<Email | null>;
 }
 
-export function useGmail({
-  client,
-  cache,
-  initialLoadSize = 50,
-}: UseGmailOptions): UseGmailResult {
+export function useGmail({ client, cache, initialLoadSize = 50 }: UseGmailOptions): UseGmailResult {
   const [state, setState] = useState<UseGmailState>({
     emails: [],
     isLoading: true,
@@ -47,19 +51,17 @@ export function useGmail({
   useEffect(() => {
     const loadEmails = async () => {
       try {
-        setState(prev => ({ ...prev, isLoading: true, error: null }));
+        setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
-        // Try to load from cache first
-        const cachedEmails = cache.getEmails({ limit: initialLoadSize });
-        cacheRef.current = cachedEmails;
-
-        // If cache is empty and we have a client, fetch from Gmail
-        if (cachedEmails.length === 0 && client) {
+        // Always fetch fresh from Gmail when client is available
+        // This ensures we don't use stale cached data
+        if (client) {
+          debugLog('INITIAL: Fetching from Gmail (always fresh)');
           const gmailEmails = await client.listMessages({ maxResults: initialLoadSize });
           cache.upsertEmails(gmailEmails.messages);
           cacheRef.current = gmailEmails.messages;
 
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
             emails: gmailEmails.messages,
             hasMore: !!gmailEmails.nextPageToken,
@@ -67,7 +69,11 @@ export function useGmail({
             isLoading: false,
           }));
         } else {
-          setState(prev => ({
+          // No client - use cache as fallback
+          const cachedEmails = cache.getEmails({ limit: initialLoadSize });
+          cacheRef.current = cachedEmails;
+
+          setState((prev) => ({
             ...prev,
             emails: cachedEmails,
             isLoading: false,
@@ -75,10 +81,15 @@ export function useGmail({
           }));
         }
       } catch (err) {
-        setState(prev => ({
+        debugLog(`INITIAL: Error: ${err}`);
+        // On error, try to fall back to cache
+        const cachedEmails = cache.getEmails({ limit: initialLoadSize });
+        setState((prev) => ({
           ...prev,
+          emails: cachedEmails,
           error: err instanceof Error ? err : new Error('Failed to load emails'),
           isLoading: false,
+          hasMore: cachedEmails.length >= initialLoadSize,
         }));
       }
     };
@@ -87,37 +98,45 @@ export function useGmail({
   }, [cache, client, initialLoadSize]);
 
   const refresh = useCallback(async () => {
+    debugLog('REFRESH: Starting refresh');
     // Deduplicate concurrent refresh calls
     if (pendingRefreshRef.current) {
+      debugLog('REFRESH: Already pending, returning existing promise');
       return pendingRefreshRef.current;
     }
 
     const refreshPromise = (async () => {
       try {
-        setState(prev => ({ ...prev, isLoading: true, error: null }));
+        debugLog('REFRESH: Setting isLoading=true');
+        setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
         if (client) {
+          debugLog('REFRESH: Fetching from Gmail API');
           const result = await client.listMessages({ maxResults: initialLoadSize });
+          debugLog(`REFRESH: Got ${result.messages.length} emails from Gmail`);
           cache.upsertEmails(result.messages);
           cacheRef.current = result.messages;
 
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
             emails: result.messages,
             hasMore: !!result.nextPageToken,
             pageToken: result.nextPageToken,
             isLoading: false,
           }));
+          debugLog('REFRESH: Updated state with Gmail emails');
         } else {
+          debugLog('REFRESH: No client, using cache');
           const cachedEmails = cache.getEmails({ limit: initialLoadSize });
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
             emails: cachedEmails,
             isLoading: false,
           }));
         }
       } catch (err) {
-        setState(prev => ({
+        debugLog(`REFRESH: Error: ${err}`);
+        setState((prev) => ({
           ...prev,
           error: err instanceof Error ? err : new Error('Failed to refresh emails'),
           isLoading: false,
@@ -135,7 +154,7 @@ export function useGmail({
     if (!state.hasMore || !client) return;
 
     try {
-      setState(prev => ({ ...prev, isLoading: true }));
+      setState((prev) => ({ ...prev, isLoading: true }));
 
       const result = await client.listMessages({
         maxResults: initialLoadSize,
@@ -146,7 +165,7 @@ export function useGmail({
       const allEmails = [...cacheRef.current, ...result.messages];
       cacheRef.current = allEmails;
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         emails: allEmails,
         hasMore: !!result.nextPageToken,
@@ -154,7 +173,7 @@ export function useGmail({
         isLoading: false,
       }));
     } catch (err) {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         error: err instanceof Error ? err : new Error('Failed to load more emails'),
         isLoading: false,
@@ -162,29 +181,32 @@ export function useGmail({
     }
   }, [state.hasMore, state.pageToken, cache, client, initialLoadSize]);
 
-  const fetchEmailDetail = useCallback(async (emailId: string): Promise<Email | null> => {
-    if (!client) return null;
+  const fetchEmailDetail = useCallback(
+    async (emailId: string): Promise<Email | null> => {
+      if (!client) return null;
 
-    // Check if we already have the body
-    const existing = state.emails.find(e => e.id === emailId);
-    if (existing?.bodyText || existing?.bodyHtml) {
-      return existing;
-    }
+      // Check if we already have the body
+      const existing = state.emails.find((e) => e.id === emailId);
+      if (existing?.bodyText || existing?.bodyHtml) {
+        return existing;
+      }
 
-    try {
-      const fullEmail = await client.getMessage(emailId, 'full');
+      try {
+        const fullEmail = await client.getMessage(emailId, 'full');
 
-      // Update the email in state with full body
-      setState(prev => ({
-        ...prev,
-        emails: prev.emails.map(e => e.id === emailId ? { ...e, ...fullEmail } : e),
-      }));
+        // Update the email in state with full body
+        setState((prev) => ({
+          ...prev,
+          emails: prev.emails.map((e) => (e.id === emailId ? { ...e, ...fullEmail } : e)),
+        }));
 
-      return fullEmail;
-    } catch {
-      return null;
-    }
-  }, [client, state.emails]);
+        return fullEmail;
+      } catch {
+        return null;
+      }
+    },
+    [client, state.emails]
+  );
 
   return {
     ...state,

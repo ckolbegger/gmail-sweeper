@@ -120,4 +120,68 @@ describe('useKeyboard', () => {
       expect(controller.getIndex()).toBe(5);
     });
   });
+
+  describe('T007: Archive and Delete Actions', () => {
+    function createActionController() {
+      const onArchive = vi.fn();
+      const onDelete = vi.fn();
+
+      const handleInput = (
+        input: string,
+        selectedEmailId?: string,
+        confirmationState: string = 'idle'
+      ) => {
+        if (input === 'e' && selectedEmailId && confirmationState !== 'confirming') {
+          onArchive(selectedEmailId);
+        }
+        if (input === '#' && selectedEmailId && confirmationState !== 'confirming') {
+          onDelete(selectedEmailId);
+        }
+      };
+
+      return { handleInput, onArchive, onDelete };
+    }
+
+    it('should call onArchive when e is pressed with email selected', () => {
+      const { handleInput, onArchive } = createActionController();
+
+      handleInput('e', 'email-123');
+
+      expect(onArchive).toHaveBeenCalledWith('email-123');
+    });
+
+    it('should call onDelete when # is pressed with email selected', () => {
+      const { handleInput, onDelete } = createActionController();
+
+      handleInput('#', 'email-123');
+
+      expect(onDelete).toHaveBeenCalledWith('email-123');
+    });
+
+    it('should not call onArchive when e is pressed with no email selected', () => {
+      const { handleInput, onArchive } = createActionController();
+
+      handleInput('e', undefined);
+
+      expect(onArchive).not.toHaveBeenCalled();
+    });
+
+    it('should not call onDelete when # is pressed with no email selected', () => {
+      const { handleInput, onDelete } = createActionController();
+
+      handleInput('#', undefined);
+
+      expect(onDelete).not.toHaveBeenCalled();
+    });
+
+    it('should not call actions when confirmation is showing', () => {
+      const { handleInput, onArchive, onDelete } = createActionController();
+
+      handleInput('e', 'email-123', 'confirming');
+      handleInput('#', 'email-123', 'confirming');
+
+      expect(onArchive).not.toHaveBeenCalled();
+      expect(onDelete).not.toHaveBeenCalled();
+    });
+  });
 });

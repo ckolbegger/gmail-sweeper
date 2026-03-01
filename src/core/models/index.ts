@@ -256,3 +256,36 @@ export interface ActionResult {
   /** Error messages */
   errors: string[];
 }
+
+/**
+ * Action type for email action keys feature.
+ */
+export type ActionType = 'archive' | 'delete';
+
+/**
+ * Result of a single email action (archive/delete) for UI state.
+ */
+export interface EmailActionResult {
+  /** Result type */
+  type: 'success' | 'failure' | 'confirmation-required';
+  /** Email ID acted upon */
+  emailId: string;
+  /** Action performed */
+  action: ActionType;
+  /** Error message (present only for failure) */
+  error?: string;
+}
+
+/**
+ * State managed by useEmailActions hook.
+ */
+export interface EmailActionState {
+  /** Whether an action is in progress */
+  isProcessing: boolean;
+  /** Last action result */
+  lastAction: EmailActionResult | null;
+  /** Whether delete confirmation is shown */
+  showDeleteConfirmation: boolean;
+  /** Email ID pending confirmation */
+  confirmationTargetEmailId: string | null;
+}

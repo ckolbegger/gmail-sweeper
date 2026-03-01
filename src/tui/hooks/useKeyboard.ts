@@ -14,6 +14,12 @@ interface UseKeyboardOptions {
   filterState?: 'idle' | 'input' | 'loading' | 'filtered' | 'error';
   onActivateFilter?: () => void;
   onClearFilter?: () => void;
+  onArchive?: (emailId: string) => void;
+  onDelete?: (emailId: string) => void;
+  onConfirmDelete?: () => void;
+  onCancelDelete?: () => void;
+  getSelectedEmailId?: () => string | undefined;
+  confirmationState?: 'idle' | 'confirming';
 }
 
 interface UseKeyboardResult {
@@ -31,6 +37,12 @@ export function useKeyboard({
   filterState = 'idle',
   onActivateFilter,
   onClearFilter,
+  onArchive,
+  onDelete,
+  onConfirmDelete,
+  onCancelDelete,
+  getSelectedEmailId,
+  confirmationState = 'idle',
 }: UseKeyboardOptions): UseKeyboardResult {
   const [index, setIndex] = useState(selectedIndex);
   const [previewScrollOffset, setPreviewScrollOffset] = useState(0);
@@ -115,6 +127,31 @@ export function useKeyboard({
     if (input === 'r' && key.ctrl) {
       onRefresh?.();
       return;
+    }
+
+    // 'e' to archive selected email
+    const selectedEmailId = getSelectedEmailId?.();
+    if (input === 'e' && selectedEmailId && confirmationState !== 'confirming') {
+      onArchive?.(selectedEmailId);
+      return;
+    }
+
+    // '#' to delete selected email
+    if (input === '#' && selectedEmailId && confirmationState !== 'confirming') {
+      onDelete?.(selectedEmailId);
+      return;
+    }
+
+    // Handle confirmation keys when in confirming state
+    if (confirmationState === 'confirming') {
+      if (input === 'y') {
+        onConfirmDelete?.();
+        return;
+      }
+      if (input === 'n' || key.escape) {
+        onCancelDelete?.();
+        return;
+      }
     }
 
     // Preview scroll: [ up, ] down
