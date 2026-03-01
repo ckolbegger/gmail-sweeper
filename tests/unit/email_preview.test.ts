@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
+import {
+  BLANK_LINE_BODY,
+  HTML_VS_PLAIN_ANCHORS,
+  HTML_VS_PLAIN_BODY
+} from './fixtures/email_detail_rendering.fixtures.js';
+
 import type { EmailDetail } from '@/adapters/gmail/get_email.js';
 import { renderEmailPreview } from '@/tui/email_preview.js';
 
@@ -32,5 +38,29 @@ describe('email preview panel', () => {
 
     expect(first).not.toEqual(second);
     expect(second.join('\n')).toContain('Subject: Second');
+  });
+
+  it('should collapse blank line runs in rendered body', () => {
+    const lines = renderEmailPreview(detail({ body: BLANK_LINE_BODY }));
+    const body = lines.join('\n');
+
+    expect(body).not.toContain('\n\n\n\n');
+  });
+
+  it('should prefer html anchor text when available', () => {
+    const lines = renderEmailPreview(detail({ body: HTML_VS_PLAIN_BODY, html_body: HTML_VS_PLAIN_ANCHORS }));
+    const body = lines.join('\n');
+
+    expect(body).toContain('Daily Briefing');
+    expect(body).not.toContain('https://example.com/news');
+  });
+
+  it('should not require interaction metadata for rendered links', () => {
+    const lines = renderEmailPreview(detail({ body: 'Open https://example.com/path' }));
+    const body = lines.join('\n');
+
+    expect(body).toContain('example.com');
+    expect(body).not.toContain('open-url');
+    expect(body).not.toContain('copy-url');
   });
 });

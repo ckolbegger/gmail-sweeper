@@ -42,6 +42,7 @@ export interface EmailDetail {
   sender: string;
   received_at: number;
   body: string;
+  html_body?: string;
   headers: Record<string, string>;
   labels: string[];
   category?: string;
@@ -92,6 +93,28 @@ function findTextBody(part?: GmailPayloadPart): string | undefined {
   }
 
   return decodeBody(part.body?.data);
+}
+
+function findHtmlBody(part?: GmailPayloadPart): string | undefined {
+  if (!part) {
+    return undefined;
+  }
+
+  if (part.mimeType === 'text/html') {
+    const decoded = decodeBody(part.body?.data);
+    if (decoded !== undefined) {
+      return decoded;
+    }
+  }
+
+  for (const child of part.parts ?? []) {
+    const nested = findHtmlBody(child);
+    if (nested !== undefined) {
+      return nested;
+    }
+  }
+
+  return undefined;
 }
 
 function extractHeaders(payload?: GmailPayloadPart): Record<string, string> {
@@ -173,6 +196,7 @@ export async function getEmailDetail(
       sender: headers.from ?? '(unknown sender)',
       received_at: receivedAt,
       body: findTextBody(data.payload) ?? data.snippet ?? '',
+      html_body: findHtmlBody(data.payload),
       headers,
       labels,
       category: mapCategory(labels),

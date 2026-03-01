@@ -69,4 +69,39 @@ describe('email detail contract', () => {
     expect(detail.headers['x-custom']).toBe('custom-value');
     expect(detail.body).toContain('Detailed body');
   });
+
+  it('should include html_body when html payload part is available', async () => {
+    const client = createClient(async () => ({
+      data: {
+        id: 'msg-3',
+        internalDate: `${Date.parse('2026-02-08T10:00:00Z')}`,
+        payload: {
+          mimeType: 'multipart/alternative',
+          headers: [
+            { name: 'Subject', value: 'HTML subject' },
+            { name: 'From', value: 'author@example.com' }
+          ],
+          parts: [
+            {
+              mimeType: 'text/plain',
+              body: {
+                data: Buffer.from('Plain text').toString('base64url')
+              }
+            },
+            {
+              mimeType: 'text/html',
+              body: {
+                data: Buffer.from('<a href="https://example.com">Example</a>').toString('base64url')
+              }
+            }
+          ]
+        },
+        labelIds: ['INBOX']
+      }
+    }));
+
+    const detail = await getEmailDetail(client, 'msg-3');
+    expect(detail.body).toBe('Plain text');
+    expect(detail.html_body).toContain('https://example.com');
+  });
 });

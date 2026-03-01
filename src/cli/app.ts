@@ -76,6 +76,15 @@ function renderHelp(): string[] {
   ];
 }
 
+function inferDetailPaneWidth(): number {
+  const columns = process.stdout.columns;
+  if (!columns || columns <= 0) {
+    return 80;
+  }
+
+  return columns;
+}
+
 export async function runInboxCli(argv: string[], deps: CliDeps = {}): Promise<number> {
   const options = parseCliArgs(argv);
   const writeLine = deps.writeLine ?? ((line: string) => console.log(line));
@@ -151,7 +160,7 @@ export async function runInboxCli(argv: string[], deps: CliDeps = {}): Promise<n
       messageIds,
       fetchDetailLines: async (messageId) => {
         const detail = await fetchEmailDetail(gmail, messageId, { userId: 'me' });
-        return renderEmailPreview(detail);
+        return renderEmailPreview(detail, inferDetailPaneWidth());
       },
       emails: visible,
       provider: aiProvider,

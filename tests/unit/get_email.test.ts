@@ -75,4 +75,34 @@ describe('email detail fetch adapter', () => {
     expect(second.body).toBe('Second body');
     expect(get).toHaveBeenCalledTimes(2);
   });
+
+  it('should expose decoded html_body when html part exists', async () => {
+    const get = vi.fn().mockResolvedValue({
+      data: {
+        id: 'msg-html',
+        internalDate: `${Date.parse('2026-02-08T10:00:00Z')}`,
+        payload: {
+          mimeType: 'multipart/alternative',
+          headers: [{ name: 'Subject', value: 'HTML Message' }],
+          parts: [
+            {
+              mimeType: 'text/plain',
+              body: { data: Buffer.from('Plain body').toString('base64url') }
+            },
+            {
+              mimeType: 'text/html',
+              body: { data: Buffer.from('<p>HTML <b>body</b></p>').toString('base64url') }
+            }
+          ]
+        },
+        labelIds: ['INBOX']
+      }
+    });
+    const client = createClient(get);
+
+    const detail = await getEmailDetail(client, 'msg-html');
+
+    expect(detail.body).toBe('Plain body');
+    expect(detail.html_body).toContain('<p>HTML');
+  });
 });

@@ -130,4 +130,41 @@ describe('detail navigation key workflow', () => {
     expect(lines.join('\n')).toContain('Body msg-2');
     expect(lines.join('\n')).toContain('Body msg-1');
   });
+
+  it('should keep whitespace-only blank runs collapsed in detail output during key navigation', async () => {
+    const lines: string[] = [];
+
+    const status = await runInboxCli(['--interactive'], {
+      loadConfig: () => baseConfig,
+      readAuthTokens: async () => ({ refreshToken: 'refresh' }),
+      createGmailClient: () => ({ users: { messages: {} } }),
+      listInboxEmails: async () => [
+        createEmail({
+          message_id: 'msg-1',
+          subject: 'Spacing',
+          sender: 'first@example.com',
+          received_at: Date.parse('2026-02-08T10:00:00Z')
+        })
+      ],
+      getEmailDetail: async () => ({
+        message_id: 'msg-1',
+        subject: 'Spacing',
+        sender: 'first@example.com',
+        received_at: Date.parse('2026-02-08T10:00:00Z'),
+        body: ['Top', '', '', '', 'Middle', '   ', '   ', '', '', 'Bottom'].join('\n'),
+        headers: { subject: 'Spacing' },
+        labels: ['INBOX'],
+        is_read: true
+      }),
+      navigationInputs: ['enter', 'back', 'quit'],
+      writeLine: (line) => lines.push(line)
+    });
+
+    expect(status).toBe(0);
+    const output = lines.join('\n');
+    const detailSegment = output.split('Detail View')[1]?.split('Keys: b or Esc returns to list, q quits')[0];
+    expect(detailSegment).toBeDefined();
+    expect(detailSegment).toContain('Top\n\n\nMiddle');
+    expect(detailSegment).toContain('Middle\n\n\nBottom');
+  });
 });
