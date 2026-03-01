@@ -7,7 +7,7 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { Email } from '../../core/contracts/types.js';
-import { formatEmailBody, type LinkSegment } from '../utils/email-body-formatter.js';
+import { formatEmailBodyWithLinks, type LinkSegment } from '../utils/email-body-formatter.js';
 
 export interface EmailDetailProps {
   /** Email to display */
@@ -214,11 +214,12 @@ export function EmailDetail({ email, terminalHeight = 24 }: EmailDetailProps): R
   
   const bodyContent = email.body.text || email.snippet || '(No content)';
   const maxContentWidth = 78; // Can use terminal width if available
-  const formattedBody = formatEmailBody(bodyContent, {
+  const { text: formattedBody, links } = formatEmailBodyWithLinks(bodyContent, {
     maxWidth: maxContentWidth,
     htmlBody: email.body.html,
   });
   const wrappedBody = wrapText(formattedBody, maxContentWidth);
+  const lineLinksMap = adjustLinksForWrapping(links, wrappedBody);
   
   // Calculate visible body lines
   const totalBodyLines = wrappedBody.length;
@@ -343,11 +344,13 @@ export function EmailDetail({ email, terminalHeight = 24 }: EmailDetailProps): R
         paddingY: 0,
         overflow: 'hidden',
       },
-        visibleLines.slice(0, maxVisibleLines).map((line, index) =>
-          React.createElement(Box, { key: scrollOffset + index, height: 1 },
-            React.createElement(Text, null, line || ' ')
-          )
-        )
+        visibleLines.slice(0, maxVisibleLines).map((line, index) => {
+          const lineIndex = scrollOffset + index;
+          const lineLinks = lineLinksMap.get(lineIndex) || [];
+          return React.createElement(Box, { key: lineIndex, height: 1 },
+            renderLineWithLinks(line, lineLinks)
+          );
+        })
       ),
 
       // Scroll down indicator

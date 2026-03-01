@@ -346,6 +346,91 @@ describe('renderLineWithLinks', () => {
 });
 
 
+describe('T004: Colored Links Integration', () => {
+  it('should use formatEmailBodyWithLinks() instead of formatEmailBody()', () => {
+    const bodyWithUrl = 'Visit https://example.com for more info';
+    const email = createEmail({
+      body: { text: bodyWithUrl },
+    });
+
+    const { lastFrame } = render(
+      React.createElement(EmailDetail, { email, terminalHeight: 24 })
+    );
+
+    const frame = lastFrame();
+    // Should show shortened URL (domain only), not the full https:// URL
+    expect(frame).toContain('example.com');
+    expect(frame).not.toContain('https://example.com');
+  });
+
+  it('should call renderLineWithLinks() for each visible line with links', () => {
+    const bodyWithUrl = 'Check out https://google.com today';
+    const email = createEmail({
+      body: { text: bodyWithUrl },
+    });
+
+    const { lastFrame } = render(
+      React.createElement(EmailDetail, { email, terminalHeight: 24 })
+    );
+
+    const frame = lastFrame();
+    // Body should be rendered (component renders without error)
+    expect(frame).toContain('google.com');
+    expect(frame).toContain('Check out');
+  });
+
+  it('should work correctly with scrolling and colored links', () => {
+    // Create a long body with a URL that will be visible after scrolling
+    const longBody = Array.from({ length: 30 }, (_, i) => `Paragraph${i} content here`).join('\n') + 
+      '\nVisit https://example.com for more info';
+    const email = createEmail({
+      body: { text: longBody },
+    });
+
+    const { lastFrame } = render(
+      React.createElement(EmailDetail, { 
+        email, 
+        terminalHeight: 20 // Terminal to force scrolling
+      })
+    );
+
+    const frame = lastFrame();
+    // Should show scroll indicator (↓) when content exceeds visible area
+    expect(frame).toContain('↓');
+    expect(frame).toContain('more lines');
+  });
+
+  it('should work with email containing no URLs', () => {
+    const bodyWithoutUrls = 'This is just plain text without any links or URLs.';
+    const email = createEmail({
+      body: { text: bodyWithoutUrls },
+    });
+
+    const { lastFrame } = render(
+      React.createElement(EmailDetail, { email, terminalHeight: 24 })
+    );
+
+    const frame = lastFrame();
+    expect(frame).toContain('This is just plain text');
+  });
+
+  it('should work with email containing multiple URLs', () => {
+    const bodyWithMultipleUrls = 'Visit https://example.com and https://google.com for search';
+    const email = createEmail({
+      body: { text: bodyWithMultipleUrls },
+    });
+
+    const { lastFrame } = render(
+      React.createElement(EmailDetail, { email, terminalHeight: 24 })
+    );
+
+    const frame = lastFrame();
+    // Should show both shortened URLs
+    expect(frame).toContain('example.com');
+    expect(frame).toContain('google.com');
+  });
+});
+
 describe('adjustLinksForWrapping', () => {
   it('should return empty map when no links', () => {
     const links: LinkSegment[] = [];

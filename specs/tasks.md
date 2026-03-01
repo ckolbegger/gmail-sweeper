@@ -221,7 +221,7 @@ export function formatEmailBodyWithLinks(textBody: string, options: FormatOption
 - [x] T001: Add `formatEmailBodyWithLinks()` with Position Tracking
 - [x] T002: Add `renderLineWithLinks()` Helper
 - [x] T003: Add `adjustLinksForWrapping()` Helper
-- [ ] T004: Integrate Colored Links into EmailDetail Component
+- [x] T004: Integrate Colored Links into EmailDetail Component
 - [ ] T005: Integration Tests for End-to-End Flow
 - [ ] T006: Final Verification & Polish
 
