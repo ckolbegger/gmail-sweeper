@@ -1,8 +1,17 @@
 import React from 'react';
 import { render } from 'ink-testing-library';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EmailDetail } from '../../src/components/Inbox/EmailDetail';
 import { Email } from '../../src/types';
+import open from 'open';
+import clipboardy from 'clipboardy';
+
+vi.mock('open');
+vi.mock('clipboardy', () => ({
+    default: {
+        writeSync: vi.fn()
+    }
+}));
 
 const mockEmail: Email = {
     id: '1',
@@ -88,5 +97,46 @@ describe('EmailDetail', () => {
         
         expect(lastFrame()).toContain('New Content');
         // If we reached here without error, the reset effect triggered
+    });
+
+    describe('Link Interactivity', () => {
+        beforeEach(() => {
+            vi.clearAllMocks();
+        });
+
+        it('should automatically focus the link closest to top, and tab to cycle', async () => {
+            const emailWithLinks = { 
+                ...mockEmail, 
+                body: 'Line 1\nhttps://first.com\nLine 3\nhttps://second.com' 
+            };
+            const { stdin } = render(<EmailDetail email={emailWithLinks} isActive={true} terminalWidth={100} terminalHeight={24} />);
+            
+            await new Promise(resolve => setTimeout(resolve, 50));
+            stdin.write('\t'); // Tab
+            await new Promise(resolve => setTimeout(resolve, 50));
+            stdin.write('\r'); // Enter
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            expect(open).toHaveBeenCalledWith('https://second.com');
+
+            // Tab again to cycle back to first
+            stdin.write('\t');
+            await new Promise(resolve => setTimeout(resolve, 50));
+            stdin.write('\r');
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            expect(open).toHaveBeenCalledWith('https://first.com');
+        });
+
+        it('should copy link on c', async () => {
+            const emailWithLinks = { ...mockEmail, body: 'https://copy.me' };
+            const { stdin } = render(<EmailDetail email={emailWithLinks} isActive={true} terminalWidth={100} terminalHeight={24} />);
+            
+            await new Promise(resolve => setTimeout(resolve, 10));
+            stdin.write('c');
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            expect(clipboardy.writeSync).toHaveBeenCalledWith('https://copy.me');
+        });
     });
 });
