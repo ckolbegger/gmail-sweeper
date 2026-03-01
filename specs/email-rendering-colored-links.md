@@ -268,18 +268,18 @@ function renderLineWithLinks(
 ```
 
 ## Acceptance Criteria
-- [ ] `formatEmailBodyWithLinks()` returns formatted text with accurate link positions
-- [ ] Links rendered in cyan color (or final chosen color) distinct from body text
-- [ ] Works correctly with line wrapping
-- [ ] Works correctly with scrolling
-- [ ] All existing tests pass
-- [ ] All new unit tests for position tracking pass
-- [ ] All new component tests for colored rendering pass
-- [ ] Visible in both light and dark terminal themes
-- [ ] Blank line collapsing still works
-- [ ] URL shortening still works
-- [ ] Link text from HTML still works
-- [ ] Integration tests cover end-to-end flow
+- [x] `formatEmailBodyWithLinks()` returns formatted text with accurate link positions
+- [x] Links rendered in cyan color distinct from body text
+- [x] Works correctly with line wrapping
+- [x] Works correctly with scrolling
+- [x] All existing tests pass
+- [x] All new unit tests for position tracking pass
+- [x] All new component tests for colored rendering pass
+- [x] Visible in both light and dark terminal themes
+- [x] Blank line collapsing still works
+- [x] URL shortening still works
+- [x] Link text from HTML still works
+- [x] Integration tests cover end-to-end flow
 
 ### Resolved Decisions
 

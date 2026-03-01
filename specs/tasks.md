@@ -167,13 +167,13 @@ As a user viewing an email in the detail pane, I want links to be rendered in a 
 **Objective:** Final verification and any remaining fixes.
 
 **Acceptance Criteria:**
-- [ ] All 428+ tests pass
-- [ ] TypeScript compilation succeeds (`npx tsc --noEmit`)
-- [ ] Build succeeds (`npm run build`)
-- [ ] Color visible in light terminal theme
-- [ ] Color visible in dark terminal theme
-- [ ] No console warnings or errors
-- [ ] Update `specs/email-rendering-colored-links.md` with final color choice
+- [x] All 468+ tests pass
+- [x] TypeScript compilation succeeds (`npx tsc --noEmit`)
+- [x] Build succeeds (`npm run build`)
+- [x] Color visible in light terminal theme
+- [x] Color visible in dark terminal theme
+- [x] No console warnings or errors
+- [x] Update `specs/email-rendering-colored-links.md` with final color choice
 
 **Implementation Notes:**
 - If cyan not visible enough, try `blue` or `magenta`
@@ -225,20 +225,20 @@ export function formatEmailBodyWithLinks(textBody: string, options: FormatOption
 - [x] T003: Add `adjustLinksForWrapping()` Helper
 - [x] T004: Integrate Colored Links into EmailDetail Component
 - [x] T005: Integration Tests for End-to-End Flow
-- [ ] T006: Final Verification & Polish
+- [x] T006: Final Verification & Polish
 
 ---
 
 ## Definition of Done
 
-- [ ] All tasks completed
-- [ ] All tests passing (428+)
-- [ ] No TypeScript errors
-- [ ] No build errors
-- [ ] Links render in cyan color (or final chosen color)
-- [ ] Links clearly visible in both light and dark terminal themes
-- [ ] Blank line collapsing still works
-- [ ] URL shortening still works
-- [ ] Link text from HTML still works
-- [ ] Scrolling works correctly with colored links
-- [ ] Integration tests cover end-to-end flow
+- [x] All tasks completed
+- [x] All tests passing (468+)
+- [x] No TypeScript errors
+- [x] No build errors
+- [x] Links render in cyan color
+- [x] Links clearly visible in both light and dark terminal themes
+- [x] Blank line collapsing still works
+- [x] URL shortening still works
+- [x] Link text from HTML still works
+- [x] Scrolling works correctly with colored links
+- [x] Integration tests cover end-to-end flow
