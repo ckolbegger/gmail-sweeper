@@ -14,6 +14,8 @@ interface UseKeyboardOptions {
   onActivateFilter?: () => void;
   onClearFilter?: () => void;
   isFilterInputActive?: boolean;
+  onArchive?: () => void;
+  onDelete?: () => void;
 }
 
 interface UseKeyboardResult {
@@ -31,6 +33,8 @@ export function useKeyboard({
   onActivateFilter,
   onClearFilter,
   isFilterInputActive = false,
+  onArchive,
+  onDelete,
 }: UseKeyboardOptions): UseKeyboardResult {
   const [index, setIndex] = useState(selectedIndex);
   const [previewScrollOffset, setPreviewScrollOffset] = useState(0);
@@ -127,6 +131,16 @@ export function useKeyboard({
     }
     if (input === '[') {
       setPreviewScrollOffset(prev => Math.max(0, prev - 3));
+      return;
+    }
+
+    // Action keys: archive and delete
+    if (input === 'e' && itemCount > 0) {
+      onArchive?.();
+      return;
+    }
+    if (input === '#' && itemCount > 0) {
+      onDelete?.();
       return;
     }
 

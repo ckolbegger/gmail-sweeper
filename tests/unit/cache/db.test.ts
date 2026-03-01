@@ -276,6 +276,38 @@ describe('EmailCache', () => {
       expect(lastSync).toEqual(date2);
     });
   });
+  describe('US1-bug-1: removeEmail', () => {
+    it('removes a cached email by id', async () => {
+      await cache.initialize();
+      cache.upsertEmails([createTestEmail('a'), createTestEmail('b'), createTestEmail('c')]);
+
+      cache.removeEmail('b');
+
+      const emails = cache.getEmails();
+      expect(emails.map(e => e.id)).toEqual(['a', 'c']);
+    });
+
+    it('persists removal across reopen', async () => {
+      await cache.initialize();
+      cache.upsertEmails([createTestEmail('a'), createTestEmail('b')]);
+      cache.removeEmail('a');
+      cache.close();
+
+      cache = new EmailCache(dbPath);
+      await cache.initialize();
+
+      const emails = cache.getEmails();
+      expect(emails.map(e => e.id)).toEqual(['b']);
+    });
+
+    it('is a no-op for unknown id', async () => {
+      await cache.initialize();
+      cache.upsertEmails([createTestEmail('a')]);
+
+      expect(() => cache.removeEmail('nonexistent')).not.toThrow();
+      expect(cache.getEmails()).toHaveLength(1);
+    });
+  });
 });
 
 // Helper function to create test emails

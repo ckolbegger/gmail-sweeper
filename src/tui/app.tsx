@@ -12,6 +12,7 @@ import { FilterInput } from './components/FilterInput.js';
 import { useGmail } from './hooks/useGmail.js';
 import { useKeyboard } from './hooks/useKeyboard.js';
 import { useSmartFilter } from './hooks/useSmartFilter.js';
+import { useEmailActions } from './hooks/useEmailActions.js';
 
 interface AppProps {
   client: GmailClient;
@@ -21,7 +22,7 @@ interface AppProps {
 }
 
 export function InboxApp({ client, cache, maxEmails, maxContextTokens: _maxContextTokens }: AppProps) {
-  const { emails, isLoading, error, fetchEmailDetail, refresh } = useGmail({
+  const { emails, isLoading, error, fetchEmailDetail, refresh, removeEmail, restoreEmail } = useGmail({
     client,
     cache,
     ...(maxEmails !== undefined ? { initialLoadSize: maxEmails } : {}),
@@ -39,6 +40,18 @@ export function InboxApp({ client, cache, maxEmails, maxContextTokens: _maxConte
   // Choose which emails to display
   const displayEmails = isFilterActive ? smartFilter.filteredEmails : emails;
 
+  const actions = useEmailActions({
+    client,
+    emails: displayEmails,
+    onRemove: removeEmail,
+    onRestore: restoreEmail,
+    onPersistRemove: (id) => cache.removeEmail(id),
+  });
+
+  // Use ref to break circular dependency: selectedEmail depends on keyboard.selectedIndex,
+  // but useKeyboard needs onArchive/onDelete which depend on selectedEmail.
+  const selectedEmailRef = useRef<typeof displayEmails[number] | undefined>();
+
   const keyboard = useKeyboard({
     itemCount: displayEmails.length,
     selectedIndex: 0,
@@ -48,10 +61,13 @@ export function InboxApp({ client, cache, maxEmails, maxContextTokens: _maxConte
     onActivateFilter: smartFilter.activateFilter,
     onClearFilter: smartFilter.clearFilter,
     isFilterInputActive,
+    onArchive: () => { if (selectedEmailRef.current) actions.archive(selectedEmailRef.current.id); },
+    onDelete: () => { if (selectedEmailRef.current) actions.delete(selectedEmailRef.current.id); },
   });
 
   // Derive selected email from current navigation index
   const selectedEmail = displayEmails[keyboard.selectedIndex];
+  selectedEmailRef.current = selectedEmail;
 
   // Fetch full email body when selection changes
   useEffect(() => {
@@ -130,9 +146,16 @@ export function InboxApp({ client, cache, maxEmails, maxContextTokens: _maxConte
       {/* Footer */}
       <Box marginTop={1}>
         <Text dimColor>
-          j/k or ↑↓ to navigate • Enter to preview • q to quit • Ctrl+R to refresh • f to filter{isFilterActive || isFilterInputActive ? ' • Esc to clear' : ''}
+          j/k or ↑↓ to navigate • Enter to preview • e archive • # delete • q to quit • Ctrl+R to refresh • f to filter{isFilterActive || isFilterInputActive ? ' • Esc to clear' : ''}
         </Text>
       </Box>
+
+      {/* Action error display */}
+      {actions.actionError && (
+        <Box>
+          <Text color="red">⚠ {actions.actionError}</Text>
+        </Box>
+      )}
 
       {/* Loading indicator */}
       {isLoading && emails.length > 0 && (

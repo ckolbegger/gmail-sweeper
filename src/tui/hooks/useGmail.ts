@@ -25,6 +25,21 @@ interface UseGmailResult extends UseGmailState {
   refresh: () => Promise<void>;
   loadMore: () => Promise<void>;
   fetchEmailDetail: (emailId: string) => Promise<Email | null>;
+  removeEmail: (id: string) => void;
+  restoreEmail: (email: Email, index: number) => void;
+}
+
+/** Pure helper: removes an email by id from a list. */
+export function removeEmailFromList(emails: Email[], id: string): Email[] {
+  return emails.filter(e => e.id !== id);
+}
+
+/** Pure helper: inserts an email at a clamped index. */
+export function restoreEmailToList(emails: Email[], email: Email, index: number): Email[] {
+  const next = [...emails];
+  const clamped = Math.max(0, Math.min(index, next.length));
+  next.splice(clamped, 0, email);
+  return next;
 }
 
 export function useGmail({
@@ -186,10 +201,20 @@ export function useGmail({
     }
   }, [client, state.emails]);
 
+  const removeEmail = useCallback((id: string) => {
+    setState(prev => ({ ...prev, emails: removeEmailFromList(prev.emails, id) }));
+  }, []);
+
+  const restoreEmail = useCallback((email: Email, index: number) => {
+    setState(prev => ({ ...prev, emails: restoreEmailToList(prev.emails, email, index) }));
+  }, []);
+
   return {
     ...state,
     refresh,
     loadMore,
     fetchEmailDetail,
+    removeEmail,
+    restoreEmail,
   };
 }

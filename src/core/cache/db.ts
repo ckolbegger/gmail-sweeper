@@ -299,6 +299,16 @@ export class EmailCache {
   }
 
   /**
+   * Removes a single email from the cache by id.
+   * @param id - Gmail message ID to remove
+   */
+  removeEmail(id: string): void {
+    this.ensureInitialized();
+    this.db.run('DELETE FROM emails WHERE id = ?', [id]);
+    this.saveDatabase();
+  }
+
+  /**
    * Close database connection and save changes
    */
   close(): void {
