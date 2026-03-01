@@ -5,7 +5,15 @@
  */
 
 import { Box, Text } from 'ink';
+import { useState } from 'react';
+import { useKeyboard } from '../hooks/use-keyboard.js';
 import type { Email } from '../../core/models/email.js';
+import {
+  collapseBlankLines,
+  process as processBody,
+} from '../../core/services/email-content-processor.js';
+import { ClipboardService } from '../../core/services/clipboard-service.js';
+import { BrowserService } from '../../core/services/browser-service.js';
 
 export interface EmailDetailProps {
   email: Email | null;
@@ -36,7 +44,11 @@ export function buildBodyViewport(
     .replace(/\t/g, ' ')
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
 
-  const rawLines = sanitizedBody.split('\n');
+  // Collapse excessive blank lines (3+ to 2)
+  const collapsedBody = collapseBlankLines(sanitizedBody);
+
+  const rawLines = collapsedBody.split('\n');
+
   const wrappedLines: string[] = [];
 
   const charDisplayWidth = (char: string): number => {
@@ -149,6 +161,65 @@ export function EmailDetail({
   maxBodyColumns = 40,
   scrollOffset = 0,
 }: EmailDetailProps) {
+  // URL cycling state - must be called before any conditional returns
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+  const [statusMessage, setStatusMessage] = useState<string>('No URLs in this email');
+
+  // URL cycling handlers - must be defined before useKeyboard
+  const handleNextUrl = () => {
+    if (urls.length === 0) {
+      setStatusMessage('No URLs in this email');
+      return;
+    }
+    const nextIndex = (selectedIndex + 1) % urls.length;
+    setSelectedIndex(nextIndex);
+    setStatusMessage(urls[nextIndex]!);
+  };
+
+  const handlePrevUrl = () => {
+    if (urls.length === 0) {
+      setStatusMessage('No URLs in this email');
+      return;
+    }
+    const prevIndex = selectedIndex <= 0 ? urls.length - 1 : selectedIndex - 1;
+    setSelectedIndex(prevIndex);
+    setStatusMessage(urls[prevIndex]!);
+  };
+
+  const handleCopyUrl = async () => {
+    if (urls.length === 0 || selectedIndex < 0) return;
+    const success = await ClipboardService.write(urls[selectedIndex]!);
+    setStatusMessage(success ? `Copied: ${urls[selectedIndex]}` : 'Failed to copy');
+  };
+
+  const handleOpenUrl = async () => {
+    if (urls.length === 0 || selectedIndex < 0) return;
+    const success = await BrowserService.open(urls[selectedIndex]!);
+    setStatusMessage(success ? `Opened: ${urls[selectedIndex]}` : 'Failed to open');
+  };
+
+  // Register keyboard shortcuts - must be called before early return
+  useKeyboard({
+    shortcuts: [
+      { key: 'u', handler: handleNextUrl, description: 'Next URL' },
+      { key: 'U', handler: handlePrevUrl, description: 'Previous URL' },
+      {
+        key: 'c',
+        handler: () => {
+          void handleCopyUrl();
+        },
+        description: 'Copy URL',
+      },
+      {
+        key: 'o',
+        handler: () => {
+          void handleOpenUrl();
+        },
+        description: 'Open URL',
+      },
+    ],
+  });
+
   // Handle null email state
   if (!email) {
     return (
@@ -197,7 +268,24 @@ export function EmailDetail({
   };
 
   const bodyText = email.body.text || '';
-  const bodyViewport = buildBodyViewport(bodyText, maxBodyLines, scrollOffset, maxBodyColumns);
+
+  // Process body: collapse blank lines and detect/truncate URLs
+  const maxUrlWidth = Math.floor(maxBodyColumns / 2);
+  const processedBody = processBody(bodyText, { maxUrlWidth });
+
+  // Replace URLs in processed text with truncated display versions
+  let displayText = processedBody.processedText;
+  const urlRefs = processedBody.urls;
+  const urls = urlRefs.map((ref) => ref.fullUrl);
+
+  for (const urlRef of [...urlRefs].sort((a, b) => b.startIndex - a.startIndex)) {
+    displayText =
+      displayText.slice(0, urlRef.startIndex) +
+      urlRef.displayText +
+      displayText.slice(urlRef.endIndex);
+  }
+
+  const bodyViewport = buildBodyViewport(displayText, maxBodyLines, scrollOffset, maxBodyColumns);
   const fromLine = truncateLine(
     formatEmailAddress(email.sender.name, email.sender.email),
     maxBodyColumns
@@ -255,6 +343,9 @@ export function EmailDetail({
             Lines {bodyViewport.startLine}-{bodyViewport.endLine} of {bodyViewport.totalLines}
             {bodyViewport.canScrollUp ? ' • [ up' : ''}
             {bodyViewport.canScrollDown ? ' • ] down' : ''}
+            {urls.length > 0 ? ` • ${selectedIndex + 1}/${urls.length} URLs` : ''}
+            {statusMessage && ' • ' + statusMessage.substring(0, maxBodyColumns - 20)}
+            {urls.length === 0 && ' • No URLs in this email'}
           </Text>
         </>
       ) : (
