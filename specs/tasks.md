@@ -112,18 +112,18 @@ As a user viewing an email in the detail pane, I want links to be rendered in a 
 **Objective:** Wire up the helpers into the EmailDetail component.
 
 **Acceptance Criteria:**
-- [ ] **TDD Step 1:** Write failing integration tests:
-  - [ ] Test: Component uses `formatEmailBodyWithLinks()` instead of `formatEmailBody()`
-  - [ ] Test: Body rendering calls `renderLineWithLinks()` for each visible line
-  - [ ] Test: Scrolling works correctly with colored links
-  - [ ] Test: Works with email containing no URLs
-  - [ ] Test: Works with email containing multiple URLs
-- [ ] **TDD Step 2:** Update component to use new helpers:
-  - [ ] Import `formatEmailBodyWithLinks` and types from formatter
-  - [ ] Replace `formatEmailBody()` call with `formatEmailBodyWithLinks()`
-  - [ ] Call `adjustLinksForWrapping()` after `wrapText()`
-  - [ ] Update body rendering to use `renderLineWithLinks()`
-- [ ] **TDD Step 3:** All tests pass
+- [x] **TDD Step 1:** Write failing integration tests:
+  - [x] Test: Component uses `formatEmailBodyWithLinks()` instead of `formatEmailBody()`
+  - [x] Test: Body rendering calls `renderLineWithLinks()` for each visible line
+  - [x] Test: Scrolling works correctly with colored links
+  - [x] Test: Works with email containing no URLs
+  - [x] Test: Works with email containing multiple URLs
+- [x] **TDD Step 2:** Update component to use new helpers:
+  - [x] Import `formatEmailBodyWithLinks` and types from formatter
+  - [x] Replace `formatEmailBody()` call with `formatEmailBodyWithLinks()`
+  - [x] Call `adjustLinksForWrapping()` after `wrapText()`
+  - [x] Update body rendering to use `renderLineWithLinks()`
+- [x] **TDD Step 3:** All tests pass
 
 **Implementation Notes:**
 - Keep existing keyboard handling and scrolling logic
@@ -141,14 +141,16 @@ As a user viewing an email in the detail pane, I want links to be rendered in a 
 **Objective:** Story-level integration tests verifying the complete user flow.
 
 **Acceptance Criteria:**
-- [ ] **TDD Step 1:** Write failing integration tests:
-  - [ ] Test: Email with HTML body shows link text in cyan color
-  - [ ] Test: Email with plain text body shows shortened URLs in cyan color
-  - [ ] Test: Email with multiple links shows all in cyan
-  - [ ] Test: Link colors visible after scrolling through long email
-  - [ ] Test: Blank line collapsing + colored links work together
-- [ ] **TDD Step 2:** Create integration test file if needed, ensure tests fail for right reasons
-- [ ] **TDD Step 3:** Run tests, fix any issues
+- [x] **TDD Step 1:** Write failing integration tests:
+  - [x] Test: Email with HTML body shows link text in cyan color
+  - [x] Test: Email with plain text body shows shortened URLs in cyan color
+  - [x] Test: Email with multiple links shows all in cyan
+  - [x] Test: Link colors visible after scrolling through long email
+  - [x] Test: Blank line collapsing + colored links work together
+- [x] **TDD Step 2:** Create integration test file, ensure tests fail for right reasons
+- [x] **TDD Step 3:** Run tests, fix any issues
+
+**Completed:** All 15 integration tests pass, verifying end-to-end flow of email → format → wrap → render with colored links.
 
 **Implementation Notes:**
 - These are higher-level integration tests
@@ -222,7 +224,7 @@ export function formatEmailBodyWithLinks(textBody: string, options: FormatOption
 - [x] T002: Add `renderLineWithLinks()` Helper
 - [x] T003: Add `adjustLinksForWrapping()` Helper
 - [x] T004: Integrate Colored Links into EmailDetail Component
-- [ ] T005: Integration Tests for End-to-End Flow
+- [x] T005: Integration Tests for End-to-End Flow
 - [ ] T006: Final Verification & Polish
 
 ---
