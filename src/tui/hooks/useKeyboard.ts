@@ -16,6 +16,7 @@ interface UseKeyboardOptions {
   isFilterInputActive?: boolean;
   onArchive?: () => void;
   onDelete?: () => void;
+  onLoadMore?: () => void;
 }
 
 interface UseKeyboardResult {
@@ -35,6 +36,7 @@ export function useKeyboard({
   isFilterInputActive = false,
   onArchive,
   onDelete,
+  onLoadMore,
 }: UseKeyboardOptions): UseKeyboardResult {
   const [index, setIndex] = useState(selectedIndex);
   const [previewScrollOffset, setPreviewScrollOffset] = useState(0);
@@ -121,6 +123,12 @@ export function useKeyboard({
     // Ctrl+R to refresh
     if (input === 'r' && key.ctrl) {
       onRefresh?.();
+      return;
+    }
+
+    // Ctrl+N to load more (next page)
+    if (input === 'n' && key.ctrl) {
+      onLoadMore?.();
       return;
     }
 

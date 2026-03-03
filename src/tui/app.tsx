@@ -22,7 +22,7 @@ interface AppProps {
 }
 
 export function InboxApp({ client, cache, maxEmails, maxContextTokens: _maxContextTokens }: AppProps) {
-  const { emails, isLoading, error, fetchEmailDetail, refresh, removeEmail, restoreEmail } = useGmail({
+  const { emails, isLoading, error, fetchEmailDetail, refresh, loadMore, removeEmail, restoreEmail } = useGmail({
     client,
     cache,
     ...(maxEmails !== undefined ? { initialLoadSize: maxEmails } : {}),
@@ -57,6 +57,7 @@ export function InboxApp({ client, cache, maxEmails, maxContextTokens: _maxConte
     selectedIndex: 0,
     onSelect: () => {},
     onRefresh: refresh,
+    onLoadMore: loadMore,
     pageSize: 10,
     onActivateFilter: smartFilter.activateFilter,
     onClearFilter: smartFilter.clearFilter,
@@ -146,7 +147,7 @@ export function InboxApp({ client, cache, maxEmails, maxContextTokens: _maxConte
       {/* Footer */}
       <Box marginTop={1}>
         <Text dimColor>
-          j/k or ↑↓ to navigate • Enter to preview • e archive • # delete • q to quit • Ctrl+R to refresh • f to filter{isFilterActive || isFilterInputActive ? ' • Esc to clear' : ''}
+          j/k or ↑↓ to navigate • Enter to preview • e archive • # delete • q to quit • Ctrl+R to refresh • Ctrl+N load more • f to filter{isFilterActive || isFilterInputActive ? ' • Esc to clear' : ''}
         </Text>
       </Box>
 
