@@ -1,6 +1,6 @@
 import { AiProvider, ClassifyEmailsRequest, ClassifyEmailsResponse, AiProviderConfig, SummarizeEmailRequest, SummarizeEmailResponse } from './provider';
 import OpenAI from 'openai';
-import { buildClassificationPrompt } from './prompt';
+import { buildClassificationPrompt, buildSummaryPrompt } from './prompt';
 
 export class OpenAiProvider implements AiProvider {
   private client: OpenAI;
@@ -14,7 +14,28 @@ export class OpenAiProvider implements AiProvider {
   }
 
   async summarizeEmail(request: SummarizeEmailRequest): Promise<SummarizeEmailResponse> {
-    throw new Error("Method not implemented.");
+    const prompt = buildSummaryPrompt(request.content);
+
+    const completion = await this.client.chat.completions.create({
+      model: this.config.model,
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' }
+    });
+
+    const text = completion.choices[0]?.message?.content || '{}';
+
+    try {
+      const parsed = JSON.parse(text);
+      return {
+        summary: {
+          ...parsed.summary,
+          emailId: request.emailId,
+          createdAt: new Date().toISOString()
+        }
+      };
+    } catch (error) {
+      throw new Error(`Failed to parse OpenAI response as JSON: ${text}`);
+    }
   }
 
   async classifyEmails(request: ClassifyEmailsRequest): Promise<ClassifyEmailsResponse> {

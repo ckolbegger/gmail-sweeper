@@ -25,7 +25,7 @@ description: "Task list template for feature implementation"
 - [x] T002 Implement `SummaryStorage` service with local JSON persistence (`~/.config/gmail-sweep/summaries.json`) in `src/services/storage/summaryStore.ts` (write unit tests in `tests/unit/summaryStore.test.ts` first).
 - [x] T003 Update existing `AiProvider` configurations/factories in `src/services/ai/config.ts` and `src/services/ai/provider.ts` to support the new `IAiProviderExtensions`.
 - [x] T004 Implement `summarizeEmail` method for `GeminiProvider` in `src/services/ai/gemini.ts` (write unit tests in `tests/unit/services/ai/provider.test.ts` first).
-- [ ] T005 [P] Implement `summarizeEmail` method for `OpenAiProvider` in `src/services/ai/openai.ts`.
+- [x] T005 [P] Implement `summarizeEmail` method for `OpenAiProvider` in `src/services/ai/openai.ts`.
 - [ ] T006 [P] Implement `summarizeEmail` method for `AnthropicProvider` in `src/services/ai/anthropic.ts`.
 
 **Checkpoint**: Foundation ready - AI providers can summarize, and the storage service can persist summaries.

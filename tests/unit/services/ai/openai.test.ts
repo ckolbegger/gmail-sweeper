@@ -56,4 +56,38 @@ describe('OpenAiProvider', () => {
       response_format: { type: 'json_object' }
     }));
   });
+
+  it('should summarize emails successfully', async () => {
+    const mockCreate = vi.fn().mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify({
+        summary: {
+          description: 'A test OpenAI summary.',
+          actionItems: ['Buy milk']
+        }
+      }) } }]
+    });
+
+    vi.mocked(OpenAI).mockImplementation(function() {
+      return {
+        chat: {
+          completions: {
+            create: mockCreate
+          }
+        }
+      } as any;
+    });
+
+    provider = new OpenAiProvider(mockConfig);
+
+    const request = {
+      emailId: 'test-email-2',
+      content: 'Can you please buy milk?'
+    };
+
+    const response = await provider.summarizeEmail(request);
+
+    expect(response.summary.description).toBe('A test OpenAI summary.');
+    expect(response.summary.actionItems).toEqual(['Buy milk']);
+    expect(response.summary.emailId).toBe('test-email-2');
+  });
 });
