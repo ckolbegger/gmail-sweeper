@@ -92,9 +92,8 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
 }) => {
     const [scrollOffset, setScrollOffset] = useState(0);
     const [manualFocusId, setManualFocusId] = useState<string | null>(null);
-    const [isSummaryViewActive, setIsSummaryViewActive] = useState(false);
 
-    const { summary, isSummarizing, error: summaryError, generateSummary } = useSummary(
+    const { summary, isSummarizing, error: summaryError, isSummaryActive, toggleSummaryView, generateSummary } = useSummary(
         aiProvider,
         summaryStorage,
         email
@@ -130,19 +129,18 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
     useEffect(() => {
         setScrollOffset(0);
         setManualFocusId(null);
-        setIsSummaryViewActive(false);
     }, [email?.id]);
 
     useInput((input, key) => {
         if (!isActive) return;
 
         if (input === 's') {
-            if (isSummaryViewActive) {
+            if (isSummaryActive) {
                 // Toggle back to full view (US2)
-                setIsSummaryViewActive(false);
+                toggleSummaryView();
             } else {
                 // Generate or show summary (US1/US3)
-                setIsSummaryViewActive(true);
+                toggleSummaryView();
                 if (!summary && !isSummarizing) {
                     generateSummary();
                 }
@@ -160,7 +158,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
         }
         
         if (input === '\t' || key.tab) {
-            if (links.length === 0 || isSummaryViewActive) return;
+            if (links.length === 0 || isSummaryActive) return;
             const currentIndex = links.findIndex(l => l.id === focusedLink?.id);
             const nextIndex = (currentIndex + 1) % links.length;
             const nextLink = links[nextIndex];
@@ -174,10 +172,10 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
             }
         }
 
-        if ((key.return || input === '\r') && focusedLink && !isSummaryViewActive) {
+        if ((key.return || input === '\r') && focusedLink && !isSummaryActive) {
             open(focusedLink.url);
         }
-        if (input === 'c' && focusedLink && !isSummaryViewActive) {
+        if (input === 'c' && focusedLink && !isSummaryActive) {
             clipboardy.writeSync(focusedLink.url);
         }
     });
@@ -198,7 +196,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                 <Text wrap="truncate-end">Date: <Text color="yellow">{email.date}</Text></Text>
             </Box>
 
-            {isSummaryViewActive ? (
+            {isSummaryActive ? (
                 <Box borderStyle="classic" borderColor="magenta" paddingX={1} flexDirection="column" flexGrow={1}>
                     <Box marginBottom={1}>
                         <Text bold color="magenta">AI Summary</Text>
@@ -243,7 +241,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                 </Box>
             )}
             <Box marginTop={1} flexShrink={0}>
-                <Text color="gray">Press 's' to {isSummaryViewActive ? 'view full email' : 'summarize'}</Text>
+                <Text color="gray">Press 's' to {isSummaryActive ? 'view full email' : 'summarize'}</Text>
             </Box>
         </Box>
     );

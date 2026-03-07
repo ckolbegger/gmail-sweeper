@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { AiProvider } from '../services/ai/provider';
 import { ISummaryStorage } from '../services/storage/summaryStore';
 import { Email, EmailSummary } from '../types';
@@ -11,6 +11,16 @@ export function useSummary(
     const [summary, setSummary] = useState<EmailSummary | null>(null);
     const [isSummarizing, setIsSummarizing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isSummaryActive, setIsSummaryActive] = useState(false);
+
+    // Reset view when email changes
+    useEffect(() => {
+        setIsSummaryActive(false);
+    }, [email?.id]);
+
+    const toggleSummaryView = useCallback(() => {
+        setIsSummaryActive(prev => !prev);
+    }, []);
 
     const generateSummary = useCallback(async () => {
         if (!email || !aiProvider || !summaryStorage) {
@@ -41,6 +51,8 @@ export function useSummary(
         summary,
         isSummarizing,
         error,
+        isSummaryActive,
+        toggleSummaryView,
         generateSummary
     };
 }

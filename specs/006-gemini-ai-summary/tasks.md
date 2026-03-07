@@ -62,12 +62,12 @@ description: "Task list template for feature implementation"
 
 ### Tests for User Story 2 (MANDATORY - Strict TDD) ⚠️
 
-- [ ] T013 [US2] Update integration test in `tests/integration/summary-flow.test.tsx` to assert that pressing 's' while the summary view is active returns to the full detail view. (Ensure it fails).
+- [x] T013 [US2] Update integration test in `tests/integration/summary-flow.test.tsx` to assert that pressing 's' while the summary view is active returns to the full detail view. (Ensure it fails).
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Update `useSummary` hook in `src/hooks/useSummary.ts` to expose a boolean `isSummaryActive` state and a `toggleSummaryView` method.
-- [ ] T015 [US2] Modify the 's' key handler in `src/components/Inbox/EmailDetail.tsx` to conditionally toggle the view back to the full email body if `isSummaryActive` is true.
+- [x] T014 [US2] Update `useSummary` hook in `src/hooks/useSummary.ts` to expose a boolean `isSummaryActive` state and a `toggleSummaryView` method.
+- [x] T015 [US2] Modify the 's' key handler in `src/components/Inbox/EmailDetail.tsx` to conditionally toggle the view back to the full email body if `isSummaryActive` is true.
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently. You can toggle back and forth.
 

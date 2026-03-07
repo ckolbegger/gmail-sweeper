@@ -83,5 +83,15 @@ describe('Summary Flow Integration', () => {
 
         // Storage should be updated
         expect(mockStorage.saveSummary).toHaveBeenCalled();
+
+        // Press 's' to toggle back
+        stdin.write('s');
+        
+        // Let React state update
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Original content should be displayed again
+        const nextFrame = lastFrame();
+        expect(nextFrame).toContain('Hello, this is a test email body');
     });
 });
