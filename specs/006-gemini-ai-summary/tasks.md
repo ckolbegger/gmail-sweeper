@@ -22,7 +22,7 @@ description: "Task list template for feature implementation"
 **Purpose**: Core infrastructure that MUST be complete before ANY user story can be implemented
 
 - [x] T001 Define `EmailSummary`, `SummarizeEmailRequest`, `SummarizeEmailResponse`, `IAiProviderExtensions`, and `ISummaryStorage` interfaces in `src/types/interfaces.ts` or `src/services/ai/provider.ts` and `src/services/storage/summaryStore.ts` types.
-- [ ] T002 Implement `SummaryStorage` service with local JSON persistence (`~/.config/gmail-sweep/summaries.json`) in `src/services/storage/summaryStore.ts` (write unit tests in `tests/unit/summaryStore.test.ts` first).
+- [x] T002 Implement `SummaryStorage` service with local JSON persistence (`~/.config/gmail-sweep/summaries.json`) in `src/services/storage/summaryStore.ts` (write unit tests in `tests/unit/summaryStore.test.ts` first).
 - [ ] T003 Update existing `AiProvider` configurations/factories in `src/services/ai/config.ts` and `src/services/ai/provider.ts` to support the new `IAiProviderExtensions`.
 - [ ] T004 Implement `summarizeEmail` method for `GeminiProvider` in `src/services/ai/gemini.ts` (write unit tests in `tests/unit/services/ai/provider.test.ts` first).
 - [ ] T005 [P] Implement `summarizeEmail` method for `OpenAiProvider` in `src/services/ai/openai.ts`.
