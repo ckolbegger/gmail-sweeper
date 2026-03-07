@@ -54,4 +54,36 @@ describe('AnthropicProvider', () => {
       messages: [expect.objectContaining({ role: 'user' })]
     }));
   });
+
+  it('should summarize emails successfully', async () => {
+    const mockCreate = vi.fn().mockResolvedValue({
+      content: [{ text: JSON.stringify({
+        summary: {
+          description: 'Anthropic summary test.',
+          actionItems: ['Read spec']
+        }
+      }) }]
+    });
+
+    vi.mocked(Anthropic).mockImplementation(function() {
+      return {
+        messages: {
+          create: mockCreate
+        }
+      } as any;
+    });
+
+    provider = new AnthropicProvider(mockConfig);
+
+    const request = {
+      emailId: 'test-email-3',
+      content: 'Hello, please read the spec.'
+    };
+
+    const response = await provider.summarizeEmail(request);
+
+    expect(response.summary.description).toBe('Anthropic summary test.');
+    expect(response.summary.actionItems).toEqual(['Read spec']);
+    expect(response.summary.emailId).toBe('test-email-3');
+  });
 });

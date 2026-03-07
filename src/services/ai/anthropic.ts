@@ -1,6 +1,6 @@
 import { AiProvider, ClassifyEmailsRequest, ClassifyEmailsResponse, AiProviderConfig, SummarizeEmailRequest, SummarizeEmailResponse } from './provider';
 import Anthropic from '@anthropic-ai/sdk';
-import { buildClassificationPrompt } from './prompt';
+import { buildClassificationPrompt, buildSummaryPrompt } from './prompt';
 
 export class AnthropicProvider implements AiProvider {
   private client: Anthropic;
@@ -13,7 +13,31 @@ export class AnthropicProvider implements AiProvider {
   }
 
   async summarizeEmail(request: SummarizeEmailRequest): Promise<SummarizeEmailResponse> {
-    throw new Error("Method not implemented.");
+    const prompt = buildSummaryPrompt(request.content);
+
+    const message = await this.client.messages.create({
+      model: this.config.model,
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const text = (message.content[0] as any).text;
+
+    try {
+      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/(\{[\s\S]*\})/);
+      const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
+      
+      const parsed = JSON.parse(jsonStr);
+      return {
+        summary: {
+          ...parsed.summary,
+          emailId: request.emailId,
+          createdAt: new Date().toISOString()
+        }
+      };
+    } catch (error) {
+      throw new Error(`Failed to parse Anthropic response as JSON: ${text}`);
+    }
   }
 
   async classifyEmails(request: ClassifyEmailsRequest): Promise<ClassifyEmailsResponse> {
