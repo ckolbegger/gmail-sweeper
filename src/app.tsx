@@ -8,6 +8,7 @@ import { Email } from './types';
 import { IEmailService } from './types/interfaces';
 import { resolveAiConfig } from './services/ai/config';
 import { createAiProvider } from './services/ai/provider';
+import { SummaryStorage } from './services/storage/summaryStore';
 import { useSmartFilter } from './hooks/useSmartFilter';
 import { FilterInput } from './components/Shared/FilterInput';
 
@@ -25,6 +26,8 @@ export default function App({ limit = 10, service: providedService }: AppProps) 
         const config = resolveAiConfig();
         return config ? createAiProvider(config) : null;
     }, []);
+
+    const summaryStorage = useMemo(() => new SummaryStorage(), []);
 
     const {
         status: filterStatus,
@@ -168,6 +171,8 @@ export default function App({ limit = 10, service: providedService }: AppProps) 
                             isActive={!!selectedEmail}
                             terminalWidth={terminalDimensions.columns}
                             terminalHeight={terminalDimensions.rows}
+                            aiProvider={aiProvider}
+                            summaryStorage={summaryStorage}
                         />
                     </Box>
                 </Box>

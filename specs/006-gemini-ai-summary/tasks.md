@@ -40,15 +40,15 @@ description: "Task list template for feature implementation"
 
 ### Tests for User Story 1 (MANDATORY - Strict TDD) ⚠️
 
-- [ ] T007 [US1] Integration test for generating a new summary from the detail view in `tests/integration/summary-flow.test.tsx`. (Ensure it fails).
+- [x] T007 [US1] Integration test for generating a new summary from the detail view in `tests/integration/summary-flow.test.tsx`. (Ensure it fails).
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Create a `useSummary` hook in `src/hooks/useSummary.ts` to manage summary loading state, handle LLM invocation, and return the current summary (write unit tests in `tests/unit/useSummary.test.ts` first).
-- [ ] T009 [US1] Update `src/app.tsx` to pass the `AiProvider` and `SummaryStorage` instances to `EmailDetail`.
-- [ ] T010 [US1] Modify `src/components/Inbox/EmailDetail.tsx` to accept the new services, use the `useSummary` hook, and intercept the 's' key using Ink's `useInput`.
-- [ ] T011 [US1] Update `EmailDetail.tsx` to display a loading indicator when `isSummarizing` is true, and handle LLM error states.
-- [ ] T012 [US1] Create a new `SummaryView` component (or add conditional rendering in `EmailDetail.tsx`) to display the one-sentence description and bulleted action items.
+- [x] T008 [US1] Create a `useSummary` hook in `src/hooks/useSummary.ts` to manage summary loading state, handle LLM invocation, and return the current summary (write unit tests in `tests/unit/useSummary.test.ts` first).
+- [x] T009 [US1] Update `src/app.tsx` to pass the `AiProvider` and `SummaryStorage` instances to `EmailDetail`.
+- [x] T010 [US1] Modify `src/components/Inbox/EmailDetail.tsx` to accept the new services, use the `useSummary` hook, and intercept the 's' key using Ink's `useInput`.
+- [x] T011 [US1] Update `EmailDetail.tsx` to display a loading indicator when `isSummarizing` is true, and handle LLM error states.
+- [x] T012 [US1] Create a new `SummaryView` component (or add conditional rendering in `EmailDetail.tsx`) to display the one-sentence description and bulleted action items.
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently. Pressing 's' generates and displays a summary.
 

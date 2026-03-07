@@ -4,12 +4,18 @@ import { Email } from '../../types';
 import { EmailRenderer, RenderedLink } from '../../utils/emailRenderer';
 import open from 'open';
 import clipboardy from 'clipboardy';
+import { AiProvider } from '../../services/ai/provider';
+import { ISummaryStorage } from '../../services/storage/summaryStore';
+import { useSummary } from '../../hooks/useSummary';
 
 interface EmailDetailProps {
     email: Email | null;
     isActive?: boolean;
     terminalWidth: number;
     terminalHeight: number;
+    aiProvider?: AiProvider | null;
+    summaryStorage?: ISummaryStorage | null;
+    onBack?: () => void; // for test compatibility
 }
 
 const renderer = new EmailRenderer();
@@ -79,10 +85,20 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
     email, 
     isActive = false, 
     terminalWidth, 
-    terminalHeight 
+    terminalHeight,
+    aiProvider = null,
+    summaryStorage = null,
+    onBack
 }) => {
     const [scrollOffset, setScrollOffset] = useState(0);
     const [manualFocusId, setManualFocusId] = useState<string | null>(null);
+    const [isSummaryViewActive, setIsSummaryViewActive] = useState(false);
+
+    const { summary, isSummarizing, error: summaryError, generateSummary } = useSummary(
+        aiProvider,
+        summaryStorage,
+        email
+    );
 
     const windowHeight = useMemo(() => Math.max(5, terminalHeight - 14), [terminalHeight]);
     const availableWidth = useMemo(() => Math.max(20, Math.floor(terminalWidth * 0.6) - 8), [terminalWidth]);
@@ -114,10 +130,25 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
     useEffect(() => {
         setScrollOffset(0);
         setManualFocusId(null);
+        setIsSummaryViewActive(false);
     }, [email?.id]);
 
     useInput((input, key) => {
         if (!isActive) return;
+
+        if (input === 's') {
+            if (isSummaryViewActive) {
+                // Toggle back to full view (US2)
+                setIsSummaryViewActive(false);
+            } else {
+                // Generate or show summary (US1/US3)
+                setIsSummaryViewActive(true);
+                if (!summary && !isSummarizing) {
+                    generateSummary();
+                }
+            }
+            return;
+        }
 
         if (key.upArrow || input === '\u001B[A') {
             setScrollOffset(prev => Math.max(0, prev - 1));
@@ -129,7 +160,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
         }
         
         if (input === '\t' || key.tab) {
-            if (links.length === 0) return;
+            if (links.length === 0 || isSummaryViewActive) return;
             const currentIndex = links.findIndex(l => l.id === focusedLink?.id);
             const nextIndex = (currentIndex + 1) % links.length;
             const nextLink = links[nextIndex];
@@ -143,10 +174,10 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
             }
         }
 
-        if ((key.return || input === '\r') && focusedLink) {
+        if ((key.return || input === '\r') && focusedLink && !isSummaryViewActive) {
             open(focusedLink.url);
         }
-        if (input === 'c' && focusedLink) {
+        if (input === 'c' && focusedLink && !isSummaryViewActive) {
             clipboardy.writeSync(focusedLink.url);
         }
     });
@@ -167,18 +198,52 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                 <Text wrap="truncate-end">Date: <Text color="yellow">{email.date}</Text></Text>
             </Box>
 
-            <Box borderStyle="classic" borderColor="gray" paddingX={1} flexDirection="column" flexGrow={1}>
-                {visibleLines.map((line, i) => {
-                    const lineLinks = links.filter(l => l.lineIndex === line.originalLineIndex);
-                    return <Box key={i}>{renderLineText(line, lineLinks, focusedLink?.id)}</Box>;
-                })}
-                {allLines.length > windowHeight && (
-                    <Box marginTop={0}>
-                        <Text color="yellow">
-                            -- [{clampedOffset + 1}-{Math.min(clampedOffset + windowHeight, allLines.length)} of {allLines.length}] --
-                        </Text>
+            {isSummaryViewActive ? (
+                <Box borderStyle="classic" borderColor="magenta" paddingX={1} flexDirection="column" flexGrow={1}>
+                    <Box marginBottom={1}>
+                        <Text bold color="magenta">AI Summary</Text>
                     </Box>
-                )}
+                    {isSummarizing ? (
+                        <Text color="yellow">Generating summary...</Text>
+                    ) : summaryError ? (
+                        <Text color="red">Error generating summary: {summaryError}</Text>
+                    ) : summary ? (
+                        <Box flexDirection="column">
+                            <Box marginBottom={1}>
+                                <Text>{summary.description}</Text>
+                            </Box>
+                            {summary.actionItems.length > 0 ? (
+                                <Box flexDirection="column">
+                                    <Text bold color="cyan">Action Items:</Text>
+                                    {summary.actionItems.map((item, idx) => (
+                                        <Text key={idx}>• {item}</Text>
+                                    ))}
+                                </Box>
+                            ) : (
+                                <Text color="gray">No action items detected.</Text>
+                            )}
+                        </Box>
+                    ) : (
+                        <Text color="yellow">Loading...</Text>
+                    )}
+                </Box>
+            ) : (
+                <Box borderStyle="classic" borderColor="gray" paddingX={1} flexDirection="column" flexGrow={1}>
+                    {visibleLines.map((line, i) => {
+                        const lineLinks = links.filter(l => l.lineIndex === line.originalLineIndex);
+                        return <Box key={i}>{renderLineText(line, lineLinks, focusedLink?.id)}</Box>;
+                    })}
+                    {allLines.length > windowHeight && (
+                        <Box marginTop={0}>
+                            <Text color="yellow">
+                                -- [{clampedOffset + 1}-{Math.min(clampedOffset + windowHeight, allLines.length)} of {allLines.length}] --
+                            </Text>
+                        </Box>
+                    )}
+                </Box>
+            )}
+            <Box marginTop={1} flexShrink={0}>
+                <Text color="gray">Press 's' to {isSummaryViewActive ? 'view full email' : 'summarize'}</Text>
             </Box>
         </Box>
     );
