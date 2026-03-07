@@ -13,9 +13,11 @@ export function useSummary(
     const [error, setError] = useState<string | null>(null);
     const [isSummaryActive, setIsSummaryActive] = useState(false);
 
-    // Reset view when email changes
+    // Reset view and state when email changes
     useEffect(() => {
         setIsSummaryActive(false);
+        setSummary(prev => prev ? null : prev);
+        setError(prev => prev ? null : prev);
     }, [email?.id]);
 
     const toggleSummaryView = useCallback(() => {
