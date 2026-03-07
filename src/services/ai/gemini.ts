@@ -1,4 +1,4 @@
-import { AiProvider, ClassifyEmailsRequest, ClassifyEmailsResponse, AiProviderConfig } from './provider';
+import { AiProvider, ClassifyEmailsRequest, ClassifyEmailsResponse, AiProviderConfig, SummarizeEmailRequest, SummarizeEmailResponse } from './provider';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { buildClassificationPrompt } from './prompt';
 
@@ -7,6 +7,10 @@ export class GeminiProvider implements AiProvider {
 
   constructor(private config: AiProviderConfig) {
     this.genAI = new GoogleGenerativeAI(config.apiKey);
+  }
+
+  async summarizeEmail(request: SummarizeEmailRequest): Promise<SummarizeEmailResponse> {
+    throw new Error("Method not implemented.");
   }
 
   async classifyEmails(request: ClassifyEmailsRequest): Promise<ClassifyEmailsResponse> {

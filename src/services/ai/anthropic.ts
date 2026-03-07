@@ -1,4 +1,4 @@
-import { AiProvider, ClassifyEmailsRequest, ClassifyEmailsResponse, AiProviderConfig } from './provider';
+import { AiProvider, ClassifyEmailsRequest, ClassifyEmailsResponse, AiProviderConfig, SummarizeEmailRequest, SummarizeEmailResponse } from './provider';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildClassificationPrompt } from './prompt';
 
@@ -10,6 +10,10 @@ export class AnthropicProvider implements AiProvider {
       apiKey: config.apiKey,
       baseURL: config.baseUrl
     });
+  }
+
+  async summarizeEmail(request: SummarizeEmailRequest): Promise<SummarizeEmailResponse> {
+    throw new Error("Method not implemented.");
   }
 
   async classifyEmails(request: ClassifyEmailsRequest): Promise<ClassifyEmailsResponse> {

@@ -1,4 +1,4 @@
-import { AiProvider, ClassifyEmailsRequest, ClassifyEmailsResponse, AiProviderConfig } from './provider';
+import { AiProvider, ClassifyEmailsRequest, ClassifyEmailsResponse, AiProviderConfig, SummarizeEmailRequest, SummarizeEmailResponse } from './provider';
 import OpenAI from 'openai';
 import { buildClassificationPrompt } from './prompt';
 
@@ -11,6 +11,10 @@ export class OpenAiProvider implements AiProvider {
       baseURL: config.baseUrl,
       dangerouslyAllowBrowser: true // if needed for testing, but typically not for node
     });
+  }
+
+  async summarizeEmail(request: SummarizeEmailRequest): Promise<SummarizeEmailResponse> {
+    throw new Error("Method not implemented.");
   }
 
   async classifyEmails(request: ClassifyEmailsRequest): Promise<ClassifyEmailsResponse> {

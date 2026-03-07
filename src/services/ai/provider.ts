@@ -54,7 +54,7 @@ export interface AiProviderConfig {
   maxContextTokens?: number;
 }
 
-export interface AiProvider {
+export interface AiProvider extends IAiProviderExtensions {
   classifyEmails(request: ClassifyEmailsRequest): Promise<ClassifyEmailsResponse>;
 }
 
