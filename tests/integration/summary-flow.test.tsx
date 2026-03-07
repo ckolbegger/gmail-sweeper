@@ -94,4 +94,42 @@ describe('Summary Flow Integration', () => {
         const nextFrame = lastFrame();
         expect(nextFrame).toContain('Hello, this is a test email body');
     });
+
+    it('should show cached summary without calling LLM if it exists', async () => {
+        const cachedSummary = {
+            emailId: mockEmail.id,
+            description: 'This is a CACHED summary.',
+            actionItems: ['Cached action'],
+            createdAt: '2026-03-07T10:05:00Z'
+        };
+
+        mockStorage.getSummary = vi.fn().mockResolvedValue(cachedSummary);
+
+        const onBack = vi.fn();
+        const { stdin, lastFrame } = render(
+            <EmailDetail
+                email={mockEmail}
+                isActive={true}
+                terminalWidth={100}
+                terminalHeight={24}
+                onBack={onBack}
+                aiProvider={mockAiProvider}
+                summaryStorage={mockStorage}
+            />
+        );
+
+        // Press 's' to trigger summary
+        stdin.write('s');
+
+        // Let React state update
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Cached summary should be displayed immediately
+        const frame = lastFrame();
+        expect(frame).toContain('This is a CACHED summary.');
+        expect(frame).toContain('Cached action');
+
+        // LLM should NOT be called
+        expect(mockAiProvider.summarizeEmail).not.toHaveBeenCalled();
+    });
 });

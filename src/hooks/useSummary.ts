@@ -31,6 +31,13 @@ export function useSummary(
         setError(null);
 
         try {
+            // T017: Check cache first
+            const cachedSummary = await summaryStorage.getSummary(email.id);
+            if (cachedSummary) {
+                setSummary(cachedSummary);
+                return; // Do not call LLM
+            }
+
             const response = await aiProvider.summarizeEmail({
                 emailId: email.id,
                 content: email.body
@@ -39,6 +46,7 @@ export function useSummary(
             const newSummary = response.summary;
             setSummary(newSummary);
 
+            // T018: Persist to storage
             await summaryStorage.saveSummary(newSummary);
         } catch (err: any) {
             setError(err.message || 'An error occurred while summarizing the email.');

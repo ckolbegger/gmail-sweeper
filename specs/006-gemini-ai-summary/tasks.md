@@ -81,12 +81,12 @@ description: "Task list template for feature implementation"
 
 ### Tests for User Story 3 (MANDATORY - Strict TDD) ⚠️
 
-- [ ] T016 [US3] Update integration test in `tests/integration/summary-flow.test.tsx` to verify that requesting a summary for an already-summarized email returns the cached version instantly (0 LLM calls). (Ensure it fails).
+- [x] T016 [US3] Update integration test in `tests/integration/summary-flow.test.tsx` to verify that requesting a summary for an already-summarized email returns the cached version instantly (0 LLM calls). (Ensure it fails).
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Update the `useSummary` hook (`src/hooks/useSummary.ts`) to check `SummaryStorage.getSummary(emailId)` before invoking the AI Provider. If a cached summary exists, return it immediately and do not trigger a new LLM request.
-- [ ] T018 [US3] Ensure the `useSummary` hook persists newly generated summaries by calling `SummaryStorage.saveSummary()` after a successful LLM invocation.
+- [x] T017 [US3] Update the `useSummary` hook (`src/hooks/useSummary.ts`) to check `SummaryStorage.getSummary(emailId)` before invoking the AI Provider. If a cached summary exists, return it immediately and do not trigger a new LLM request.
+- [x] T018 [US3] Ensure the `useSummary` hook persists newly generated summaries by calling `SummaryStorage.saveSummary()` after a successful LLM invocation.
 
 **Checkpoint**: All user stories should now be independently functional. Existing summaries are loaded instantly.
 
