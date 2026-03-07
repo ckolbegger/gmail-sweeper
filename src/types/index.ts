@@ -31,3 +31,10 @@ export type PaginatedResponse<T> = {
     nextPageToken?: string;
     resultSizeEstimate?: number;
 };
+
+export interface EmailSummary {
+  emailId: string;
+  description: string;
+  actionItems: string[];
+  createdAt: string;
+}

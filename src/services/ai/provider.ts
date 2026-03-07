@@ -1,6 +1,7 @@
 import { GeminiProvider } from './gemini';
 import { AnthropicProvider } from './anthropic';
 import { OpenAiProvider } from './openai';
+import type { EmailSummary } from '../../types';
 
 /**
  * AI Provider Abstraction
@@ -30,6 +31,19 @@ export interface ClassifyEmailsRequest {
 
 export interface ClassifyEmailsResponse {
   results: EmailClassification[];
+}
+
+export interface SummarizeEmailRequest {
+  emailId: string;
+  content: string;
+}
+
+export interface SummarizeEmailResponse {
+  summary: EmailSummary;
+}
+
+export interface IAiProviderExtensions {
+  summarizeEmail(request: SummarizeEmailRequest): Promise<SummarizeEmailResponse>;
 }
 
 export interface AiProviderConfig {
