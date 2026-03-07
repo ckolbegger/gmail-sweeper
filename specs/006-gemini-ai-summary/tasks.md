@@ -96,9 +96,9 @@ description: "Task list template for feature implementation"
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T019 Update `README.md` to document the new 's' keybinding for AI Summaries.
-- [ ] T020 Run `npm run lint` and `npm test` to ensure no regressions were introduced across the codebase.
-- [ ] T021 Manual exploratory testing using instructions in `quickstart.md`.
+- [x] T019 Update `README.md` to document the new 's' keybinding for AI Summaries.
+- [x] T020 Run `npm run lint` and `npm test` to ensure no regressions were introduced across the codebase.
+- [x] T021 Manual exploratory testing using instructions in `quickstart.md`.
 
 ---
 
