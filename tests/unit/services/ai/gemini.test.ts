@@ -122,4 +122,62 @@ describe('GeminiProvider', () => {
 
     await expect(provider.classifyEmails(request)).rejects.toThrow('Failed to parse AI response as JSON');
   });
+
+  it('should summarize emails successfully', async () => {
+    const mockGenerateContent = vi.fn().mockResolvedValue({
+      response: {
+        text: () => JSON.stringify({
+          summary: {
+            description: 'This is a test summary.',
+            actionItems: ['Task 1', 'Task 2']
+          }
+        })
+      }
+    });
+
+    const mockGetGenerativeModel = vi.fn().mockReturnValue({
+      generateContent: mockGenerateContent
+    });
+
+    vi.mocked(GoogleGenerativeAI).mockImplementation(function() {
+      return {
+        getGenerativeModel: mockGetGenerativeModel
+      } as any;
+    });
+
+    provider = new GeminiProvider(mockConfig);
+
+    const request = {
+      emailId: 'test-email-1',
+      content: 'Hello, please review the PR.'
+    };
+
+    const response = await provider.summarizeEmail(request);
+
+    expect(response.summary.description).toBe('This is a test summary.');
+    expect(response.summary.actionItems).toEqual(['Task 1', 'Task 2']);
+    expect(response.summary.emailId).toBe('test-email-1');
+  });
+
+  it('should handle API errors for summarizeEmail', async () => {
+    const mockGenerateContent = vi.fn().mockRejectedValue(new Error('API Error'));
+    const mockGetGenerativeModel = vi.fn().mockReturnValue({
+      generateContent: mockGenerateContent
+    });
+
+    vi.mocked(GoogleGenerativeAI).mockImplementation(function() {
+      return {
+        getGenerativeModel: mockGetGenerativeModel
+      } as any;
+    });
+
+    provider = new GeminiProvider(mockConfig);
+
+    const request = {
+      emailId: 'test-email-1',
+      content: 'Hello, please review the PR.'
+    };
+
+    await expect(provider.summarizeEmail(request)).rejects.toThrow('API Error');
+  });
 });

@@ -27,3 +27,22 @@ Emails to classify:
 ${JSON.stringify(emailList, null, 2)}
 `;
 }
+
+/**
+ * Build the prompt for summarizing an email
+ */
+export function buildSummaryPrompt(content: string): string {
+  return `You are an email summarization assistant.
+Your task is to summarize the following email content.
+Provide exactly two things:
+1. A single one-sentence description of the content.
+2. A bulleted list of action items extracted from the email. If there are no action items, provide an empty list.
+
+Return your response ONLY as a JSON object with a "summary" object containing:
+- "description" (string)
+- "actionItems" (array of strings)
+
+Email content:
+${content}
+`;
+}
