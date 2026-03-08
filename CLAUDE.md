@@ -19,17 +19,28 @@ Auto-generated from all feature plans. Last updated: 2026-02-14
 ```text
 src/
   core/
-    summary/        # AI email summarisation (006-claude-ai-summary)
+    summary/        # AI email summarisation (006-claude-ai-summary, 007-summary-precompute)
       index.ts      # barrel export
       prompt.ts     # buildSummaryPrompt, parseSummaryResponse, SummaryGenerationError
       service.ts    # SummaryService (Anthropic + OpenAI)
+      precompute-worker.ts  # PrecomputeWorker, PrecomputeConfig, readPrecomputeConfig (007)
     cache/db.ts     # extended: email_summaries table, getSummary(), setSummary()
     models/index.ts # extended: EmailSummary interface
   tui/
+    index.tsx       # extended: instantiates PrecomputeWorker on startup (007)
+    app.tsx         # extended: passes worker prop, wires onEmailsFetched (007)
     hooks/useEmailSummary.ts   # idle/loading/ready/error state machine
+    hooks/useGmail.ts          # extended: onEmailsFetched callback on loadMore (007)
     components/EmailPreview.tsx # extended: viewMode + summaryState props
 tests/
+  unit/summary/precompute-worker.test.ts  # 007: config + worker unit tests
+  integration/precompute-worker.test.ts   # 007: real cache round-trip tests
 ```
+
+## Environment Variables (007-summary-precompute)
+
+- `SUMMARY_PRECOMPUTE_LIMIT` — max emails covered per background pass (default: 500)
+- `SUMMARY_PRECOMPUTE_MAX_DEPTH` — absolute position ceiling; worker never processes email at index ≥ this value (default: 500); effective depth = min(limit, maxDepth)
 
 ## Commands
 

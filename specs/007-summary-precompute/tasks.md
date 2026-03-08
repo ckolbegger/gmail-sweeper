@@ -86,7 +86,7 @@
 
 **Purpose**: End-to-end persistence verification and documentation.
 
-- [ ] T008 [P] Update `CLAUDE.md` active technologies section for feature `007-summary-precompute` to reflect the new `src/core/summary/precompute-worker.ts` module and the two new env vars (`SUMMARY_PRECOMPUTE_LIMIT`, `SUMMARY_PRECOMPUTE_MAX_DEPTH`); update project structure diagram in `CLAUDE.md` accordingly
+- [x] T008 [P] Update `CLAUDE.md` active technologies section for feature `007-summary-precompute` to reflect the new `src/core/summary/precompute-worker.ts` module and the two new env vars (`SUMMARY_PRECOMPUTE_LIMIT`, `SUMMARY_PRECOMPUTE_MAX_DEPTH`); update project structure diagram in `CLAUDE.md` accordingly
 
 - [ ] T009 [P] Run all `quickstart.md` manual verification steps for US1–US4 including SC-001 (worker starts within 5s), SC-002 (restart within 2s of Ctrl-N), and SC-005 (UI responsiveness during worker activity) — these three success criteria have no automated test coverage and are manual-only checks; confirm `npm test && npm run lint` passes clean with no regressions against previous feature tests
 
