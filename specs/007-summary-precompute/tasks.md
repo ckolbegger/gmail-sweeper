@@ -118,6 +118,27 @@
 
 ---
 
+### B002 — Show cached summary when navigating to a summarised email
+
+**Reported**: 2026-03-08
+**Priority**: P1
+
+**Current behaviour**: Navigating to any email always opens in full-detail view, even when a precomputed summary exists in the cache. `useEmailSummary` now supports `initialSummary` (B001-T001) but `app.tsx` never checks the cache on navigation and never passes it in.
+
+**Expected behaviour**:
+- Navigate to email → check `cache.getSummary(email.id)` (synchronous SQLite read, no network) → if summary exists, open in summary view with that summary pre-loaded; if no summary, open in full-detail view
+- `s` key continues to toggle between summary and full-detail in both directions
+- Navigating away and back always resets to summary view if a cached summary exists (no memory of user's prior toggle)
+- No automatic AI call — only display what is already in the cache
+
+**Root cause**: `app.tsx` resets `detailViewMode` to `'full'` unconditionally on email change and never calls `cache.getSummary()` to check for an existing summary. The `initialSummary` prop added to `useEmailSummary` in B001-T001 is never populated.
+
+**Depends on**: B001-T001 ✅ (already complete)
+
+- [ ] B002-T001 In `app.tsx`, replace the unconditional `setDetailViewMode('full')` reset in the selected-email `useEffect` with a cache check: call `cache.getSummary(selectedEmail.id)` synchronously; if a summary is returned, call `setDetailViewMode('summary')` and store the summary in a new `initialSummary` state variable; if null, call `setDetailViewMode('full')` and set `initialSummary` to `undefined`; pass `initialSummary` to `useEmailSummary`; write and pass tests covering: navigating to an email with a cached summary opens in summary view, navigating to an email with no cached summary opens in full-detail view, navigating between emails resets correctly in both directions
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
