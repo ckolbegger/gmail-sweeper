@@ -92,6 +92,36 @@
 
 ---
 
+## Bug Fixes
+
+### B001 — Auto-show cached summary on email navigation
+
+**Reported**: 2026-03-08
+**Priority**: P1
+
+**Current behaviour**: Navigating to any email always opens in full-detail view, even when a precomputed summary exists in the cache.
+
+**Expected behaviour**:
+- If the email has a cached summary → open in summary view automatically
+- If no cached summary → open in full-detail view (unchanged)
+- `s` key continues to toggle between summary and full-detail in both directions
+- Navigating away and back always resets to summary view if a cached summary exists (no memory of user's last toggle)
+- If the background worker generates a summary while the user is viewing the email in full-detail → switch to summary view automatically (live update)
+- No automatic AI call is triggered — only display what is already in the cache
+
+**Root cause**: `src/tui/app.tsx` always initialises `detailViewMode` to `'full'` and the `useEffect` that resets on email change also resets to `'full'` unconditionally. Neither checks the cache for an existing summary.
+
+**Files to change**:
+- `src/tui/app.tsx` — on selected-email change, read `cache.getSummary(email.id)` synchronously and set initial `detailViewMode` to `'summary'` if a summary exists; also pass the cached summary into `useEmailSummary` so the state machine skips fetching
+- `src/tui/hooks/useEmailSummary.ts` — accept an optional pre-loaded `EmailSummary` to initialise directly into `ready` state, avoiding a redundant AI call
+- Tests: `tests/unit/tui/app-props.test.tsx` and/or a new `tests/unit/tui/useEmailSummary.test.ts` scenario covering pre-loaded summary path
+
+- [ ] B001-T001 In `useEmailSummary` hook (`src/tui/hooks/useEmailSummary.ts`), add an `initialSummary?: EmailSummary` option; when provided, initialise state to `{ status: 'ready', summary: initialSummary }` instead of `'idle'`; write unit tests covering: hook initialises to ready when initialSummary provided, hook initialises to idle when no initialSummary, switching emails clears ready state unless new initialSummary provided
+
+- [ ] B001-T002 In `app.tsx`, on selected-email change: call `cache.getSummary(selectedEmail.id)` synchronously; if a summary exists, set `detailViewMode` to `'summary'` and pass the summary as `initialSummary` to `useEmailSummary`; if no summary, set `detailViewMode` to `'full'`; also subscribe to summary-cache changes so if the background worker writes a summary while the email is displayed in full-detail, the view switches to `'summary'` automatically — implement via a polling `useEffect` (e.g. 2s interval) that re-checks `cache.getSummary(selectedEmail.id)` and upgrades the view if a summary appears; write and pass tests covering: opens in summary view when cache hit, opens in full view when cache miss, live-switches to summary when worker delivers summary during viewing (depends on B001-T001)
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
