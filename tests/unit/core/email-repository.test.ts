@@ -64,7 +64,8 @@ describe('EmailRepository', () => {
         category TEXT,
         snippet TEXT,
         history_id TEXT,
-        synced_at INTEGER NOT NULL
+        synced_at INTEGER NOT NULL,
+        summary TEXT
       );
 
       CREATE INDEX IF NOT EXISTS idx_emails_date_received ON emails(date_received DESC);

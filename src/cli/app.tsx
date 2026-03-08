@@ -305,6 +305,81 @@ export function App() {
     [displayedEmails, selectedEmailId]
   );
 
+  // Handle email archive
+  const handleArchiveEmail = useCallback(async (emailId: string) => {
+    if (!gmailClientRef.current || !selectedEmail) return;
+
+    setStatusMessage('Archiving...');
+    const result = await gmailClientRef.current.archiveEmails([emailId]);
+
+    if (result.successfulCount > 0) {
+      // Remove from local database to persist across restarts
+      if (emailRepositoryRef.current) {
+        await emailRepositoryRef.current.delete(emailId);
+      }
+
+      const currentIndex = displayedEmails.findIndex((e) => e.id === emailId);
+      const newEmails = emails.filter((e) => e.id !== emailId);
+      setEmails(newEmails);
+
+      // Auto-advance selection
+      if (currentIndex >= 0) {
+        const nextEmail = displayedEmails[currentIndex + 1] || displayedEmails[currentIndex - 1];
+        setSelectedEmailId(nextEmail?.id);
+      }
+
+      setStatusMessage('Archived 1 email');
+    } else {
+      setStatusMessage(`Archive failed: ${result.failures[0]?.error ?? 'Unknown error'}`);
+    }
+  }, [emails, displayedEmails, selectedEmail]);
+
+  // Handle email delete
+  const handleDeleteEmail = useCallback(async (emailId: string) => {
+    if (!gmailClientRef.current || !selectedEmail) return;
+
+    setStatusMessage('Deleting...');
+    const result = await gmailClientRef.current.deleteEmails([emailId]);
+
+    if (result.successfulCount > 0) {
+      // Remove from local database to persist across restarts
+      if (emailRepositoryRef.current) {
+        await emailRepositoryRef.current.delete(emailId);
+      }
+
+      const currentIndex = displayedEmails.findIndex((e) => e.id === emailId);
+      const newEmails = emails.filter((e) => e.id !== emailId);
+      setEmails(newEmails);
+
+      // Auto-advance selection
+      if (currentIndex >= 0) {
+        const nextEmail = displayedEmails[currentIndex + 1] || displayedEmails[currentIndex - 1];
+        setSelectedEmailId(nextEmail?.id);
+      }
+
+      setStatusMessage('Deleted 1 email');
+    } else {
+      setStatusMessage(`Delete failed: ${result.failures[0]?.error ?? 'Unknown error'}`);
+    }
+  }, [emails, displayedEmails, selectedEmail]);
+
+  // Handle saving summary to database
+  const handleSaveSummary = useCallback(async (emailId: string, summary: string) => {
+    if (!emailRepositoryRef.current) return;
+
+    try {
+      const email = await emailRepositoryRef.current.getById(emailId);
+      if (email) {
+        email.summary = summary;
+        await emailRepositoryRef.current.save(email);
+        // Update local state to reflect the saved summary
+        setEmails((prev) => prev.map((e) => (e.id === emailId ? { ...e, summary } : e)));
+      }
+    } catch (error) {
+      setStatusMessage(`Failed to save summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }, []);
+
   const configuredDetailMargin = Number.parseInt(process.env.DETAIL_BODY_MARGIN ?? '10', 10);
   const detailBodyMargin = Number.isFinite(configuredDetailMargin)
     ? Math.min(20, Math.max(4, configuredDetailMargin))
@@ -441,18 +516,6 @@ export function App() {
           return;
         },
         description: 'Sort by date',
-      },
-      {
-        key: 's',
-        handler: () => {
-          if (filterMode || showHelp) {
-            return false;
-          }
-
-          handleSort('sender');
-          return;
-        },
-        description: 'Sort by sender',
       },
       {
         key: 'u',
@@ -593,6 +656,30 @@ export function App() {
         },
         description: 'Scroll detail down',
       },
+      {
+        key: 'e',
+        handler: () => {
+          if (filterMode || showHelp || isRefreshing || !selectedEmail) {
+            return false;
+          }
+
+          void handleArchiveEmail(selectedEmail.id);
+          return;
+        },
+        description: 'Archive selected email',
+      },
+      {
+        key: '#',
+        handler: () => {
+          if (filterMode || showHelp || isRefreshing || !selectedEmail) {
+            return false;
+          }
+
+          void handleDeleteEmail(selectedEmail.id);
+          return;
+        },
+        description: 'Delete selected email',
+      },
     ],
   });
 
@@ -696,6 +783,7 @@ export function App() {
                 maxBodyLines={detailBodyLines}
                 maxBodyColumns={maxDetailBodyColumns}
                 scrollOffset={detailScrollOffset}
+                onSaveSummary={handleSaveSummary}
               />
             </Box>
           </>
@@ -734,8 +822,8 @@ export function App() {
             </Text>
           )}
         <Text dimColor>
-          ↑↓ Navigate • [/] Detail scroll • . Refresh • d/s/u/b/g Sort • f/l/c/a Filter • r Unread • x Clear • ?
-          Help • q Quit
+          e Archive • # Delete • ↑↓ Navigate • [/] Detail scroll • . Refresh • d/u/b/g Sort • f/l/c/a
+          Filter • r Unread • x Clear • ? Help • q Quit
         </Text>
       </Box>
     </Box>

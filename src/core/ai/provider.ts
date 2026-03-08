@@ -7,6 +7,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { buildClassificationPrompt } from './prompt.js';
 import { AiProviderError } from '../errors/index.js';
+import { logAiDebug } from '../logging/ai-debug-log.js';
 
 // --- Types ---
 
@@ -51,6 +52,12 @@ export interface AiProviderConfig {
 
 // --- Interface ---
 
+/** Prompt for generic LLM calls */
+export interface LLMPrompt {
+  system: string;
+  user: string;
+}
+
 /** AI provider abstraction for email classification */
 export interface AiProvider {
   /**
@@ -60,7 +67,18 @@ export interface AiProvider {
    * @param emails - Array of email metadata to classify
    * @returns Classification results for each email
    */
-  classifyEmails(filterDescription: string, emails: EmailMetadata[]): Promise<EmailClassification[]>;
+  classifyEmails(
+    filterDescription: string,
+    emails: EmailMetadata[]
+  ): Promise<EmailClassification[]>;
+
+  /**
+   * Make a generic LLM call with system and user prompts.
+   *
+   * @param prompt - System and user prompts
+   * @returns Raw text response from the LLM
+   */
+  callLLM(prompt: LLMPrompt): Promise<string>;
 }
 
 // --- Factory ---
@@ -73,7 +91,10 @@ export interface AiProvider {
  * @returns Configured AI provider
  * @throws Error if provider type is unsupported
  */
-export function createAiProvider(config: AiProviderConfig, client?: AnthropicClient | OpenAiClient): AiProvider {
+export function createAiProvider(
+  config: AiProviderConfig,
+  client?: AnthropicClient | OpenAiClient
+): AiProvider {
   switch (config.provider) {
     case 'anthropic':
       return new AnthropicProvider(config, client as AnthropicClient | undefined);
@@ -102,20 +123,25 @@ export interface AnthropicClient {
 class AnthropicProvider implements AiProvider {
   private readonly client: AnthropicClient;
   private readonly model: string;
+  private readonly baseUrl: string;
 
-  constructor(
-    config: AiProviderConfig,
-    client?: AnthropicClient
-  ) {
+  constructor(config: AiProviderConfig, client?: AnthropicClient) {
     if (client) {
       this.client = client;
     } else {
-      this.client = new Anthropic({ apiKey: config.apiKey });
+      this.client = new Anthropic({
+        apiKey: config.apiKey,
+        baseURL: config.baseUrl,
+      });
     }
     this.model = config.model ?? 'claude-sonnet-4-20250514';
+    this.baseUrl = config.baseUrl ?? 'https://api.anthropic.com';
   }
 
-  async classifyEmails(filterDescription: string, emails: EmailMetadata[]): Promise<EmailClassification[]> {
+  async classifyEmails(
+    filterDescription: string,
+    emails: EmailMetadata[]
+  ): Promise<EmailClassification[]> {
     const { system, user } = buildClassificationPrompt(filterDescription, emails);
 
     try {
@@ -134,6 +160,38 @@ class AnthropicProvider implements AiProvider {
 
       const text = textBlock.text;
       return this.parseResponse(text);
+    } catch (error) {
+      if (error instanceof AiProviderError) {
+        throw error;
+      }
+      const message = error instanceof Error ? error.message : 'Unknown Anthropic API error';
+      throw new AiProviderError(`Anthropic API error: ${message}`);
+    }
+  }
+
+  async callLLM(prompt: LLMPrompt): Promise<string> {
+    try {
+      const debugLog = (msg: string) => logAiDebug('AnthropicProvider', msg);
+
+      debugLog('callLLM called');
+      debugLog(`Model: ${this.model}`);
+      debugLog(`Base URL: ${this.baseUrl}`);
+      debugLog(`System prompt length: ${prompt.system.length}`);
+      debugLog(`User prompt length: ${prompt.user.length}`);
+      const response = await this.client.messages.create({
+        model: this.model,
+        max_tokens: 4096,
+        system: prompt.system,
+        messages: [{ role: 'user', content: prompt.user }],
+      });
+
+      const textBlock = response.content.find((block) => block.type === 'text');
+      if (!textBlock || textBlock.type !== 'text' || !textBlock.text) {
+        throw new AiProviderError('No text content in Anthropic response');
+      }
+
+      debugLog(`Response received, length: ${textBlock.text.length}`);
+      return textBlock.text;
     } catch (error) {
       if (error instanceof AiProviderError) {
         throw error;
@@ -222,10 +280,7 @@ class OpenAiProvider implements AiProvider {
   private readonly client: OpenAiClient;
   private readonly model: string;
 
-  constructor(
-    config: AiProviderConfig,
-    client?: OpenAiClient
-  ) {
+  constructor(config: AiProviderConfig, client?: OpenAiClient) {
     if (client) {
       this.client = client;
     } else {
@@ -237,7 +292,10 @@ class OpenAiProvider implements AiProvider {
     this.model = config.model ?? 'gpt-4o';
   }
 
-  async classifyEmails(filterDescription: string, emails: EmailMetadata[]): Promise<EmailClassification[]> {
+  async classifyEmails(
+    filterDescription: string,
+    emails: EmailMetadata[]
+  ): Promise<EmailClassification[]> {
     const { system, user } = buildClassificationPrompt(filterDescription, emails);
 
     try {
@@ -256,6 +314,41 @@ class OpenAiProvider implements AiProvider {
       }
 
       return this.parseResponse(content);
+    } catch (error) {
+      if (error instanceof AiProviderError) {
+        throw error;
+      }
+      const message = error instanceof Error ? error.message : 'Unknown OpenAI API error';
+      throw new AiProviderError(`OpenAI API error: ${message}`);
+    }
+  }
+
+  async callLLM(prompt: LLMPrompt): Promise<string> {
+    const debugLog = (msg: string) => logAiDebug('OpenAiProvider', msg);
+
+    debugLog('callLLM called');
+    debugLog(`Model: ${this.model}`);
+
+    debugLog(`System prompt length: ${prompt.system.length}`);
+    debugLog(`User prompt length: ${prompt.user.length}`);
+
+    try {
+      const response = await this.client.chat.completions.create({
+        model: this.model,
+        messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user },
+        ],
+        max_tokens: 4096,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new AiProviderError('No content in OpenAI response');
+      }
+
+      debugLog(`Response received, length: ${content.length}`);
+      return content;
     } catch (error) {
       if (error instanceof AiProviderError) {
         throw error;

@@ -10,10 +10,20 @@
 import { renderApp } from './app.js';
 import { loadEnvFile } from '../core/config/env.js';
 import { parseAuthorizationCode } from './parse-auth-code.js';
+import { logAiDebug } from '../core/logging/ai-debug-log.js';
 
 export { renderApp };
 
 loadEnvFile();
+
+function logAiStartupConfig(): void {
+  const provider = process.env.AI_PROVIDER?.trim() || '(not set)';
+  const model = process.env.AI_MODEL?.trim() || '(default)';
+  const baseUrl = process.env.AI_BASE_URL?.trim() || '(provider default)';
+  logAiDebug('Startup', `AI config: provider=${provider}, model=${model}, baseUrl=${baseUrl}`);
+}
+
+logAiStartupConfig();
 
 function printUsage(): void {
   console.log(`Usage: gmail-sweep [command]

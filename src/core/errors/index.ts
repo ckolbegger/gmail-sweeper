@@ -79,4 +79,16 @@ export class AiProviderError extends GmailSweepError {
     super(message, cause);
     this.name = 'AiProviderError';
   }
+
 }
+
+/**
+ * Summary generation errors
+ */
+export class SummaryGenerationError extends GmailSweepError {
+  constructor(message: string, cause?: Error) {
+    super(message, cause);
+    this.name = 'SummaryGenerationError';
+  }
+}
+

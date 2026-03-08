@@ -29,6 +29,7 @@ export const EmailSchema = z.object({
   snippet: z.string(),
   historyId: z.string(),
   syncedAt: z.date(),
+  summary: z.string().optional(),
 });
 
 // Label Color Schema

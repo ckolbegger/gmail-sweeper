@@ -32,8 +32,8 @@ export class EmailRepository {
         INSERT OR REPLACE INTO emails (
           id, thread_id, subject, sender_name, sender_email,
           recipients, cc, bcc, date_received, body_text, body_html,
-          labels, is_read, category, snippet, history_id, synced_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          labels, is_read, category, snippet, history_id, synced_at, summary
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       const recipientsJson = JSON.stringify(email.recipients);
@@ -61,7 +61,8 @@ export class EmailRepository {
         email.category || null,
         email.snippet,
         email.historyId,
-        syncedAt
+        syncedAt,
+        email.summary || null
       );
     } catch (error) {
       throw new GmailError('INVALID_REQUEST', 'Failed to save email', error as Error);
@@ -170,6 +171,7 @@ export class EmailRepository {
       snippet: row.snippet,
       historyId: row.history_id,
       syncedAt: new Date(row.synced_at),
+      summary: row.summary,
     };
   }
 }

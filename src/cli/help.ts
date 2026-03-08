@@ -23,7 +23,6 @@ export const HELP_SECTIONS: HelpSection[] = [
     title: 'Sorting',
     commands: [
       { key: 'd', description: 'Sort by date' },
-      { key: 's', description: 'Sort by sender' },
       { key: 'u', description: 'Sort by subject' },
       { key: 'b', description: 'Sort by label' },
       { key: 'g', description: 'Sort by category' },
@@ -46,6 +45,22 @@ export const HELP_SECTIONS: HelpSection[] = [
       { key: 'Enter', description: 'Apply current filter text' },
       { key: 'Esc', description: 'Cancel filter text input' },
       { key: 'Backspace', description: 'Delete previous character' },
+    ],
+  },
+  {
+    title: 'Email Detail View',
+    commands: [
+      { key: 's', description: 'Toggle AI summary / full email' },
+      { key: 'u / U', description: 'Cycle through URLs (next/previous)' },
+      { key: 'c', description: 'Copy selected URL to clipboard' },
+      { key: 'o', description: 'Open selected URL in browser' },
+    ],
+  },
+  {
+    title: 'Actions',
+    commands: [
+      { key: 'e', description: 'Archive selected email' },
+      { key: '#', description: 'Delete selected email (move to trash)' },
     ],
   },
 ];
