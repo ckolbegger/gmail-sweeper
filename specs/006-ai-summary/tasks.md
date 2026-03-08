@@ -246,5 +246,5 @@ Refactoring tasks to improve the AI Summary feature after initial implementation
 - [x] R005: Summary view only shows after generation
 - [x] R006: No inline type imports
 - [x] R007: Shared provider utility with tests
-- [ ] R008: useAISummary has ≥7 unit tests
+- [x] R008: useAISummary has ≥7 unit tests
 - [ ] R009: buildSummaryPrompt has ≥5 unit tests
