@@ -18,16 +18,16 @@ export class AnthropicProvider implements AiProvider {
     const message = await this.client.messages.create({
       model: this.config.model,
       max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [
+        { role: 'user', content: prompt },
+        { role: 'assistant', content: '{' }
+      ],
     });
 
-    const text = (message.content[0] as any).text;
+    const text = '{' + (message.content[0] as any).text;
 
     try {
-      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/(\{[\s\S]*\})/);
-      const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
-      
-      const parsed = JSON.parse(jsonStr);
+      const parsed = JSON.parse(text);
       return {
         summary: {
           ...parsed.summary,
@@ -46,16 +46,16 @@ export class AnthropicProvider implements AiProvider {
     const message = await this.client.messages.create({
       model: this.config.model,
       max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [
+        { role: 'user', content: prompt },
+        { role: 'assistant', content: '{' }
+      ],
     });
 
-    const text = (message.content[0] as any).text;
+    const text = '{' + (message.content[0] as any).text;
 
     try {
-      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/(\{[\s\S]*\})/);
-      const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
-      
-      return JSON.parse(jsonStr) as ClassifyEmailsResponse;
+      return JSON.parse(text) as ClassifyEmailsResponse;
     } catch (error) {
       throw new Error(`Failed to parse Anthropic response as JSON: ${text}`);
     }

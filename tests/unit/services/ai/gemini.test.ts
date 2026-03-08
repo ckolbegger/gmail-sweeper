@@ -71,7 +71,12 @@ describe('GeminiProvider', () => {
       confidence: 0.9,
       reasoning: 'Matches description'
     });
-    expect(mockGetGenerativeModel).toHaveBeenCalledWith({ model: 'gemini-pro' });
+    expect(mockGetGenerativeModel).toHaveBeenCalledWith({ 
+      model: 'gemini-pro',
+      generationConfig: {
+        responseMimeType: "application/json"
+      }
+    });
   });
 
   it('should handle API errors', async () => {

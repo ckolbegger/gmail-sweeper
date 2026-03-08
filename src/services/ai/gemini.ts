@@ -10,7 +10,12 @@ export class GeminiProvider implements AiProvider {
   }
 
   async summarizeEmail(request: SummarizeEmailRequest): Promise<SummarizeEmailResponse> {
-    const model = this.genAI.getGenerativeModel({ model: this.config.model });
+    const model = this.genAI.getGenerativeModel({ 
+      model: this.config.model,
+      generationConfig: {
+        responseMimeType: "application/json"
+      }
+    });
     const prompt = buildSummaryPrompt(request.content);
 
     const result = await model.generateContent(prompt);
@@ -18,11 +23,7 @@ export class GeminiProvider implements AiProvider {
     const text = response.text();
 
     try {
-      // Extract JSON from response
-      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/(\{[\s\S]*\})/);
-      const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
-      
-      const parsed = JSON.parse(jsonStr);
+      const parsed = JSON.parse(text);
       
       // Inject emailId and createdAt to the returned summary
       return {
@@ -38,7 +39,12 @@ export class GeminiProvider implements AiProvider {
   }
 
   async classifyEmails(request: ClassifyEmailsRequest): Promise<ClassifyEmailsResponse> {
-    const model = this.genAI.getGenerativeModel({ model: this.config.model });
+    const model = this.genAI.getGenerativeModel({ 
+      model: this.config.model,
+      generationConfig: {
+        responseMimeType: "application/json"
+      }
+    });
     const prompt = buildClassificationPrompt(request.filterDescription, request.emails);
 
     const result = await model.generateContent(prompt);
@@ -46,11 +52,7 @@ export class GeminiProvider implements AiProvider {
     const text = response.text();
 
     try {
-      // Extract JSON from response (handling potential markdown formatting)
-      const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/(\{[\s\S]*\})/);
-      const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
-      
-      return JSON.parse(jsonStr) as ClassifyEmailsResponse;
+      return JSON.parse(text) as ClassifyEmailsResponse;
     } catch (error) {
       throw new Error(`Failed to parse AI response as JSON: ${text}`);
     }

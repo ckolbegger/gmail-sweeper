@@ -19,16 +19,15 @@ describe('AnthropicProvider', () => {
 
   it('should classify emails successfully', async () => {
     const mockCreate = vi.fn().mockResolvedValue({
-      content: [{ text: JSON.stringify({
-        results: [
+      content: [{ text: `"results": [
           {
-            emailId: '1',
-            matches: true,
-            confidence: 0.9,
-            reasoning: 'Match'
+            "emailId": "1",
+            "matches": true,
+            "confidence": 0.9,
+            "reasoning": "Match"
           }
         ]
-      }) }]
+      }` }]
     });
 
     vi.mocked(Anthropic).mockImplementation(function() {
@@ -51,18 +50,20 @@ describe('AnthropicProvider', () => {
     expect(response.results).toHaveLength(1);
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
       model: 'claude-3-haiku',
-      messages: [expect.objectContaining({ role: 'user' })]
+      messages: [
+        expect.objectContaining({ role: 'user' }),
+        expect.objectContaining({ role: 'assistant', content: '{' })
+      ]
     }));
   });
 
   it('should summarize emails successfully', async () => {
     const mockCreate = vi.fn().mockResolvedValue({
-      content: [{ text: JSON.stringify({
-        summary: {
-          description: 'Anthropic summary test.',
-          actionItems: ['Read spec']
+      content: [{ text: `"summary": {
+          "description": "Anthropic summary test.",
+          "actionItems": ["Read spec"]
         }
-      }) }]
+      }` }]
     });
 
     vi.mocked(Anthropic).mockImplementation(function() {
