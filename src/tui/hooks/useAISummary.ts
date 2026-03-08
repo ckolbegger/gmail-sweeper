@@ -7,6 +7,7 @@ import type { Email, EmailSummary } from '../../core/models/index.js';
 import type { EmailCache } from '../../core/cache/db.js';
 import { resolveAiConfig } from '../../core/ai/config.js';
 import { createAiProvider } from '../../core/ai/provider.js';
+import { createProviderConfig } from '../../core/ai/provider-utils.js';
 import { convertHtmlToText } from '../../core/rendering/index.js';
 
 export type SummaryState = 'idle' | 'loading' | 'success' | 'error';
@@ -51,22 +52,7 @@ export function useAISummary({ cache }: UseAISummaryOptions = {}): UseAISummaryR
       setSummaryError(null);
 
       try {
-        const providerConfig: {
-          provider: 'anthropic' | 'openai';
-          model: string;
-          apiKey: string;
-          maxContextTokens: number;
-          baseUrl?: string;
-        } = {
-          provider: config.provider,
-          model: config.model,
-          apiKey: config.apiKey,
-          maxContextTokens: config.maxContextTokens,
-        };
-        if (config.baseUrl) {
-          providerConfig.baseUrl = config.baseUrl;
-        }
-        const provider = createAiProvider(providerConfig);
+        const provider = createAiProvider(createProviderConfig(config));
 
         let body = email.bodyText || '';
         if (!body && email.bodyHtml) {
