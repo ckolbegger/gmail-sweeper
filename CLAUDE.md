@@ -28,8 +28,8 @@ src/
     models/index.ts # extended: EmailSummary interface
   tui/
     index.tsx       # extended: instantiates PrecomputeWorker on startup (007)
-    app.tsx         # extended: passes worker prop, wires onEmailsFetched (007)
-    hooks/useEmailSummary.ts   # idle/loading/ready/error state machine
+    app.tsx         # extended: worker prop, onEmailsFetched, cache check on navigation (007, B002)
+    hooks/useEmailSummary.ts   # extended: initialSummary option → ready state (B001)
     hooks/useGmail.ts          # extended: onEmailsFetched callback on loadMore (007)
     components/EmailPreview.tsx # extended: viewMode + summaryState props
 tests/
@@ -51,6 +51,8 @@ npm test && npm run lint
 TypeScript 5.4 (strict mode, ES2022 target, ESM): Follow standard conventions
 
 ## Recent Changes
+- B002: app.tsx checks cache.getSummary() on navigation; opens in summary view if cached, full-detail if not
+- B001: useEmailSummary accepts initialSummary to initialise directly into ready state (no redundant AI call)
 - 007-summary-precompute: Added TypeScript 5.4, strict mode, ESM (`"module": "NodeNext"`) + `@anthropic-ai/sdk` / `openai` (existing), `sql.js` (existing), Ink 4.0 + React 18 (TUI, existing)
 - 006-claude-ai-summary: Added TypeScript 5.4, strict mode, ESM (`"module": "NodeNext"`) + Ink 4.0, React 18, ink-testing-library 3.0, @anthropic-ai/sdk (existing), openai (existing)
 - 004-claude-email-actions: Added TypeScript 5.4, strict mode, ESM (`"module": "NodeNext"`) + Ink 4.0, React 18, ink-testing-library 3.0, googleapis 130
