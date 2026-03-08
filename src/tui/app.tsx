@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Box, Text, useStdout } from 'ink';
 import type { GmailClient } from '../core/gmail/client.js';
 import type { EmailCache } from '../core/cache/db.js';
+import type { Email, EmailSummary } from '../core/models/index.js';
 import { EmailList } from './components/EmailList.js';
 import { EmailPreview } from './components/EmailPreview.js';
 import { FilterInput } from './components/FilterInput.js';
@@ -25,16 +26,14 @@ export function InboxApp({ client, cache }: AppProps) {
   const { emails, isLoading, error, fetchEmailDetail, refresh } = useGmail({ client, cache });
   const [removedEmailIds, setRemovedEmailIds] = useState<Set<string>>(new Set());
   const [showSummary, setShowSummary] = useState(false);
-  const [summaries, setSummaries] = useState<
-    Map<string, import('../core/models/index.js').EmailSummary>
-  >(new Map());
+  const [summaries, setSummaries] = useState<Map<string, EmailSummary>>(new Map());
   const lastFetchedId = useRef<string | null>(null);
   const { stdout } = useStdout();
   const terminalHeight = stdout?.rows ?? 24;
 
   const { generateSummary, summaryState, abortGeneration } = useAISummary({ cache });
 
-  const selectedEmailRef = useRef<import('../core/models/index.js').Email | null>(null);
+  const selectedEmailRef = useRef<Email | null>(null);
 
   const toggleSummary = useCallback(async () => {
     const currentEmail = selectedEmailRef.current;

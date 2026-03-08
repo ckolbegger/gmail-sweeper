@@ -244,7 +244,7 @@ Refactoring tasks to improve the AI Summary feature after initial implementation
 - [x] R003: HTML emails are properly summarized
 - [x] R004: No race conditions on email navigation
 - [x] R005: Summary view only shows after generation
-- [ ] R006: No inline type imports
+- [x] R006: No inline type imports
 - [ ] R007: Shared provider utility with tests
 - [ ] R008: useAISummary has ≥7 unit tests
 - [ ] R009: buildSummaryPrompt has ≥5 unit tests
