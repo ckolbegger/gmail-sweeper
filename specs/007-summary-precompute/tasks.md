@@ -135,7 +135,7 @@
 
 **Depends on**: B001-T001 ✅ (already complete)
 
-- [ ] B002-T001 In `app.tsx`, replace the unconditional `setDetailViewMode('full')` reset in the selected-email `useEffect` with a cache check: call `cache.getSummary(selectedEmail.id)` synchronously; if a summary is returned, call `setDetailViewMode('summary')` and store the summary in a new `initialSummary` state variable; if null, call `setDetailViewMode('full')` and set `initialSummary` to `undefined`; pass `initialSummary` to `useEmailSummary`; write and pass tests covering: navigating to an email with a cached summary opens in summary view, navigating to an email with no cached summary opens in full-detail view, navigating between emails resets correctly in both directions
+- [x] B002-T001 In `app.tsx`, replace the unconditional `setDetailViewMode('full')` reset in the selected-email `useEffect` with a cache check: call `cache.getSummary(selectedEmail.id)` synchronously; if a summary is returned, call `setDetailViewMode('summary')` and store the summary in a new `initialSummary` state variable; if null, call `setDetailViewMode('full')` and set `initialSummary` to `undefined`; pass `initialSummary` to `useEmailSummary`; write and pass tests covering: navigating to an email with a cached summary opens in summary view, navigating to an email with no cached summary opens in full-detail view, navigating between emails resets correctly in both directions
 
 ---
 

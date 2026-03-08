@@ -17,6 +17,7 @@ import { useEmailActions } from './hooks/useEmailActions.js';
 import { useEmailSummary } from './hooks/useEmailSummary.js';
 import { resolveAiConfig } from '../core/ai/config.js';
 import type { PrecomputeWorker } from '../core/summary/precompute-worker.js';
+import type { EmailSummary } from '../core/models/index.js';
 
 interface AppProps {
   client: GmailClient;
@@ -36,8 +37,13 @@ export function InboxApp({ client, cache, worker, maxEmails, maxContextTokens: _
   const smartFilter = useSmartFilter({ emails });
   const lastFetchedId = useRef<string | null>(null);
   const [detailViewMode, setDetailViewMode] = useState<DetailViewMode>('full');
+  const [initialSummary, setInitialSummary] = useState<EmailSummary | undefined>(undefined);
   const aiConfig = useMemo(() => resolveAiConfig(), []);
-  const { summaryState, requestSummary: requestEmailSummary, reset: resetEmailSummary } = useEmailSummary({ cache, aiConfig });
+  const { summaryState, requestSummary: requestEmailSummary, reset: resetEmailSummary } = useEmailSummary({
+    cache,
+    aiConfig,
+    ...(initialSummary !== undefined ? { initialSummary } : {}),
+  });
   const { stdout } = useStdout();
   const terminalHeight = stdout?.rows ?? 24;
   // Reserve 4 lines for header + footer + filter input + loading indicator
@@ -104,10 +110,24 @@ export function InboxApp({ client, cache, worker, maxEmails, maxContextTokens: _
   }, [selectedEmail, fetchEmailDetail]);
 
   // Reset summary state when selected email changes (T008)
+  // If a cached summary exists, open in summary view with it pre-loaded.
   useEffect(() => {
-    setDetailViewMode('full');
+    if (!selectedEmail) {
+      setDetailViewMode('full');
+      setInitialSummary(undefined);
+      resetEmailSummary();
+      return;
+    }
+    const cached = cache.getSummary(selectedEmail.id);
+    if (cached) {
+      setDetailViewMode('summary');
+      setInitialSummary(cached);
+    } else {
+      setDetailViewMode('full');
+      setInitialSummary(undefined);
+    }
     resetEmailSummary();
-  }, [selectedEmail?.id, resetEmailSummary]);
+  }, [selectedEmail?.id, cache, resetEmailSummary]);
 
   // T050: Loading state
   if (isLoading && emails.length === 0) {
