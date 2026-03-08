@@ -11,6 +11,11 @@ export interface RunInkSessionOptions {
   listLines: string[];
   messageIds: string[];
   fetchDetailLines: (messageId: string) => Promise<string[]>;
+  fetchDetailData?: (messageId: string) => Promise<{
+    subject: string;
+    sender: string;
+    body: string;
+  }>;
   archiveEmail?: (messageId: string) => Promise<void>;
   deleteEmail?: (messageId: string) => Promise<void>;
   emails?: Email[];
@@ -56,6 +61,7 @@ function defaultCreateRenderer(options: RunInkSessionOptions): InkRendererInstan
       listLines: options.listLines,
       messageIds: options.messageIds,
       fetchDetailLines: options.fetchDetailLines,
+      fetchDetailData: options.fetchDetailData,
       archiveEmail: options.archiveEmail,
       deleteEmail: options.deleteEmail,
       emails: options.emails,
@@ -90,6 +96,7 @@ async function runScriptedInkSession(options: RunInkSessionOptions): Promise<voi
     state = await applyTuiCommand(state, parseCommandToken(token), {
       messageIds: options.messageIds,
       fetchDetailLines: options.fetchDetailLines,
+      fetchDetailData: options.fetchDetailData,
       archiveEmail: options.archiveEmail,
       deleteEmail: options.deleteEmail,
       emails: options.emails,

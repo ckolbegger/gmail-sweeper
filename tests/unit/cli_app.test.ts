@@ -130,6 +130,13 @@ describe('CLI inbox workflow', () => {
 
     const preview = await session.fetchDetailLines('msg-2');
     expect(preview.join('\n')).toContain('Second body');
+    const rawDetail = await session.fetchDetailData('msg-2');
+    expect(rawDetail).toEqual({
+      subject: 'Second',
+      sender: 'second@example.com',
+      body: 'Second body'
+    });
+    expect(getEmailDetail).toHaveBeenCalledTimes(1);
     expect(getEmailDetail).toHaveBeenCalledWith(expect.anything(), 'msg-2', { userId: 'me' });
   });
 

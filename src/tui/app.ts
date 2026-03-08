@@ -26,6 +26,11 @@ const DEFAULT_VIEWPORT_ROWS = 25;
 export interface TuiCommandDeps {
   messageIds: string[];
   fetchDetailLines: (messageId: string) => Promise<string[]>;
+  fetchDetailData?: (messageId: string) => Promise<{
+    subject: string;
+    sender: string;
+    body: string;
+  }>;
   archiveEmail?: (messageId: string) => Promise<void>;
   deleteEmail?: (messageId: string) => Promise<void>;
   emails?: Email[];
@@ -50,6 +55,11 @@ interface DetailSummaryUiState {
   mode: 'full' | 'loading_summary' | 'summary';
   messageId?: string;
   fullLines: string[];
+  rawDetail?: {
+    subject: string;
+    sender: string;
+    body: string;
+  };
   summaryLines: string[];
   requestId: number;
   errorMessage?: string;
@@ -124,26 +134,10 @@ function createDetailSummaryUiState(): DetailSummaryUiState {
     mode: 'full',
     messageId: undefined,
     fullLines: [],
+    rawDetail: undefined,
     summaryLines: [],
     requestId: 0,
     errorMessage: undefined
-  };
-}
-
-function parseSummaryInputFromDetailLines(detailLines: string[]): {
-  subject: string;
-  sender: string;
-  body: string;
-} {
-  const subjectLine = detailLines.find((line) => line.startsWith('Subject: ')) ?? '';
-  const senderLine = detailLines.find((line) => line.startsWith('From: ')) ?? '';
-  const bodyStart = detailLines.findIndex((line) => line.length === 0);
-  const bodyLines = bodyStart >= 0 ? detailLines.slice(bodyStart + 1) : detailLines;
-
-  return {
-    subject: subjectLine.replace(/^Subject:\s*/, '').trim(),
-    sender: senderLine.replace(/^From:\s*/, '').trim(),
-    body: bodyLines.join('\n').trim()
   };
 }
 
@@ -474,6 +468,13 @@ async function applySummaryToggle(state: TuiAppState, deps: TuiCommandDeps): Pro
 
   const requestId = state.detailSummary.requestId + 1;
   const fullLines = state.detailSummary.messageId === messageId ? state.detailSummary.fullLines : state.detailLines;
+  const rawDetail = state.detailSummary.messageId === messageId ? state.detailSummary.rawDetail : undefined;
+  if (!rawDetail) {
+    return {
+      ...state,
+      statusLine: '(error) Raw email detail unavailable for summary generation.'
+    };
+  }
   const loadingState: TuiAppState = {
     ...state,
     statusLine: 'Generating AI summary...',
@@ -481,6 +482,7 @@ async function applySummaryToggle(state: TuiAppState, deps: TuiCommandDeps): Pro
       mode: 'loading_summary',
       messageId,
       fullLines,
+      rawDetail,
       summaryLines: [],
       requestId,
       errorMessage: undefined
@@ -489,12 +491,11 @@ async function applySummaryToggle(state: TuiAppState, deps: TuiCommandDeps): Pro
   deps.onStateUpdate?.(loadingState);
 
   try {
-    const summaryInput = parseSummaryInputFromDetailLines(fullLines);
     const result = await deps.summaryService.getOrGenerateSummary({
       messageId,
-      subject: summaryInput.subject,
-      sender: summaryInput.sender,
-      body: summaryInput.body
+      subject: rawDetail.subject,
+      sender: rawDetail.sender,
+      body: rawDetail.body
     });
 
     return {
@@ -631,7 +632,10 @@ export async function applyTuiCommand(
       }
 
       try {
-        const detailLines = await deps.fetchDetailLines(messageId);
+        const [detailLines, rawDetail] = await Promise.all([
+          deps.fetchDetailLines(messageId),
+          deps.fetchDetailData?.(messageId)
+        ]);
         return {
           ...state,
           navigation: openDetailView(state.navigation, messageId),
@@ -641,6 +645,7 @@ export async function applyTuiCommand(
             mode: 'full',
             messageId,
             fullLines: detailLines,
+            rawDetail,
             summaryLines: [],
             requestId: state.detailSummary.requestId + 1,
             errorMessage: undefined
@@ -749,6 +754,7 @@ export function InkInboxApp(props: InkInboxAppProps): unknown {
     () => ({
       messageIds: props.messageIds,
       fetchDetailLines: props.fetchDetailLines,
+      fetchDetailData: props.fetchDetailData,
       archiveEmail: props.archiveEmail,
       deleteEmail: props.deleteEmail,
       emails: props.emails,
@@ -766,6 +772,7 @@ export function InkInboxApp(props: InkInboxAppProps): unknown {
       props.deleteEmail,
       props.emails,
       props.fetchDetailLines,
+      props.fetchDetailData,
       props.messageIds,
       props.provider,
       props.summaryService,

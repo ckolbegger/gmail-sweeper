@@ -100,6 +100,11 @@ describe('tui app smart filter progress', () => {
     let state = createTuiAppState(1);
     state = await applyTuiCommand(state, 'open', {
       messageIds: ['msg-1'],
+      fetchDetailData: async () => ({
+        subject: 'Summary progress',
+        sender: 'sender@example.com',
+        body: 'RAW body text'
+      }),
       fetchDetailLines: async () => [
         'Detail View',
         'Message: msg-1',

@@ -4,6 +4,12 @@ import { createPersistedSummaryFixture } from './fixtures/ai_summary.fixtures.js
 
 import { applyTuiCommand, createTuiAppState, renderTuiScreen } from '@/tui/app.js';
 
+const RAW_DETAIL = {
+  subject: 'Follow up needed',
+  sender: 'lead@example.com',
+  body: 'RAW: Please send an update by Friday.'
+};
+
 describe('ink app root state container', () => {
   it('should render inbox list with selected row highlight', () => {
     const state = createTuiAppState(2);
@@ -169,21 +175,29 @@ describe('ink app root state container', () => {
     state = await applyTuiCommand(state, 'open', {
       messageIds: ['msg-1'],
       fetchDetailLines,
+      fetchDetailData: async () => RAW_DETAIL,
       summaryService
     });
     state = await applyTuiCommand(state, 'summary', {
       messageIds: ['msg-1'],
       fetchDetailLines,
+      fetchDetailData: async () => RAW_DETAIL,
       summaryService
     });
 
     expect(state.detailSummary.mode).toBe('summary');
     expect(renderTuiScreen(['First'], state).join('\n')).toContain('- Send an update by Friday');
     expect(summaryService.getOrGenerateSummary).toHaveBeenCalledOnce();
+    expect(summaryService.getOrGenerateSummary).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: 'RAW: Please send an update by Friday.'
+      })
+    );
 
     state = await applyTuiCommand(state, 'summary', {
       messageIds: ['msg-1'],
       fetchDetailLines,
+      fetchDetailData: async () => RAW_DETAIL,
       summaryService
     });
     expect(state.detailSummary.mode).toBe('full');
@@ -212,6 +226,7 @@ describe('ink app root state container', () => {
     state = await applyTuiCommand(state, 'open', {
       messageIds: ['msg-1'],
       fetchDetailLines,
+      fetchDetailData: async () => RAW_DETAIL,
       summaryService
     });
 
@@ -221,6 +236,7 @@ describe('ink app root state container', () => {
       {
         messageIds: ['msg-1'],
         fetchDetailLines,
+        fetchDetailData: async () => RAW_DETAIL,
         summaryService,
         onStateUpdate
       },
@@ -233,6 +249,7 @@ describe('ink app root state container', () => {
     const next = await applyTuiCommand(loadingState, 'summary', {
       messageIds: ['msg-1'],
       fetchDetailLines,
+      fetchDetailData: async () => RAW_DETAIL,
       summaryService
     });
     expect(next).toBe(loadingState);
@@ -257,11 +274,13 @@ describe('ink app root state container', () => {
     state = await applyTuiCommand(state, 'open', {
       messageIds: ['msg-1'],
       fetchDetailLines,
+      fetchDetailData: async () => RAW_DETAIL,
       summaryService
     });
     state = await applyTuiCommand(state, 'summary', {
       messageIds: ['msg-1'],
       fetchDetailLines,
+      fetchDetailData: async () => RAW_DETAIL,
       summaryService
     });
 
@@ -307,6 +326,18 @@ describe('ink app root state container', () => {
         '',
         'Second body'
       ]);
+    const fetchDetailData = vi
+      .fn()
+      .mockResolvedValueOnce({
+        subject: 'First subject',
+        sender: 'first@example.com',
+        body: 'RAW FIRST BODY'
+      })
+      .mockResolvedValueOnce({
+        subject: 'Second subject',
+        sender: 'second@example.com',
+        body: 'RAW SECOND BODY'
+      });
     const run = deferred();
     const summaryService = {
       getOrGenerateSummary: vi.fn().mockReturnValue(run.promise)
@@ -316,12 +347,14 @@ describe('ink app root state container', () => {
     state = await applyTuiCommand(state, 'open', {
       messageIds: ['msg-1', 'msg-2'],
       fetchDetailLines,
+      fetchDetailData,
       summaryService
     });
 
     const pendingSummary = applyTuiCommand(state, 'summary', {
       messageIds: ['msg-1', 'msg-2'],
       fetchDetailLines,
+      fetchDetailData,
       summaryService,
       onStateUpdate
     });
@@ -330,16 +363,19 @@ describe('ink app root state container', () => {
     state = await applyTuiCommand(state, 'back', {
       messageIds: ['msg-1', 'msg-2'],
       fetchDetailLines,
+      fetchDetailData,
       summaryService
     });
     state = await applyTuiCommand(state, 'down', {
       messageIds: ['msg-1', 'msg-2'],
       fetchDetailLines,
+      fetchDetailData,
       summaryService
     });
     state = await applyTuiCommand(state, 'open', {
       messageIds: ['msg-1', 'msg-2'],
       fetchDetailLines,
+      fetchDetailData,
       summaryService
     });
 

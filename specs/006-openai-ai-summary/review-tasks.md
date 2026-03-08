@@ -6,7 +6,7 @@
   - Drop invalid summary entries while preserving valid records.
   - Rewrite healed store content automatically.
 
-- [ ] R002 Use raw email detail data (not rendered lines) for summary generation in `src/tui/app.ts` and runtime wiring.
+- [X] R002 Use raw email detail data (not rendered lines) for summary generation in `src/tui/app.ts` and runtime wiring.
   - Carry structured detail payload (`subject`, `sender`, raw `body`) in detail state.
   - Call `summaryService.getOrGenerateSummary` from raw detail fields only.
   - Remove/retire parsing from formatted UI lines.

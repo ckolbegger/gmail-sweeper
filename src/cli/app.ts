@@ -2,7 +2,7 @@ import { google } from 'googleapis';
 
 import { createAiProvider, isSummaryProvider } from '@/adapters/ai/provider.js';
 import { createAuthUrl, createGmailClient } from '@/adapters/gmail/client.js';
-import { getEmailDetail, type GmailDetailClientLike } from '@/adapters/gmail/get_email.js';
+import { getEmailDetail, type EmailDetail, type GmailDetailClientLike } from '@/adapters/gmail/get_email.js';
 import { listInboxEmails, type GmailReadClientLike } from '@/adapters/gmail/list_emails.js';
 import {
   archiveEmail as archiveGmailEmail,
@@ -173,12 +173,45 @@ export async function runInboxCli(argv: string[], deps: CliDeps = {}): Promise<n
 
   writeLine(`Loaded ${emails.length} emails, showing ${visible.length}.`);
   if (options.interactive) {
+    const detailCache = new Map<string, EmailDetail>();
+    const pendingDetailLoads = new Map<string, Promise<EmailDetail>>();
+    const loadDetail = async (messageId: string): Promise<EmailDetail> => {
+      const cached = detailCache.get(messageId);
+      if (cached) {
+        return cached;
+      }
+
+      const pending = pendingDetailLoads.get(messageId);
+      if (pending) {
+        return pending;
+      }
+
+      const next = fetchEmailDetail(gmail, messageId, { userId: 'me' })
+        .then((detail) => {
+          detailCache.set(messageId, detail);
+          return detail;
+        })
+        .finally(() => {
+          pendingDetailLoads.delete(messageId);
+        });
+      pendingDetailLoads.set(messageId, next);
+      return next;
+    };
+
     await launchInkSession({
       listLines: lines,
       messageIds,
       fetchDetailLines: async (messageId) => {
-        const detail = await fetchEmailDetail(gmail, messageId, { userId: 'me' });
+        const detail = await loadDetail(messageId);
         return renderEmailPreview(detail, inferDetailPaneWidth());
+      },
+      fetchDetailData: async (messageId) => {
+        const detail = await loadDetail(messageId);
+        return {
+          subject: detail.subject,
+          sender: detail.sender,
+          body: detail.body
+        };
       },
       archiveEmail: async (messageId) => {
         await archiveGmailEmail(gmail, messageId, { userId: 'me' });
