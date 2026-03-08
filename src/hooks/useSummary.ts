@@ -25,7 +25,7 @@ export function useSummary(
     }, []);
 
     const generateSummary = useCallback(async () => {
-        if (!email || !aiProvider || !summaryStorage) {
+        if (!email || !aiProvider || !summaryStorage || isSummarizing) {
             return;
         }
 

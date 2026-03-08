@@ -95,4 +95,47 @@ describe('useSummary hook', () => {
         expect(results.error).toBe('LLM failed');
         expect(results.summary).toBeNull();
     });
+
+    it('should prevent concurrent API calls when already summarizing', async () => {
+        let results: any = null;
+        let generateFn: any = null;
+
+        // Make the mock promise not resolve immediately so we can trigger the concurrent call
+        let resolvePromise: any;
+        const delayedPromise = new Promise(resolve => {
+            resolvePromise = resolve;
+        });
+
+        mockAiProvider.summarizeEmail = vi.fn().mockImplementation(() => delayedPromise);
+
+        const TestComponent = () => {
+            const hook = useSummary(mockAiProvider, mockStorage, mockEmail);
+            results = hook;
+            generateFn = hook.generateSummary;
+            return null;
+        };
+
+        render(<TestComponent />);
+
+        // Call first time
+        generateFn();
+
+        await new Promise(resolve => setTimeout(resolve, 50));
+        expect(results.isSummarizing).toBe(true);
+
+        // Call second time while first is still pending
+        generateFn();
+
+        expect(mockAiProvider.summarizeEmail).toHaveBeenCalledTimes(1); // Should only be called once
+
+        // Resolve the promise to clean up
+        resolvePromise({
+            summary: {
+                emailId: 'test-email-1',
+                description: 'Mock desc',
+                actionItems: ['Task 1'],
+                createdAt: '2026-03-07T10:05:00Z'
+            }
+        });
+    });
 });

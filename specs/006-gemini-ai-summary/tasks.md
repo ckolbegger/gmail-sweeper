@@ -129,3 +129,21 @@ description: "Task list template for feature implementation"
 1. Deliver User Story 1: Generation works.
 2. Deliver User Story 2: Toggle works (UX improved).
 3. Deliver User Story 3: Caching works (Performance improved).
+
+---
+
+## Phase 5: Technical Debt & Refactoring
+
+**Purpose**: Address code review feedback and improve reliability and maintainability.
+
+### High Priority (Reliability & Bug Prevention)
+
+- [x] R001 [Refactor] Add an early return to `generateSummary` in `src/hooks/useSummary.ts` to prevent concurrent API calls if `isSummarizing` is true (write/update unit tests first).
+- [ ] R002 [Refactor] Implement an in-memory queue/mutex for atomic file writes in `src/services/storage/summaryStore.ts`. Ensure file writes write to a temporary file and use `fs.rename` to prevent corruption during concurrent accesses. Add unit tests in `tests/unit/services/storage/summaryStore.test.ts`.
+
+### Medium Priority (Refactoring & Robustness)
+
+- [ ] R003 [Refactor] Extract the summary UI logic from `src/components/Inbox/EmailDetail.tsx` into a new `src/components/Inbox/SummaryView.tsx` component.
+- [ ] R004 [Refactor] Update `SummaryView.tsx` to handle its own keyboard inputs (using `useInput` for toggling views and navigation when active).
+- [ ] R005 [Refactor] Add support for a "Force Regenerate" feature. Update `generateSummary` in `src/hooks/useSummary.ts` to accept an optional `force` flag that bypasses the cache. Update `SummaryView.tsx` to listen for the `S` (Shift+s) key to trigger `generateSummary(true)`. Add integration tests.
+- [ ] R006 [Refactor] Improve LLM JSON output reliability. Update `src/services/ai/gemini.ts` to natively enforce JSON response types (`responseMimeType: "application/json"`). Update `src/services/ai/anthropic.ts` to ensure strict JSON output (e.g., via forced prefill or tool use) instead of relying on regex stripping. Update corresponding unit tests.
