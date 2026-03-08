@@ -104,4 +104,27 @@ describe('summary store adapter', () => {
       )
     ).rejects.toThrow('Invalid summary record');
   });
+
+  it('should serialize parallel upserts without dropping records', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'gmail-sweeper-summary-'));
+    tempDirs.push(dir);
+    const filePath = join(dir, 'email-summaries.json');
+    const store = createSummaryStore(filePath);
+
+    const records = Array.from({ length: 20 }, (_, index) =>
+      createPersistedSummaryFixture({
+        messageId: `msg-${index + 1}`,
+        summarySentence: `Summary ${index + 1}.`
+      })
+    );
+
+    await Promise.all(records.map((record) => store.upsert(record)));
+
+    for (const record of records) {
+      await expect(store.getByMessageId(record.messageId)).resolves.toEqual(record);
+    }
+
+    const files = await readdir(dir);
+    expect(files.some((name) => name.includes('.tmp-'))).toBe(false);
+  });
 });

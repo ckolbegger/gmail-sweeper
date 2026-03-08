@@ -11,7 +11,7 @@
   - Call `summaryService.getOrGenerateSummary` from raw detail fields only.
   - Remove/retire parsing from formatted UI lines.
 
-- [ ] R003 Make summary store writes atomic and race-safe in `src/adapters/storage/summary_store.ts`.
+- [X] R003 Make summary store writes atomic and race-safe in `src/adapters/storage/summary_store.ts`.
   - Write via temp file + `rename`.
   - Introduce per-store write serialization to avoid read-modify-write races.
   - Add regression tests for interleaved writes.

@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
 import type { AiProviderConfig } from '@/adapters/ai/provider.js';
@@ -183,15 +183,41 @@ async function readDocument(filePath: string): Promise<SummaryStoreDocument> {
 
 async function writeDocument(filePath: string, document: SummaryStoreDocument): Promise<void> {
   await mkdir(dirname(filePath), { recursive: true });
-  await writeFile(filePath, JSON.stringify(document, null, 2), 'utf8');
+  const serialized = JSON.stringify(document, null, 2);
+  const tmpPath = `${filePath}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  await writeFile(tmpPath, serialized, 'utf8');
+
+  try {
+    await rename(tmpPath, filePath);
+  } catch (error) {
+    try {
+      await unlink(tmpPath);
+    } catch {
+      // Best effort temp cleanup.
+    }
+    throw error;
+  }
 }
 
 class FileSummaryStore implements SummaryStore {
+  private queue: Promise<void> = Promise.resolve();
+
   constructor(private readonly filePath: string) {}
 
+  private withLock<T>(fn: () => Promise<T>): Promise<T> {
+    const run = this.queue.then(fn, fn);
+    this.queue = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
+  }
+
   async getByMessageId(messageId: string): Promise<PersistedEmailSummary | null> {
-    const document = await readDocument(this.filePath);
-    return document.summariesByMessageId[messageId] ?? null;
+    return this.withLock(async () => {
+      const document = await readDocument(this.filePath);
+      return document.summariesByMessageId[messageId] ?? null;
+    });
   }
 
   async upsert(record: PersistedEmailSummary): Promise<void> {
@@ -199,15 +225,17 @@ class FileSummaryStore implements SummaryStore {
       throw new Error('Invalid summary record');
     }
 
-    const document = await readDocument(this.filePath);
-    const nextDocument: SummaryStoreDocument = {
-      ...document,
-      summariesByMessageId: {
-        ...document.summariesByMessageId,
-        [record.messageId]: record
-      }
-    };
-    await writeDocument(this.filePath, nextDocument);
+    await this.withLock(async () => {
+      const document = await readDocument(this.filePath);
+      const nextDocument: SummaryStoreDocument = {
+        ...document,
+        summariesByMessageId: {
+          ...document.summariesByMessageId,
+          [record.messageId]: record
+        }
+      };
+      await writeDocument(this.filePath, nextDocument);
+    });
   }
 }
 
