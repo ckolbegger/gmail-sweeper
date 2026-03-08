@@ -371,6 +371,88 @@ describe('PrecomputeWorker', () => {
   });
 });
 
+// ─── T007: MAXIMUM_DEPTH (SUMMARY_PRECOMPUTE_MAX_DEPTH) boundary tests ──────
+
+describe('MAXIMUM_DEPTH (SUMMARY_PRECOMPUTE_MAX_DEPTH) boundary', () => {
+  afterEach(() => {
+    delete process.env['SUMMARY_PRECOMPUTE_LIMIT'];
+    delete process.env['SUMMARY_PRECOMPUTE_MAX_DEPTH'];
+  });
+
+  it('maxDepth=2 wins over coverageLimit=5 — worker fetches exactly 2 emails', async () => {
+    const config: PrecomputeConfig = { coverageLimit: 5, maxDepth: 2 };
+    const cache = makeCache([makeEmail('e1'), makeEmail('e2')]);
+    const service = makeService();
+    const worker = new PrecomputeWorker(cache as any, service as any, config);
+
+    worker.start();
+    await new Promise(r => setTimeout(r, 50));
+    worker.stop();
+
+    // effectiveDepth = min(5, 2) = 2
+    expect(cache.getEmails).toHaveBeenCalledWith({ sortBy: 'date', sortDesc: true, limit: 2 });
+  });
+
+  it('coverageLimit=5 wins over maxDepth=10 — worker fetches exactly 5 emails', async () => {
+    const config: PrecomputeConfig = { coverageLimit: 5, maxDepth: 10 };
+    const cache = makeCache([]);
+    const service = makeService();
+    const worker = new PrecomputeWorker(cache as any, service as any, config);
+
+    worker.start();
+    await new Promise(r => setTimeout(r, 50));
+    worker.stop();
+
+    // effectiveDepth = min(5, 10) = 5
+    expect(cache.getEmails).toHaveBeenCalledWith({ sortBy: 'date', sortDesc: true, limit: 5 });
+  });
+
+  it('SUMMARY_PRECOMPUTE_MAX_DEPTH unset → readPrecomputeConfig returns maxDepth=500', () => {
+    delete process.env['SUMMARY_PRECOMPUTE_MAX_DEPTH'];
+    const config = readPrecomputeConfig();
+    expect(config.maxDepth).toBe(500);
+  });
+
+  it('SUMMARY_PRECOMPUTE_MAX_DEPTH=500 → readPrecomputeConfig returns maxDepth=500', () => {
+    process.env['SUMMARY_PRECOMPUTE_MAX_DEPTH'] = '500';
+    const config = readPrecomputeConfig();
+    expect(config.maxDepth).toBe(500);
+  });
+
+  it('restart() after new fetch still respects maxDepth ceiling', async () => {
+    const config: PrecomputeConfig = { coverageLimit: 10, maxDepth: 3 };
+    // slow first pass to keep it alive so restart() can cancel it
+    const emails = [makeEmail('e1'), makeEmail('e2'), makeEmail('e3')];
+    const cache = makeCache(emails);
+    let firstEmailStarted = false;
+    const service = makeService(async (email) => {
+      if (email.id === 'e1' && !firstEmailStarted) {
+        firstEmailStarted = true;
+        await new Promise(r => setTimeout(r, 200));
+      }
+      return makeSummary(email.id);
+    });
+    const worker = new PrecomputeWorker(cache as any, service as any, config);
+
+    worker.start();
+    // Wait until first pass is underway
+    await new Promise(r => setTimeout(r, 30));
+    expect(firstEmailStarted).toBe(true);
+
+    // Restart cancels current pass and starts a new one
+    worker.restart();
+    await new Promise(r => setTimeout(r, 100));
+    worker.stop();
+
+    // Both passes must have requested limit = effectiveDepth = min(10, 3) = 3
+    const calls = (cache.getEmails as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls.length).toBeGreaterThanOrEqual(2);
+    for (const call of calls) {
+      expect(call[0]).toEqual({ sortBy: 'date', sortDesc: true, limit: 3 });
+    }
+  });
+});
+
 // ─── T006: N-boundary end-to-end chain tests ────────────────────────────────
 
 describe('N-boundary (SUMMARY_PRECOMPUTE_LIMIT) end-to-end chain', () => {

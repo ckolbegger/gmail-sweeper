@@ -76,7 +76,7 @@
 
 **Independent Test**: Set `SUMMARY_PRECOMPUTE_MAX_DEPTH=3`, `SUMMARY_PRECOMPUTE_LIMIT=10`. After worker runs, only first 3 emails have summaries; email #4+ never touched.
 
-- [ ] T007 [P] [US4] Extend `tests/unit/summary/precompute-worker.test.ts` with MAXIMUM_DEPTH boundary tests: given `maxDepth=2`, `coverageLimit=5`, `effectiveDepth=2` (maxDepth wins), worker fetches 2 emails not 5; given `maxDepth=10`, `coverageLimit=5`, `effectiveDepth=5` (coverageLimit wins); given `SUMMARY_PRECOMPUTE_MAX_DEPTH` unset, defaults to 500; restart after new fetch still respects maxDepth ceiling; write each test first and confirm it fails before running the suite — if any test fails against existing code, fix the implementation before marking complete (depends on T003)
+- [x] T007 [P] [US4] Extend `tests/unit/summary/precompute-worker.test.ts` with MAXIMUM_DEPTH boundary tests: given `maxDepth=2`, `coverageLimit=5`, `effectiveDepth=2` (maxDepth wins), worker fetches 2 emails not 5; given `maxDepth=10`, `coverageLimit=5`, `effectiveDepth=5` (coverageLimit wins); given `SUMMARY_PRECOMPUTE_MAX_DEPTH` unset, defaults to 500; restart after new fetch still respects maxDepth ceiling; write each test first and confirm it fails before running the suite — if any test fails against existing code, fix the implementation before marking complete (depends on T003)
 
 **Checkpoint**: All 4 user stories complete. Both config boundaries verified by tests and manual quickstart steps US3 + US4.
 
