@@ -13,6 +13,7 @@ import { useGmail } from './hooks/useGmail.js';
 import { useKeyboard } from './hooks/useKeyboard.js';
 import { useSmartFilter } from './hooks/useSmartFilter.js';
 import { useEmailActions } from './hooks/useEmailActions.js';
+import { useAISummary } from './hooks/useAISummary.js';
 import { ConfirmationPrompt } from './components/ConfirmationPrompt.js';
 
 interface AppProps {
@@ -23,9 +24,28 @@ interface AppProps {
 export function InboxApp({ client, cache }: AppProps) {
   const { emails, isLoading, error, fetchEmailDetail, refresh } = useGmail({ client, cache });
   const [removedEmailIds, setRemovedEmailIds] = useState<Set<string>>(new Set());
+  const [showSummary, setShowSummary] = useState(false);
+  const [summaries, setSummaries] = useState<
+    Map<string, import('../core/models/index.js').EmailSummary>
+  >(new Map());
   const lastFetchedId = useRef<string | null>(null);
   const { stdout } = useStdout();
   const terminalHeight = stdout?.rows ?? 24;
+
+  const { generateSummary } = useAISummary({ cache });
+
+  const selectedEmailRef = useRef<import('../core/models/index.js').Email | null>(null);
+
+  const toggleSummary = useCallback(async () => {
+    const currentEmail = selectedEmailRef.current;
+    if (!showSummary && currentEmail && !summaries.has(currentEmail.id)) {
+      const summary = await generateSummary(currentEmail);
+      if (summary) {
+        setSummaries((prev) => new Map(prev).set(currentEmail.id, summary));
+      }
+    }
+    setShowSummary((prev) => !prev);
+  }, [showSummary, summaries, generateSummary]);
 
   // Filter out removed emails from display
   const displayEmails = emails.filter((email) => !removedEmailIds.has(email.id));
@@ -90,9 +110,14 @@ export function InboxApp({ client, cache }: AppProps) {
     onConfirmDelete: confirmDelete,
     onCancelDelete: cancelDelete,
     confirmationState: actionState.showDeleteConfirmation ? 'confirming' : 'idle',
+    onToggleSummary: toggleSummary,
   });
 
   const selectedEmail = filteredDisplayEmails[keyboard.selectedIndex];
+
+  useEffect(() => {
+    selectedEmailRef.current = selectedEmail || null;
+  }, [selectedEmail]);
 
   useEffect(() => {
     if (selectedEmail && selectedEmail.id !== lastFetchedId.current) {
@@ -147,9 +172,17 @@ export function InboxApp({ client, cache }: AppProps) {
         {/* Right: Email preview */}
         <Box width="50%" paddingLeft={1} height={contentHeight} overflow="hidden">
           <EmailPreview
-            email={selectedEmail}
+            email={
+              selectedEmail
+                ? {
+                    ...selectedEmail,
+                    summary: summaries.get(selectedEmail.id) ?? selectedEmail.summary ?? null,
+                  }
+                : undefined
+            }
             maxHeight={contentHeight}
             scrollOffset={keyboard.previewScrollOffset}
+            showSummary={showSummary}
           />
         </Box>
       </Box>
@@ -178,9 +211,10 @@ export function InboxApp({ client, cache }: AppProps) {
         <Text dimColor>
           {filterState === 'input' || filterState === 'loading'
             ? 'Enter to filter • Escape to cancel'
-            : 'j/k or ↑↓ to navigate • Enter to preview • e to archive • # to delete • f to filter • q to quit'}
+            : 'j/k or ↑↓ to navigate • Enter to preview • e to archive • # to delete • f to filter • s to toggle summary • q to quit'}
         </Text>
         {filterState === 'filtered' && <Text dimColor> • Esc to clear filter</Text>}
+        {showSummary && <Text dimColor> • [Summary View]</Text>}
       </Box>
 
       {/* Action status message */}
