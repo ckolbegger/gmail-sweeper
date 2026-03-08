@@ -1,6 +1,8 @@
 node_modules
 dist
-.env
+build/
+*.log
+.env*
 credentials.json
 token.json
 coverage
