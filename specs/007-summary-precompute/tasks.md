@@ -16,7 +16,7 @@
 
 **Purpose**: Stub out the new `src/core/summary/precompute-worker.ts` module so it can be referenced by subsequent tasks.
 
-- [ ] T001 Create `src/core/summary/precompute-worker.ts` as an empty module stub (exports `PrecomputeConfig` interface, `readPrecomputeConfig`, and `PrecomputeWorker` class as unimplemented stubs); update `src/core/summary/index.ts` barrel to re-export all three
+- [x] T001 Create `src/core/summary/precompute-worker.ts` as an empty module stub (exports `PrecomputeConfig` interface, `readPrecomputeConfig`, and `PrecomputeWorker` class as unimplemented stubs); update `src/core/summary/index.ts` barrel to re-export all three
 
 ---
 
