@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import type { Email } from '../../core/models/index.js';
 import type { EmailSummary } from '../../core/models/index.js';
 import type { EmailCache } from '../../core/cache/db.js';
@@ -16,6 +16,7 @@ export interface SummaryState {
 export interface UseEmailSummaryOptions {
   cache: EmailCache;
   aiConfig: AiProviderConfig | null;
+  initialSummary?: EmailSummary;
 }
 
 export interface UseEmailSummaryResult {
@@ -37,8 +38,12 @@ const INITIAL_STATE: SummaryState = {
   error: null,
 };
 
-export function useEmailSummary({ cache, aiConfig }: UseEmailSummaryOptions): UseEmailSummaryResult {
-  const [summaryState, setSummaryState] = useState<SummaryState>(INITIAL_STATE);
+export function useEmailSummary({ cache, aiConfig, initialSummary }: UseEmailSummaryOptions): UseEmailSummaryResult {
+  const [summaryState, setSummaryState] = useState<SummaryState>(
+    initialSummary !== undefined
+      ? { status: 'ready', summary: initialSummary, error: null }
+      : INITIAL_STATE,
+  );
   // Ref guards concurrent requestSummary calls without stale-closure risk from state reads
   const isLoadingRef = useRef(false);
   // Generation counter — incremented on each new request and on reset.
@@ -47,6 +52,22 @@ export function useEmailSummary({ cache, aiConfig }: UseEmailSummaryOptions): Us
   const requestIdRef = useRef(0);
   // Stable service instance — recreated only when aiConfig changes
   const service = useMemo(() => (aiConfig ? new SummaryService(aiConfig) : null), [aiConfig]);
+
+  // When initialSummary changes (new email selected), re-initialise state.
+  // Track the previous emailId to detect genuine email switches vs. first render.
+  const prevEmailIdRef = useRef<string | undefined>(initialSummary?.emailId);
+  useEffect(() => {
+    const newEmailId = initialSummary?.emailId;
+    if (newEmailId === prevEmailIdRef.current) return;
+    prevEmailIdRef.current = newEmailId;
+    requestIdRef.current++; // invalidate any in-flight request
+    isLoadingRef.current = false;
+    if (initialSummary !== undefined) {
+      setSummaryState({ status: 'ready', summary: initialSummary, error: null });
+    } else {
+      setSummaryState(INITIAL_STATE);
+    }
+  }, [initialSummary]);
 
   const requestSummary = useCallback(
     (email: Email) => {

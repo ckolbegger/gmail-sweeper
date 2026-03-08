@@ -325,6 +325,97 @@ describe('useEmailSummary', () => {
     });
   });
 
+  describe('initialSummary option', () => {
+    it('initialises to ready when initialSummary provided', () => {
+      const summary = makeSummary('email-1');
+      const cache = makeMockCache();
+
+      const { result } = renderHook(() =>
+        useEmailSummary({
+          cache: cache as unknown as EmailCache,
+          aiConfig: AI_CONFIG,
+          initialSummary: summary,
+        })
+      );
+
+      expect(result.current.summaryState.status).toBe('ready');
+      expect(result.current.summaryState.summary).toEqual(summary);
+      expect(result.current.summaryState.error).toBeNull();
+    });
+
+    it('initialises to idle when no initialSummary', () => {
+      const cache = makeMockCache();
+
+      const { result } = renderHook(() =>
+        useEmailSummary({ cache: cache as unknown as EmailCache, aiConfig: AI_CONFIG })
+      );
+
+      expect(result.current.summaryState.status).toBe('idle');
+      expect(result.current.summaryState.summary).toBeNull();
+    });
+
+    it('switching emails with new initialSummary transitions to ready', () => {
+      const summaryA = makeSummary('email-a');
+      const summaryB = makeSummary('email-b');
+      const cache = makeMockCache();
+
+      let currentSummary: EmailSummary | undefined = summaryA;
+      const { result, rerender } = renderHook(() =>
+        useEmailSummary({
+          cache: cache as unknown as EmailCache,
+          aiConfig: AI_CONFIG,
+          initialSummary: currentSummary,
+        })
+      );
+
+      expect(result.current.summaryState.status).toBe('ready');
+      expect(result.current.summaryState.summary?.emailId).toBe('email-a');
+
+      currentSummary = summaryB;
+      rerender();
+
+      expect(result.current.summaryState.status).toBe('ready');
+      expect(result.current.summaryState.summary?.emailId).toBe('email-b');
+    });
+
+    it('switching to email without initialSummary resets to idle', () => {
+      const summaryA = makeSummary('email-a');
+      const cache = makeMockCache();
+
+      let currentSummary: EmailSummary | undefined = summaryA;
+      const { result, rerender } = renderHook(() =>
+        useEmailSummary({
+          cache: cache as unknown as EmailCache,
+          aiConfig: AI_CONFIG,
+          initialSummary: currentSummary,
+        })
+      );
+
+      expect(result.current.summaryState.status).toBe('ready');
+
+      currentSummary = undefined;
+      rerender();
+
+      expect(result.current.summaryState.status).toBe('idle');
+      expect(result.current.summaryState.summary).toBeNull();
+    });
+
+    it('does not trigger AI call when initialSummary provided', () => {
+      const summary = makeSummary('email-1');
+      const cache = makeMockCache();
+
+      renderHook(() =>
+        useEmailSummary({
+          cache: cache as unknown as EmailCache,
+          aiConfig: AI_CONFIG,
+          initialSummary: summary,
+        })
+      );
+
+      expect(mockSummarize).not.toHaveBeenCalled();
+    });
+  });
+
   it('retry after error → loading again', async () => {
     const email = makeEmail();
     const cache = makeMockCache(null);
