@@ -48,7 +48,7 @@ describe('summary store adapter', () => {
     expect(raw).toContain('"msg-1"');
   });
 
-  it('should auto-heal malformed persisted payloads by dropping invalid entries', async () => {
+  it('should treat malformed single entries as cache misses while preserving valid entries', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'gmail-sweeper-summary-'));
     tempDirs.push(dir);
     const filePath = join(dir, 'email-summaries.json');
@@ -63,11 +63,22 @@ describe('summary store adapter', () => {
 
     await expect(store.getByMessageId('msg-good')).resolves.toEqual(valid);
     await expect(store.getByMessageId('msg-bad')).resolves.toBeNull();
+    await store.upsert(
+      createPersistedSummaryFixture({
+        messageId: 'msg-bad',
+        summarySentence: 'Recovered summary.'
+      })
+    );
+    await expect(store.getByMessageId('msg-good')).resolves.toEqual(valid);
+    await expect(store.getByMessageId('msg-bad')).resolves.toMatchObject({
+      messageId: 'msg-bad',
+      summarySentence: 'Recovered summary.'
+    });
 
     const healed = JSON.parse(await readFile(filePath, 'utf8')) as {
       summariesByMessageId?: Record<string, unknown>;
     };
-    expect(Object.keys(healed.summariesByMessageId ?? {})).toEqual(['msg-good']);
+    expect(Object.keys(healed.summariesByMessageId ?? {}).sort()).toEqual(['msg-bad', 'msg-good']);
   });
 
   it('should auto-heal invalid JSON by backing it up and resetting the store file', async () => {

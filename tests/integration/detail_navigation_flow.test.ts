@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -388,5 +388,86 @@ describe('detail navigation flow integration', () => {
 
     expect(secondStatus).toBe(0);
     expect(providerSecond.summarizeEmail).not.toHaveBeenCalled();
+  });
+
+  it('should regenerate summary when selected-email cache entry is malformed', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'gmail-sweeper-summary-flow-'));
+    tempDirs.push(dir);
+    const summaryPath = join(dir, 'email-summaries.json');
+    await writeFile(
+      summaryPath,
+      JSON.stringify(
+        {
+          version: 1,
+          summariesByMessageId: {
+            'msg-1': 42,
+            'msg-2': {
+              messageId: 'msg-2',
+              summarySentence: 'Existing valid summary.',
+              actionItems: ['None'],
+              provider: 'openai',
+              model: 'gpt-4o-mini',
+              createdAt: '2026-03-08T00:00:00.000Z'
+            }
+          }
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    const summarizeEmail = vi.fn().mockResolvedValue({
+      summarySentence: 'Regenerated summary sentence.',
+      actionItems: ['None']
+    });
+
+    const status = await runInboxCli(['--interactive'], {
+      loadConfig: () => ({
+        ...baseConfig,
+        aiConfig: {
+          provider: 'openai' as const,
+          model: 'gpt-4o-mini',
+          apiKey: 'test-key',
+          maxContextTokens: 32000
+        }
+      }),
+      createAiProvider: () => ({
+        classifyEmails: vi.fn().mockResolvedValue({ results: [] }),
+        summarizeEmail
+      }),
+      createSummaryStore: () => createSummaryStore(summaryPath),
+      readAuthTokens: async () => ({ refreshToken: 'refresh' }),
+      createGmailClient: () => ({ users: { messages: {} } }),
+      listInboxEmails: async () => [
+        createEmail({
+          message_id: 'msg-1',
+          subject: 'Needs regeneration',
+          sender: 'lead@work.com',
+          received_at: Date.parse('2026-02-08T10:00:00Z')
+        })
+      ],
+      getEmailDetail: async () => ({
+        message_id: 'msg-1',
+        subject: 'Needs regeneration',
+        sender: 'lead@work.com',
+        received_at: Date.parse('2026-02-08T10:00:00Z'),
+        body: 'Regenerate from this raw body.',
+        headers: { subject: 'Needs regeneration', from: 'lead@work.com' },
+        labels: ['INBOX'],
+        is_read: true
+      }),
+      navigationInputs: ['enter', 's', 'quit'],
+      writeLine: () => undefined
+    });
+
+    expect(status).toBe(0);
+    expect(summarizeEmail).toHaveBeenCalledTimes(1);
+
+    const repaired = JSON.parse(await readFile(summaryPath, 'utf8')) as {
+      summariesByMessageId?: Record<string, { summarySentence?: string }>;
+    };
+    expect(repaired.summariesByMessageId?.['msg-2']?.summarySentence).toBe('Existing valid summary.');
+    expect(repaired.summariesByMessageId?.['msg-1']?.summarySentence).toBe('Regenerated summary sentence.');
   });
 });

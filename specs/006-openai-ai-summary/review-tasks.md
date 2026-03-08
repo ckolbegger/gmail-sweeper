@@ -16,7 +16,7 @@
   - Introduce per-store write serialization to avoid read-modify-write races.
   - Add regression tests for interleaved writes.
 
-- [ ] R004 Add explicit recovery tests for malformed persisted summaries.
+- [X] R004 Add explicit recovery tests for malformed persisted summaries.
   - Integration test: malformed cache for selected email falls back to regeneration.
   - Unit test: malformed single entry is ignored as cache miss while valid entries remain usable.
 
