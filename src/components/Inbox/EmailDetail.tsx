@@ -201,6 +201,7 @@ export const EmailDetail: React.FC<EmailDetailProps> = ({
                     error={summaryError}
                     isActive={isActive && isSummaryActive}
                     onToggleView={toggleSummaryView}
+                    onForceRegenerate={() => generateSummary(true)}
                 />
             ) : (
                 <>

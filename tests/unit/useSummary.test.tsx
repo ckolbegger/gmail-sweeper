@@ -138,4 +138,32 @@ describe('useSummary hook', () => {
             }
         });
     });
+
+    it('should bypass cache when force is true', async () => {
+        let results: any = null;
+        let generateFn: any = null;
+
+        mockStorage.getSummary = vi.fn().mockResolvedValue({
+            emailId: 'test-email-1',
+            description: 'Old cache',
+            actionItems: [],
+            createdAt: '2026-03-07T10:05:00Z'
+        });
+
+        const TestComponent = () => {
+            const hook = useSummary(mockAiProvider, mockStorage, mockEmail);
+            results = hook;
+            generateFn = hook.generateSummary;
+            return null;
+        };
+
+        render(<TestComponent />);
+
+        // Call with force=true
+        await generateFn(true);
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        expect(mockStorage.getSummary).not.toHaveBeenCalled();
+        expect(mockAiProvider.summarizeEmail).toHaveBeenCalledTimes(1);
+    });
 });

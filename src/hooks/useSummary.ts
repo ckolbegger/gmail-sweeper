@@ -24,7 +24,7 @@ export function useSummary(
         setIsSummaryActive(prev => !prev);
     }, []);
 
-    const generateSummary = useCallback(async () => {
+    const generateSummary = useCallback(async (force: boolean = false) => {
         if (!email || !aiProvider || !summaryStorage || isSummarizing) {
             return;
         }
@@ -33,11 +33,13 @@ export function useSummary(
         setError(null);
 
         try {
-            // T017: Check cache first
-            const cachedSummary = await summaryStorage.getSummary(email.id);
-            if (cachedSummary) {
-                setSummary(cachedSummary);
-                return; // Do not call LLM
+            if (!force) {
+                // T017: Check cache first
+                const cachedSummary = await summaryStorage.getSummary(email.id);
+                if (cachedSummary) {
+                    setSummary(cachedSummary);
+                    return; // Do not call LLM
+                }
             }
 
             const response = await aiProvider.summarizeEmail({
