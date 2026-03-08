@@ -9,6 +9,9 @@ import { platform } from 'node:os';
 import type { Email } from '../../core/models/index.js';
 import { processEmailBody } from '../../core/text/body-formatter.js';
 import type { LinkInfo, ProcessedLine } from '../../core/text/body-formatter.js';
+import type { SummaryState } from '../hooks/useEmailSummary.js';
+
+export type DetailViewMode = 'full' | 'summary';
 
 function copyToClipboard(url: string): void {
   const os = platform();
@@ -37,6 +40,8 @@ interface EmailPreviewProps {
   maxHeight: number;
   scrollOffset?: number;
   paneWidth?: number;
+  viewMode?: DetailViewMode;
+  summaryState?: SummaryState;
 }
 
 /**
@@ -48,15 +53,26 @@ function formatRecipients(recipients: Array<{ email: string; name?: string }>): 
     .join(', ');
 }
 
-export function EmailPreview({ email, maxHeight = 20, scrollOffset = 0, paneWidth = 80 }: EmailPreviewProps) {
+function EmailHeader({ email }: { email: Email }) {
+  return (
+    <>
+      <Text bold wrap="truncate">{email.subject}</Text>
+      <Text wrap="truncate">From: {email.sender.name || email.sender.email}</Text>
+      <Text wrap="truncate">To: {formatRecipients(email.recipients)}</Text>
+      <Text dimColor>{'─'.repeat(40)}</Text>
+    </>
+  );
+}
+
+export function EmailPreview({ email, maxHeight = 20, scrollOffset = 0, paneWidth = 80, viewMode = 'full', summaryState }: EmailPreviewProps) {
   const [focusedLinkIndex, setFocusedLinkIndex] = useState<number | null>(null);
 
-  // Process body upfront (before hooks) so allLinks is available
+  // Only process body in full view (summary view skips it)
   let processedLines: ProcessedLine[] = [];
   let allLinks: LinkInfo[] = [];
   let totalLines = 0;
 
-  if (email) {
+  if (email && viewMode === 'full') {
     const rawBody = email.bodyText ?? (email.bodyHtml ?? '');
     const isHtml = !email.bodyText && !!email.bodyHtml;
     const result = processEmailBody(rawBody, isHtml, paneWidth);
@@ -111,14 +127,42 @@ export function EmailPreview({ email, maxHeight = 20, scrollOffset = 0, paneWidt
 
   const focusedLink: LinkInfo | null = focusedLinkIndex !== null ? allLinks[focusedLinkIndex] ?? null : null;
 
+  // Summary view
+  if (viewMode === 'summary' && summaryState && summaryState.status !== 'idle') {
+    return (
+      <Box flexDirection="column" width="100%">
+        <EmailHeader email={email} />
+
+        {summaryState.status === 'loading' && (
+          <Text dimColor>⏳ Generating summary...</Text>
+        )}
+        {summaryState.status === 'error' && (
+          <Text color="red">⚠ {summaryState.error}. Press &apos;s&apos; to retry.</Text>
+        )}
+        {summaryState.status === 'ready' && summaryState.summary && (
+          <Box flexDirection="column">
+            <Text>{summaryState.summary.oneSentence}</Text>
+            <Box flexDirection="column" marginTop={1}>
+              {summaryState.summary.actionItems.length > 0 ? (
+                summaryState.summary.actionItems.map((item, idx) => (
+                  <Text key={idx}>• {item}</Text>
+                ))
+              ) : (
+                <Text dimColor>(No action items)</Text>
+              )}
+            </Box>
+            <Box marginTop={1}><Text dimColor>[s] full view</Text></Box>
+          </Box>
+        )}
+      </Box>
+    );
+  }
+
   return (
     <Box flexDirection="column" width="100%">
       {/* Header */}
-      <Text bold wrap="truncate">{email.subject}</Text>
-      <Text wrap="truncate">From: {email.sender.name || email.sender.email}</Text>
-      <Text wrap="truncate">To: {formatRecipients(email.recipients)}</Text>
+      <EmailHeader email={email} />
       {email.hasAttachments && <Text>📎 Has attachments</Text>}
-      <Text dimColor>{'─'.repeat(40)}</Text>
 
       {/* Body */}
       {displayedLines.length > 0 ? (

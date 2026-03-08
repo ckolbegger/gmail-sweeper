@@ -10,6 +10,7 @@ import { dirname } from 'path';
 import type {
   Email,
   EmailCacheOptions,
+  EmailSummary,
 } from '../models/index.js';
 
 let SQL: any = null;
@@ -128,6 +129,16 @@ export class EmailCache {
       CREATE TABLE IF NOT EXISTS sync_state (
         user_email TEXT PRIMARY KEY,
         last_sync TEXT NOT NULL
+      );
+    `);
+
+    // Create email_summaries table
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS email_summaries (
+        email_id      TEXT PRIMARY KEY,
+        one_sentence  TEXT NOT NULL,
+        action_items_json TEXT NOT NULL,
+        generated_at  TEXT NOT NULL
       );
     `);
 
@@ -305,6 +316,55 @@ export class EmailCache {
   removeEmail(id: string): void {
     this.ensureInitialized();
     this.db.run('DELETE FROM emails WHERE id = ?', [id]);
+    this.saveDatabase();
+  }
+
+  /**
+   * Returns a cached summary for the given email ID, or null if not found.
+   */
+  getSummary(emailId: string): EmailSummary | null {
+    this.ensureInitialized();
+
+    const stmt = this.db.prepare(
+      'SELECT one_sentence, action_items_json, generated_at FROM email_summaries WHERE email_id = ?'
+    );
+    stmt.bind([emailId]);
+
+    let result: EmailSummary | null = null;
+    if (stmt.step()) {
+      const row = stmt.getAsObject();
+      result = {
+        emailId,
+        oneSentence: row.one_sentence as string,
+        actionItems: JSON.parse(row.action_items_json as string) as string[],
+        generatedAt: new Date(row.generated_at as string),
+      };
+    }
+
+    stmt.free();
+    return result;
+  }
+
+  /**
+   * Upserts a summary for the given email ID.
+   */
+  setSummary(emailId: string, summary: EmailSummary): void {
+    this.ensureInitialized();
+
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO email_summaries (email_id, one_sentence, action_items_json, generated_at)
+      VALUES (?, ?, ?, ?)
+    `);
+
+    stmt.bind([
+      emailId,
+      summary.oneSentence,
+      JSON.stringify(summary.actionItems),
+      summary.generatedAt.toISOString(),
+    ]);
+    stmt.step();
+    stmt.free();
+
     this.saveDatabase();
   }
 

@@ -244,6 +244,20 @@ export interface SearchResult {
 }
 
 /**
+ * AI-generated summary for a single email (006-claude-ai-summary).
+ */
+export interface EmailSummary {
+  /** Gmail message ID this summary belongs to */
+  emailId: string;
+  /** One-sentence description of the email content */
+  oneSentence: string;
+  /** Action items extracted from the email (empty array if none) */
+  actionItems: string[];
+  /** When the summary was generated */
+  generatedAt: Date;
+}
+
+/**
  * Result from action execution.
  */
 export interface ActionResult {

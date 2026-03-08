@@ -2,6 +2,9 @@
  * AI provider types and helpers.
  */
 
+import { AnthropicProvider } from './anthropic.js';
+import { OpenAiProvider } from './openai.js';
+
 export type ConfidenceLevel = 'high' | 'medium' | 'low';
 
 /** Map numeric confidence (0.0–1.0) to a discrete confidence level. */
@@ -55,25 +58,7 @@ export interface AiProvider {
   classifyEmails(request: ClassifyEmailsRequest): Promise<ClassifyEmailsResponse>;
 }
 
-/** Anthropic AI provider */
-export class AnthropicProvider implements AiProvider {
-  constructor(public readonly config: AiProviderConfig) {}
-
-  async classifyEmails(_request: ClassifyEmailsRequest): Promise<ClassifyEmailsResponse> {
-    // TODO: implement with Anthropic SDK
-    throw new Error('Not implemented');
-  }
-}
-
-/** OpenAI-compatible AI provider */
-export class OpenAiProvider implements AiProvider {
-  constructor(public readonly config: AiProviderConfig) {}
-
-  async classifyEmails(_request: ClassifyEmailsRequest): Promise<ClassifyEmailsResponse> {
-    // TODO: implement with OpenAI SDK
-    throw new Error('Not implemented');
-  }
-}
+export { AnthropicProvider, OpenAiProvider };
 
 /** Create an AI provider instance from configuration. */
 export function createAiProvider(config: AiProviderConfig): AiProvider {

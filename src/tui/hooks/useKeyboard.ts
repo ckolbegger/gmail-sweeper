@@ -17,6 +17,7 @@ interface UseKeyboardOptions {
   onArchive?: () => void;
   onDelete?: () => void;
   onLoadMore?: () => void;
+  onToggleSummary?: () => void;
 }
 
 interface UseKeyboardResult {
@@ -37,6 +38,7 @@ export function useKeyboard({
   onArchive,
   onDelete,
   onLoadMore,
+  onToggleSummary,
 }: UseKeyboardOptions): UseKeyboardResult {
   const [index, setIndex] = useState(selectedIndex);
   const [previewScrollOffset, setPreviewScrollOffset] = useState(0);
@@ -139,6 +141,12 @@ export function useKeyboard({
     }
     if (input === '[') {
       setPreviewScrollOffset(prev => Math.max(0, prev - 3));
+      return;
+    }
+
+    // Summary toggle
+    if (input === 's' && itemCount > 0) {
+      onToggleSummary?.();
       return;
     }
 

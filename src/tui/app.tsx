@@ -2,17 +2,20 @@
  * T041/T048/T050/T025: Main TUI app shell - coordinates email list, preview, keyboard navigation, and smart filter.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Box, Text, useStdout } from 'ink';
 import type { GmailClient } from '../core/gmail/client.js';
 import type { EmailCache } from '../core/cache/db.js';
 import { EmailList } from './components/EmailList.js';
 import { EmailPreview } from './components/EmailPreview.js';
+import type { DetailViewMode } from './components/EmailPreview.js';
 import { FilterInput } from './components/FilterInput.js';
 import { useGmail } from './hooks/useGmail.js';
 import { useKeyboard } from './hooks/useKeyboard.js';
 import { useSmartFilter } from './hooks/useSmartFilter.js';
 import { useEmailActions } from './hooks/useEmailActions.js';
+import { useEmailSummary } from './hooks/useEmailSummary.js';
+import { resolveAiConfig } from '../core/ai/config.js';
 
 interface AppProps {
   client: GmailClient;
@@ -29,6 +32,9 @@ export function InboxApp({ client, cache, maxEmails, maxContextTokens: _maxConte
   });
   const smartFilter = useSmartFilter({ emails });
   const lastFetchedId = useRef<string | null>(null);
+  const [detailViewMode, setDetailViewMode] = useState<DetailViewMode>('full');
+  const aiConfig = useMemo(() => resolveAiConfig(), []);
+  const { summaryState, requestSummary: requestEmailSummary, reset: resetEmailSummary } = useEmailSummary({ cache, aiConfig });
   const { stdout } = useStdout();
   const terminalHeight = stdout?.rows ?? 24;
   // Reserve 4 lines for header + footer + filter input + loading indicator
@@ -52,6 +58,16 @@ export function InboxApp({ client, cache, maxEmails, maxContextTokens: _maxConte
   // but useKeyboard needs onArchive/onDelete which depend on selectedEmail.
   const selectedEmailRef = useRef<typeof displayEmails[number] | undefined>();
 
+  const handleToggleSummary = useCallback(() => {
+    if (detailViewMode === 'full') {
+      setDetailViewMode('summary');
+      const email = selectedEmailRef.current;
+      if (email) requestEmailSummary(email);
+    } else {
+      setDetailViewMode('full');
+    }
+  }, [detailViewMode, requestEmailSummary]);
+
   const keyboard = useKeyboard({
     itemCount: displayEmails.length,
     selectedIndex: 0,
@@ -64,6 +80,7 @@ export function InboxApp({ client, cache, maxEmails, maxContextTokens: _maxConte
     isFilterInputActive,
     onArchive: () => { if (selectedEmailRef.current) actions.archive(selectedEmailRef.current.id); },
     onDelete: () => { if (selectedEmailRef.current) actions.delete(selectedEmailRef.current.id); },
+    onToggleSummary: handleToggleSummary,
   });
 
   // Derive selected email from current navigation index
@@ -79,6 +96,12 @@ export function InboxApp({ client, cache, maxEmails, maxContextTokens: _maxConte
       }
     }
   }, [selectedEmail, fetchEmailDetail]);
+
+  // Reset summary state when selected email changes (T008)
+  useEffect(() => {
+    setDetailViewMode('full');
+    resetEmailSummary();
+  }, [selectedEmail?.id, resetEmailSummary]);
 
   // T050: Loading state
   if (isLoading && emails.length === 0) {
@@ -140,14 +163,20 @@ export function InboxApp({ client, cache, maxEmails, maxContextTokens: _maxConte
 
         {/* Right: Email preview */}
         <Box width="50%" paddingLeft={1} height={contentHeight} overflow="hidden">
-          <EmailPreview email={selectedEmail} maxHeight={contentHeight} scrollOffset={keyboard.previewScrollOffset} />
+          <EmailPreview
+            email={selectedEmail}
+            maxHeight={contentHeight}
+            scrollOffset={keyboard.previewScrollOffset}
+            viewMode={detailViewMode}
+            summaryState={summaryState}
+          />
         </Box>
       </Box>
 
       {/* Footer */}
       <Box marginTop={1}>
         <Text dimColor>
-          j/k or ↑↓ to navigate • Enter to preview • e archive • # delete • q to quit • Ctrl+R to refresh • Ctrl+N load more • f to filter{isFilterActive || isFilterInputActive ? ' • Esc to clear' : ''}
+          j/k or ↑↓ to navigate • e archive • # delete • s summary • q to quit • Ctrl+R refresh • Ctrl+N load more • f filter{isFilterActive || isFilterInputActive ? ' • Esc clear' : ''}
         </Text>
       </Box>
 
