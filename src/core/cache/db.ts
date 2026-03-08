@@ -333,10 +333,18 @@ export class EmailCache {
     let result: EmailSummary | null = null;
     if (stmt.step()) {
       const row = stmt.getAsObject();
+      let actionItems: string[];
+      try {
+        actionItems = JSON.parse(row.action_items_json as string) as string[];
+      } catch {
+        // Corrupt cache entry — treat as miss so a fresh summary is generated
+        stmt.free();
+        return null;
+      }
       result = {
         emailId,
         oneSentence: row.one_sentence as string,
-        actionItems: JSON.parse(row.action_items_json as string) as string[],
+        actionItems,
         generatedAt: new Date(row.generated_at as string),
       };
     }
@@ -346,9 +354,9 @@ export class EmailCache {
   }
 
   /**
-   * Upserts a summary for the given email ID.
+   * Upserts a summary. The storage key is derived from `summary.emailId`.
    */
-  setSummary(emailId: string, summary: EmailSummary): void {
+  setSummary(summary: EmailSummary): void {
     this.ensureInitialized();
 
     const stmt = this.db.prepare(`
@@ -357,7 +365,7 @@ export class EmailCache {
     `);
 
     stmt.bind([
-      emailId,
+      summary.emailId,
       summary.oneSentence,
       JSON.stringify(summary.actionItems),
       summary.generatedAt.toISOString(),

@@ -59,10 +59,13 @@ export function InboxApp({ client, cache, maxEmails, maxContextTokens: _maxConte
   const selectedEmailRef = useRef<typeof displayEmails[number] | undefined>();
 
   const handleToggleSummary = useCallback(() => {
+    // Belt-and-suspenders: keyboard layer guards itemCount > 0, but protect
+    // against direct calls when no email is selected so detailViewMode stays 'full'.
+    if (!selectedEmailRef.current) return;
+
     if (detailViewMode === 'full') {
       setDetailViewMode('summary');
-      const email = selectedEmailRef.current;
-      if (email) requestEmailSummary(email);
+      requestEmailSummary(selectedEmailRef.current);
     } else {
       setDetailViewMode('full');
     }

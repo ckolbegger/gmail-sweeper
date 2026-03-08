@@ -11,6 +11,12 @@ export class SummaryService {
   constructor(private readonly config: AiProviderConfig) {}
 
   async summarize(email: Email): Promise<EmailSummary> {
+    if (this.config.provider !== 'anthropic' && this.config.provider !== 'openai') {
+      throw new SummaryGenerationError(
+        `Unsupported AI provider: ${String(this.config.provider)}. Supported: anthropic, openai`,
+      );
+    }
+
     const { system, user } = buildSummaryPrompt(email);
 
     let rawText: string;
@@ -43,7 +49,6 @@ export class SummaryService {
         rawText = response.choices[0]?.message?.content ?? '';
       }
     } catch (err) {
-      if (err instanceof SummaryGenerationError) throw err;
       throw new SummaryGenerationError(
         `AI provider error: ${(err as Error).message}`,
         err as Error,

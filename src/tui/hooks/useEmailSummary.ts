@@ -41,6 +41,10 @@ export function useEmailSummary({ cache, aiConfig }: UseEmailSummaryOptions): Us
   const [summaryState, setSummaryState] = useState<SummaryState>(INITIAL_STATE);
   // Ref guards concurrent requestSummary calls without stale-closure risk from state reads
   const isLoadingRef = useRef(false);
+  // Generation counter — incremented on each new request and on reset.
+  // Promise callbacks check their captured id against the current value and discard
+  // results that belong to a superseded request (stale navigation race fix).
+  const requestIdRef = useRef(0);
   // Stable service instance — recreated only when aiConfig changes
   const service = useMemo(() => (aiConfig ? new SummaryService(aiConfig) : null), [aiConfig]);
 
@@ -62,28 +66,33 @@ export function useEmailSummary({ cache, aiConfig }: UseEmailSummaryOptions): Us
         return;
       }
 
-      // Start loading
+      // Start loading — capture the current generation id in the closure
+      const myId = ++requestIdRef.current;
       isLoadingRef.current = true;
       setSummaryState({ status: 'loading', summary: null, error: null });
 
       service
         .summarize(email)
         .then(summary => {
-          cache.setSummary(email.id, summary);
+          if (requestIdRef.current !== myId) return; // stale — discard
+          cache.setSummary(summary);
           setSummaryState({ status: 'ready', summary, error: null });
         })
         .catch((err: unknown) => {
+          if (requestIdRef.current !== myId) return; // stale — discard
           const message = err instanceof Error ? err.message : 'Unknown error occurred';
           setSummaryState({ status: 'error', summary: null, error: message });
         })
         .finally(() => {
-          isLoadingRef.current = false;
+          // Only clear the guard if this request is still the active one
+          if (requestIdRef.current === myId) isLoadingRef.current = false;
         });
     },
     [cache, service],
   );
 
   const reset = useCallback(() => {
+    requestIdRef.current++; // invalidate any in-flight request
     isLoadingRef.current = false;
     setSummaryState(INITIAL_STATE);
   }, []);

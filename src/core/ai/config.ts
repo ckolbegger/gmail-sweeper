@@ -1,14 +1,21 @@
 import type { AiProviderConfig } from './provider.js';
 
+const SUPPORTED_PROVIDERS = ['anthropic', 'openai'] as const;
+
 /**
  * Resolve AI provider configuration from environment variables.
- * Returns null if required variables (AI_PROVIDER, AI_API_KEY) are missing.
+ * Returns null if required variables (AI_PROVIDER, AI_API_KEY) are missing
+ * or if AI_PROVIDER is not a supported value.
  */
 export function resolveAiConfig(): AiProviderConfig | null {
   const provider = process.env['AI_PROVIDER'];
   const apiKey = process.env['AI_API_KEY'];
 
   if (!provider || !apiKey) {
+    return null;
+  }
+
+  if (!SUPPORTED_PROVIDERS.includes(provider as 'anthropic' | 'openai')) {
     return null;
   }
 

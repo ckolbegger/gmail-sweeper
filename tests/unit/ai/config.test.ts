@@ -60,6 +60,14 @@ describe('resolveAiConfig()', () => {
     expect(config!.maxContextTokens).toBe(32000);
   });
 
+  it('returns null for unknown provider (e.g. gemini)', () => {
+    process.env['AI_PROVIDER'] = 'gemini';
+    process.env['AI_API_KEY'] = 'key';
+    process.env['AI_MODEL'] = 'gemini-pro';
+
+    expect(resolveAiConfig()).toBeNull();
+  });
+
   it('AI_BASE_URL is optional', () => {
     process.env['AI_PROVIDER'] = 'openai';
     process.env['AI_MODEL'] = 'gpt-4';

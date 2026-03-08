@@ -65,7 +65,7 @@ function makeMockCache(initial?: EmailSummary | null) {
   if (initial) store.set(initial.emailId, initial);
   return {
     getSummary: vi.fn((id: string) => store.get(id) ?? null),
-    setSummary: vi.fn((id: string, s: EmailSummary) => { store.set(id, s); }),
+    setSummary: vi.fn((s: EmailSummary) => { store.set(s.emailId, s); }),
   };
 }
 
@@ -124,7 +124,7 @@ describe('useEmailSummary', () => {
 
     expect(result.current.summaryState.status).toBe('ready');
     expect(result.current.summaryState.summary).toEqual(summary);
-    expect(cache.setSummary).toHaveBeenCalledWith(email.id, summary);
+    expect(cache.setSummary).toHaveBeenCalledWith(summary);
   });
 
   it('AI failure → error state with message', async () => {
@@ -214,6 +214,115 @@ describe('useEmailSummary', () => {
     expect(result.current.summaryState.status).toBe('error');
     expect(result.current.summaryState.error).toBe('AI not configured');
     expect(mockSummarize).not.toHaveBeenCalled();
+  });
+
+  it('stale promise ignored after reset()', async () => {
+    const emailA = makeEmail('email-a');
+    const cache = makeMockCache(null);
+    let resolveA!: (s: EmailSummary) => void;
+    mockSummarize.mockReturnValueOnce(new Promise(r => { resolveA = r; }));
+
+    const { result } = renderHook(() =>
+      useEmailSummary({ cache: cache as unknown as EmailCache, aiConfig: AI_CONFIG })
+    );
+
+    // Start loading email A
+    act(() => { result.current.requestSummary(emailA); });
+    expect(result.current.summaryState.status).toBe('loading');
+
+    // Navigate away — reset invalidates the in-flight request
+    act(() => { result.current.reset(); });
+    expect(result.current.summaryState.status).toBe('idle');
+
+    // Resolve email A's stale promise
+    await act(async () => {
+      resolveA(makeSummary('email-a'));
+      await Promise.resolve();
+    });
+
+    // State must stay idle, not flip to 'ready' with email A's summary
+    expect(result.current.summaryState.status).toBe('idle');
+    expect(cache.setSummary).not.toHaveBeenCalled();
+  });
+
+  it('stale promise does not overwrite second request', async () => {
+    const emailA = makeEmail('email-a');
+    const emailB = makeEmail('email-b');
+    const summaryA = makeSummary('email-a');
+    const summaryB = makeSummary('email-b');
+    const cache = makeMockCache(null);
+
+    let resolveA!: (s: EmailSummary) => void;
+    let resolveB!: (s: EmailSummary) => void;
+    mockSummarize
+      .mockReturnValueOnce(new Promise(r => { resolveA = r; }))
+      .mockReturnValueOnce(new Promise(r => { resolveB = r; }));
+
+    const { result } = renderHook(() =>
+      useEmailSummary({ cache: cache as unknown as EmailCache, aiConfig: AI_CONFIG })
+    );
+
+    // Start loading email A
+    act(() => { result.current.requestSummary(emailA); });
+    expect(result.current.summaryState.status).toBe('loading');
+
+    // Navigate away and start loading email B
+    act(() => { result.current.reset(); });
+    act(() => { result.current.requestSummary(emailB); });
+    expect(result.current.summaryState.status).toBe('loading');
+
+    // Email A resolves first (stale) — state must stay 'loading', not flip to 'ready' with A's summary
+    await act(async () => {
+      resolveA(summaryA);
+      await Promise.resolve();
+    });
+    expect(result.current.summaryState.status).toBe('loading');
+
+    // Email B resolves — state should become 'ready' with B's summary
+    await act(async () => {
+      resolveB(summaryB);
+      await Promise.resolve();
+    });
+    expect(result.current.summaryState.status).toBe('ready');
+    expect(result.current.summaryState.summary?.emailId).toBe('email-b');
+  });
+
+  it('stale finally does not clear isLoadingRef for active request', async () => {
+    const emailA = makeEmail('email-a');
+    const emailB = makeEmail('email-b');
+    const cache = makeMockCache(null);
+
+    let resolveA!: (s: EmailSummary) => void;
+    let resolveB!: (s: EmailSummary) => void;
+    mockSummarize
+      .mockReturnValueOnce(new Promise(r => { resolveA = r; }))
+      .mockReturnValueOnce(new Promise(r => { resolveB = r; }));
+
+    const { result } = renderHook(() =>
+      useEmailSummary({ cache: cache as unknown as EmailCache, aiConfig: AI_CONFIG })
+    );
+
+    // Start loading A, reset, start loading B
+    act(() => { result.current.requestSummary(emailA); });
+    act(() => { result.current.reset(); });
+    act(() => { result.current.requestSummary(emailB); });
+
+    // Resolve A (stale) — its finally should NOT clear B's loading guard
+    await act(async () => {
+      resolveA(makeSummary('email-a'));
+      await Promise.resolve();
+    });
+
+    // B is still loading — a third requestSummary call should be a no-op (guard still active)
+    act(() => { result.current.requestSummary(emailB); });
+    // Only 2 calls total (A and B), not 3
+    expect(mockSummarize).toHaveBeenCalledTimes(2);
+
+    // Clean up B
+    await act(async () => {
+      resolveB(makeSummary('email-b'));
+      await Promise.resolve();
+    });
   });
 
   it('retry after error → loading again', async () => {

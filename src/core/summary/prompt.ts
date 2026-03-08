@@ -1,6 +1,26 @@
 import type { Email } from '../models/index.js';
 import { GmailSweepError } from '../errors.js';
 
+/**
+ * Strip HTML tags and decode common entities to produce plain text suitable
+ * for AI summarisation. Not a full HTML parser — good enough for email bodies.
+ */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')   // remove style blocks
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')  // remove script blocks
+    .replace(/<br\s*\/?>/gi, '\n')                      // br → newline
+    .replace(/<\/p>/gi, '\n\n')                         // paragraph end → blank line
+    .replace(/<[^>]+>/g, '')                            // strip remaining tags
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, '\n\n')                         // collapse excess newlines
+    .trim();
+}
+
 export class SummaryGenerationError extends GmailSweepError {
   constructor(
     message: string,
@@ -15,7 +35,11 @@ export class SummaryGenerationError extends GmailSweepError {
  * Build the system + user prompt for email summarisation.
  */
 export function buildSummaryPrompt(email: Email): { system: string; user: string } {
-  const bodyText = email.bodyText ?? email.snippet ?? '';
+  const bodyText =
+    email.bodyText ??
+    (email.bodyHtml ? htmlToText(email.bodyHtml) : null) ??
+    email.snippet ??
+    '';
   const senderName = email.sender.name ?? '';
   const senderEmail = email.sender.email;
 

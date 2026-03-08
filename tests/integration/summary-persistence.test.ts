@@ -38,7 +38,7 @@ describe('Summary persistence (FR-008)', () => {
     const cache1 = new EmailCache(dbPath);
     await cache1.initialize();
     const summary = makeSummary('email-persist-1');
-    cache1.setSummary('email-persist-1', summary);
+    cache1.setSummary(summary);
     cache1.close();
 
     // Session 2: reopen and verify
@@ -70,9 +70,9 @@ describe('Summary persistence (FR-008)', () => {
   it('overwrite persists the latest value', async () => {
     const cache1 = new EmailCache(dbPath);
     await cache1.initialize();
-    cache1.setSummary('email-x', makeSummary('email-x'));
+    cache1.setSummary(makeSummary('email-x'));
     const updated = { ...makeSummary('email-x'), oneSentence: 'Updated sentence.' };
-    cache1.setSummary('email-x', updated);
+    cache1.setSummary(updated);
     cache1.close();
 
     const cache2 = new EmailCache(dbPath);

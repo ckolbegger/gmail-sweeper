@@ -50,6 +50,42 @@ describe('buildSummaryPrompt', () => {
     expect(user).toContain('Snippet fallback.');
   });
 
+  it('uses bodyText when both bodyText and bodyHtml are present', () => {
+    const email = makeEmail({
+      bodyText: 'Plain text body.',
+      bodyHtml: '<p>HTML body that should be ignored</p>',
+    });
+    const { user } = buildSummaryPrompt(email);
+    expect(user).toContain('Plain text body.');
+    expect(user).not.toContain('HTML body that should be ignored');
+  });
+
+  it('strips bodyHtml to plain text when bodyText is absent', () => {
+    const email = makeEmail({
+      bodyText: undefined,
+      bodyHtml: '<p>Hello <b>world</b>, please <a href="#">click here</a>.</p>',
+      snippet: 'Should not appear',
+    });
+    const { user } = buildSummaryPrompt(email);
+    expect(user).toContain('Hello world');
+    expect(user).not.toContain('Should not appear');
+    expect(user).not.toContain('<p>');
+    expect(user).not.toContain('<b>');
+  });
+
+  it('falls back to snippet when both bodyText and bodyHtml are absent', () => {
+    const email = makeEmail({ bodyText: undefined, bodyHtml: undefined, snippet: 'Only snippet.' });
+    const { user } = buildSummaryPrompt(email);
+    expect(user).toContain('Only snippet.');
+  });
+
+  it('uses empty string when all body fields are absent', () => {
+    const email = makeEmail({ bodyText: undefined, bodyHtml: undefined, snippet: undefined });
+    expect(() => buildSummaryPrompt(email)).not.toThrow();
+    const { user } = buildSummaryPrompt(email);
+    expect(typeof user).toBe('string');
+  });
+
   it('returns a system prompt', () => {
     const email = makeEmail();
     const { system } = buildSummaryPrompt(email);

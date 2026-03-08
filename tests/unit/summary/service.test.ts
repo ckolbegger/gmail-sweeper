@@ -133,4 +133,14 @@ describe('SummaryService', () => {
       expect(result.oneSentence).toBeTruthy();
     });
   });
+
+  describe('unsupported provider', () => {
+    it('throws SummaryGenerationError for unknown provider', async () => {
+      const badConfig = { ...ANTHROPIC_CONFIG, provider: 'gemini' as 'anthropic' };
+      const service = new SummaryService(badConfig);
+
+      await expect(service.summarize(makeEmail())).rejects.toBeInstanceOf(SummaryGenerationError);
+      await expect(service.summarize(makeEmail())).rejects.toThrow('Unsupported AI provider');
+    });
+  });
 });
