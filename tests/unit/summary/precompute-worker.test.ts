@@ -370,3 +370,62 @@ describe('PrecomputeWorker', () => {
     expect(service.summarize).toHaveBeenCalledWith(emails[0]);
   });
 });
+
+// ─── T006: N-boundary end-to-end chain tests ────────────────────────────────
+
+describe('N-boundary (SUMMARY_PRECOMPUTE_LIMIT) end-to-end chain', () => {
+  afterEach(() => {
+    delete process.env['SUMMARY_PRECOMPUTE_LIMIT'];
+    delete process.env['SUMMARY_PRECOMPUTE_MAX_DEPTH'];
+  });
+
+  it('SUMMARY_PRECOMPUTE_LIMIT=3 → readPrecomputeConfig returns coverageLimit=3, worker fetches exactly 3 emails (not 4)', async () => {
+    process.env['SUMMARY_PRECOMPUTE_LIMIT'] = '3';
+    const config = readPrecomputeConfig();
+    expect(config.coverageLimit).toBe(3);
+
+    // Cache returns 4 emails — but worker should ask for only 3
+    const fourEmails = [makeEmail('e1'), makeEmail('e2'), makeEmail('e3'), makeEmail('e4')];
+    const cache = {
+      getEmails: vi.fn(() => fourEmails.slice(0, 3)), // honour the limit in mock
+      getSummary: vi.fn(() => null),
+      setSummary: vi.fn(),
+    };
+    const service = makeService();
+    const worker = new PrecomputeWorker(cache as any, service as any, config);
+
+    worker.start();
+    await new Promise(r => setTimeout(r, 50));
+    worker.stop();
+
+    // Must have requested exactly 3, not 4
+    expect(cache.getEmails).toHaveBeenCalledWith({ sortBy: 'date', sortDesc: true, limit: 3 });
+    // Only the 3 returned emails should be summarised
+    expect(service.summarize).toHaveBeenCalledTimes(3);
+    const summarizedIds = (service.summarize as ReturnType<typeof vi.fn>).mock.calls.map(
+      (call: unknown[]) => (call[0] as Email).id,
+    );
+    expect(summarizedIds).not.toContain('e4');
+  });
+
+  it('SUMMARY_PRECOMPUTE_LIMIT unset → readPrecomputeConfig returns coverageLimit=500, worker fetches up to 500', async () => {
+    // env var must NOT be set
+    delete process.env['SUMMARY_PRECOMPUTE_LIMIT'];
+    const config = readPrecomputeConfig();
+    expect(config.coverageLimit).toBe(500);
+
+    const cache = {
+      getEmails: vi.fn(() => [] as Email[]),
+      getSummary: vi.fn(() => null),
+      setSummary: vi.fn(),
+    };
+    const service = makeService();
+    const worker = new PrecomputeWorker(cache as any, service as any, config);
+
+    worker.start();
+    await new Promise(r => setTimeout(r, 50));
+    worker.stop();
+
+    expect(cache.getEmails).toHaveBeenCalledWith({ sortBy: 'date', sortDesc: true, limit: 500 });
+  });
+});

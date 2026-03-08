@@ -64,7 +64,7 @@
 
 **Independent Test**: Set `SUMMARY_PRECOMPUTE_LIMIT=5`, clear the cache, start the app. After 30s, first 5 emails have instant summaries; email #6+ shows ⏳.
 
-- [ ] T006 [P] [US3] Extend `tests/unit/summary/precompute-worker.test.ts` with explicit N-boundary end-to-end chain tests: given `SUMMARY_PRECOMPUTE_LIMIT=3` in `process.env`, `readPrecomputeConfig()` returns `coverageLimit=3`, worker constructed with that config fetches exactly 3 emails (not 4), stops after processing those 3; given `SUMMARY_PRECOMPUTE_LIMIT` unset, worker fetches up to 500; write each test first and confirm it fails before running the suite — if any test fails against existing code, fix the implementation before marking complete (depends on T003)
+- [x] T006 [P] [US3] Extend `tests/unit/summary/precompute-worker.test.ts` with explicit N-boundary end-to-end chain tests: given `SUMMARY_PRECOMPUTE_LIMIT=3` in `process.env`, `readPrecomputeConfig()` returns `coverageLimit=3`, worker constructed with that config fetches exactly 3 emails (not 4), stops after processing those 3; given `SUMMARY_PRECOMPUTE_LIMIT` unset, worker fetches up to 500; write each test first and confirm it fails before running the suite — if any test fails against existing code, fix the implementation before marking complete (depends on T003)
 
 **Checkpoint**: N boundary verified by tests and manual quickstart step US3.
 
