@@ -41,7 +41,7 @@ describe('Link Interaction Integration', () => {
             />
             );
 
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise(resolve => setTimeout(resolve, 100));
 
             // Initial state: first link should be focused and cyan
             // But since ink-testing-library strips ansi colors in text (unless using a parser), 
@@ -49,17 +49,17 @@ describe('Link Interaction Integration', () => {
 
             // Tab to second link
             stdin.write('\t');
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise(resolve => setTimeout(resolve, 100));
 
             // Open
             stdin.write('\r');
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise(resolve => setTimeout(resolve, 100));
 
             expect(open).toHaveBeenCalledWith('https://second.com');
 
             // Copy
             stdin.write('c');
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise(resolve => setTimeout(resolve, 100));
             expect(clipboardy.writeSync).toHaveBeenCalledWith('https://second.com');
 
             // Tab again, wraps to first
