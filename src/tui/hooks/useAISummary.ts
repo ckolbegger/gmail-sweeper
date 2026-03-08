@@ -19,6 +19,7 @@ export interface UseAISummaryResult {
   summaryState: SummaryState;
   summaryError: string | null;
   generateSummary: (email: Email) => Promise<EmailSummary | null>;
+  abortGeneration: () => void;
 }
 
 export function useAISummary({ cache }: UseAISummaryOptions = {}): UseAISummaryResult {
@@ -109,9 +110,18 @@ export function useAISummary({ cache }: UseAISummaryOptions = {}): UseAISummaryR
     [cache]
   );
 
+  const abortGeneration = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setSummaryState('idle');
+    }
+  }, []);
+
   return {
     summaryState,
     summaryError,
     generateSummary,
+    abortGeneration,
   };
 }

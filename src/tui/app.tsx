@@ -32,7 +32,7 @@ export function InboxApp({ client, cache }: AppProps) {
   const { stdout } = useStdout();
   const terminalHeight = stdout?.rows ?? 24;
 
-  const { generateSummary, summaryState } = useAISummary({ cache });
+  const { generateSummary, summaryState, abortGeneration } = useAISummary({ cache });
 
   const selectedEmailRef = useRef<import('../core/models/index.js').Email | null>(null);
 
@@ -118,6 +118,15 @@ export function InboxApp({ client, cache }: AppProps) {
   useEffect(() => {
     selectedEmailRef.current = selectedEmail || null;
   }, [selectedEmail]);
+
+  useEffect(() => {
+    if (summaryState === 'loading' && selectedEmail) {
+      const currentEmail = selectedEmailRef.current;
+      if (currentEmail && summaries.has(currentEmail.id)) {
+        abortGeneration();
+      }
+    }
+  }, [selectedEmail, summaryState, summaries, abortGeneration]);
 
   useEffect(() => {
     if (selectedEmail && selectedEmail.id !== lastFetchedId.current) {
