@@ -7,6 +7,7 @@ import type { Email, EmailSummary } from '../../core/models/index.js';
 import type { EmailCache } from '../../core/cache/db.js';
 import { resolveAiConfig } from '../../core/ai/config.js';
 import { createAiProvider } from '../../core/ai/provider.js';
+import { convertHtmlToText } from '../../core/rendering/index.js';
 
 export type SummaryState = 'idle' | 'loading' | 'success' | 'error';
 
@@ -66,7 +67,11 @@ export function useAISummary({ cache }: UseAISummaryOptions = {}): UseAISummaryR
         }
         const provider = createAiProvider(providerConfig);
 
-        const body = email.bodyText || '';
+        let body = email.bodyText || '';
+        if (!body && email.bodyHtml) {
+          body = convertHtmlToText(email.bodyHtml);
+        }
+
         const result = await provider.generateSummary(
           email.id,
           email.subject,
