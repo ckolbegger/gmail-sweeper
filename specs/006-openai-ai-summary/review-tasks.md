@@ -20,6 +20,6 @@
   - Integration test: malformed cache for selected email falls back to regeneration.
   - Unit test: malformed single entry is ignored as cache miss while valid entries remain usable.
 
-- [ ] R005 Add observability for summary pipeline.
+- [X] R005 Add observability for summary pipeline.
   - Track cache hit/miss, generation success/failure, and auto-heal events.
   - Emit structured logs or counters with message IDs redacted/truncated.

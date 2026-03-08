@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { SummaryObservabilityEvent } from '@/core/summary_observability.js';
 import { createPersistedSummaryFixture } from './fixtures/ai_summary.fixtures.js';
 
 import { createSummaryStore } from '@/adapters/storage/summary_store.js';
@@ -59,7 +60,10 @@ describe('summary store adapter', () => {
       JSON.stringify({ version: 1, summariesByMessageId: { 'msg-good': valid, 'msg-bad': 42 } }),
       'utf8'
     );
-    const store = createSummaryStore(filePath);
+    const events: SummaryObservabilityEvent[] = [];
+    const store = createSummaryStore(filePath, {
+      observabilitySink: (event) => events.push(event)
+    });
 
     await expect(store.getByMessageId('msg-good')).resolves.toEqual(valid);
     await expect(store.getByMessageId('msg-bad')).resolves.toBeNull();
@@ -79,6 +83,7 @@ describe('summary store adapter', () => {
       summariesByMessageId?: Record<string, unknown>;
     };
     expect(Object.keys(healed.summariesByMessageId ?? {}).sort()).toEqual(['msg-bad', 'msg-good']);
+    expect(events.some((event) => event.event === 'summary_store_autoheal_sanitized')).toBe(true);
   });
 
   it('should auto-heal invalid JSON by backing it up and resetting the store file', async () => {
@@ -87,7 +92,10 @@ describe('summary store adapter', () => {
     const filePath = join(dir, 'email-summaries.json');
 
     await writeFile(filePath, '{invalid-json', 'utf8');
-    const store = createSummaryStore(filePath);
+    const events: SummaryObservabilityEvent[] = [];
+    const store = createSummaryStore(filePath, {
+      observabilitySink: (event) => events.push(event)
+    });
 
     await expect(store.getByMessageId('msg-1')).resolves.toBeNull();
 
@@ -100,12 +108,16 @@ describe('summary store adapter', () => {
 
     const files = await readdir(dir);
     expect(files.some((name) => name.startsWith('email-summaries.json.corrupt-'))).toBe(true);
+    expect(events.some((event) => event.event === 'summary_store_autoheal_reset')).toBe(true);
   });
 
   it('should reject malformed records before writing', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'gmail-sweeper-summary-'));
     tempDirs.push(dir);
-    const store = createSummaryStore(join(dir, 'email-summaries.json'));
+    const events: SummaryObservabilityEvent[] = [];
+    const store = createSummaryStore(join(dir, 'email-summaries.json'), {
+      observabilitySink: (event) => events.push(event)
+    });
 
     await expect(
       store.upsert(
@@ -114,6 +126,7 @@ describe('summary store adapter', () => {
         })
       )
     ).rejects.toThrow('Invalid summary record');
+    expect(events.some((event) => event.event === 'summary_store_invalid_record_rejected')).toBe(true);
   });
 
   it('should serialize parallel upserts without dropping records', async () => {

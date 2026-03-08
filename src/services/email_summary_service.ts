@@ -7,6 +7,11 @@ import type {
   SummaryStore
 } from '@/adapters/storage/summary_store.js';
 import { ValidationError } from '@/core/errors.js';
+import {
+  emitSummaryObservabilityEvent,
+  redactMessageId,
+  type SummaryObservabilitySink
+} from '@/core/summary_observability.js';
 
 export interface GetOrGenerateSummaryRequest {
   messageId: string;
@@ -29,6 +34,7 @@ export interface CreateEmailSummaryServiceOptions {
   providerName: PersistedEmailSummary['provider'];
   model: string;
   store: SummaryStore;
+  observabilitySink?: SummaryObservabilitySink;
   now?: () => Date;
 }
 
@@ -86,11 +92,27 @@ export function createEmailSummaryService(options: CreateEmailSummaryServiceOpti
 
       const cached = await options.store.getByMessageId(messageId);
       if (cached) {
+        emitSummaryObservabilityEvent(options.observabilitySink, {
+          event: 'summary_cache_hit',
+          messageIdHint: redactMessageId(messageId),
+          details: {
+            provider: cached.provider,
+            model: cached.model
+          }
+        });
         return {
           record: cached,
           cacheHit: true
         };
       }
+      emitSummaryObservabilityEvent(options.observabilitySink, {
+        event: 'summary_cache_miss',
+        messageIdHint: redactMessageId(messageId),
+        details: {
+          provider: options.providerName,
+          model: options.model
+        }
+      });
 
       const subject = request.subject?.trim() ?? '';
       const sender = request.sender?.trim() ?? '';
@@ -99,12 +121,26 @@ export function createEmailSummaryService(options: CreateEmailSummaryServiceOpti
         throw new ValidationError('Summary generation requires subject, sender, and body');
       }
 
-      const generated = await options.provider.summarizeEmail({
-        messageId,
-        subject,
-        sender,
-        body
-      });
+      let generated: SummarizeEmailResponse;
+      try {
+        generated = await options.provider.summarizeEmail({
+          messageId,
+          subject,
+          sender,
+          body
+        });
+      } catch (error) {
+        emitSummaryObservabilityEvent(options.observabilitySink, {
+          event: 'summary_generation_failure',
+          messageIdHint: redactMessageId(messageId),
+          details: {
+            provider: options.providerName,
+            model: options.model,
+            reason: error instanceof Error ? error.message : String(error)
+          }
+        });
+        throw error;
+      }
       const normalized = normalizeSummaryResponse(generated);
 
       const record: PersistedEmailSummary = {
@@ -117,6 +153,15 @@ export function createEmailSummaryService(options: CreateEmailSummaryServiceOpti
       };
 
       await options.store.upsert(record);
+      emitSummaryObservabilityEvent(options.observabilitySink, {
+        event: 'summary_generation_success',
+        messageIdHint: redactMessageId(messageId),
+        details: {
+          provider: options.providerName,
+          model: options.model,
+          actionItemCount: record.actionItems.length
+        }
+      });
       return {
         record,
         cacheHit: false

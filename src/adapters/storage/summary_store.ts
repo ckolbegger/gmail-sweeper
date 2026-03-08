@@ -2,6 +2,11 @@ import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
 import type { AiProviderConfig } from '@/adapters/ai/provider.js';
+import {
+  emitSummaryObservabilityEvent,
+  redactMessageId,
+  type SummaryObservabilitySink
+} from '@/core/summary_observability.js';
 
 const SUMMARY_STORE_VERSION = 1;
 export const DEFAULT_SUMMARY_STORE_PATH = '.gmail-sweeper/email-summaries.json';
@@ -85,11 +90,13 @@ function parseDocument(raw: string, filePath: string): SummaryStoreDocument {
 function sanitizeDocument(parsed: unknown): {
   document: SummaryStoreDocument;
   needsRewrite: boolean;
+  droppedCount: number;
 } {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return {
       document: createEmptyDocument(),
-      needsRewrite: true
+      needsRewrite: true,
+      droppedCount: 0
     };
   }
 
@@ -98,12 +105,14 @@ function sanitizeDocument(parsed: unknown): {
     summariesByMessageId?: unknown;
   };
   let needsRewrite = record.version !== SUMMARY_STORE_VERSION;
+  let droppedCount = 0;
   const summariesByMessageId: Record<string, PersistedEmailSummary> = {};
 
   if (!record.summariesByMessageId || typeof record.summariesByMessageId !== 'object') {
     return {
       document: createEmptyDocument(),
-      needsRewrite: true
+      needsRewrite: true,
+      droppedCount: 0
     };
   }
 
@@ -112,6 +121,7 @@ function sanitizeDocument(parsed: unknown): {
   )) {
     if (!isValidPersistedSummary(summary) || summary.messageId !== messageId) {
       needsRewrite = true;
+      droppedCount += 1;
       continue;
     }
 
@@ -123,7 +133,8 @@ function sanitizeDocument(parsed: unknown): {
       version: SUMMARY_STORE_VERSION,
       summariesByMessageId
     },
-    needsRewrite
+    needsRewrite,
+    droppedCount
   };
 }
 
@@ -139,21 +150,34 @@ function buildCorruptBackupPath(filePath: string): string {
   return `${filePath}.corrupt-${stamp}`;
 }
 
-async function resetCorruptStoreFile(filePath: string): Promise<SummaryStoreDocument> {
+async function resetCorruptStoreFile(
+  filePath: string,
+  observabilitySink?: SummaryObservabilitySink
+): Promise<SummaryStoreDocument> {
   const empty = createEmptyDocument();
   await mkdir(dirname(filePath), { recursive: true });
+  const backupPath = buildCorruptBackupPath(filePath);
 
   try {
-    await rename(filePath, buildCorruptBackupPath(filePath));
+    await rename(filePath, backupPath);
   } catch {
     // Best effort backup: continue with fresh store creation.
   }
 
   await writeFile(filePath, JSON.stringify(empty, null, 2), 'utf8');
+  emitSummaryObservabilityEvent(observabilitySink, {
+    event: 'summary_store_autoheal_reset',
+    details: {
+      backupPath
+    }
+  });
   return empty;
 }
 
-async function readDocument(filePath: string): Promise<SummaryStoreDocument> {
+async function readDocument(
+  filePath: string,
+  observabilitySink?: SummaryObservabilitySink
+): Promise<SummaryStoreDocument> {
   try {
     const raw = await readFile(filePath, 'utf8');
     try {
@@ -164,12 +188,18 @@ async function readDocument(filePath: string): Promise<SummaryStoreDocument> {
       try {
         parsed = JSON.parse(raw) as unknown;
       } catch {
-        return resetCorruptStoreFile(filePath);
+        return resetCorruptStoreFile(filePath, observabilitySink);
       }
 
       const sanitized = sanitizeDocument(parsed);
       if (sanitized.needsRewrite) {
         await writeDocument(filePath, sanitized.document);
+        emitSummaryObservabilityEvent(observabilitySink, {
+          event: 'summary_store_autoheal_sanitized',
+          details: {
+            droppedEntries: sanitized.droppedCount
+          }
+        });
       }
       return sanitized.document;
     }
@@ -202,7 +232,10 @@ async function writeDocument(filePath: string, document: SummaryStoreDocument): 
 class FileSummaryStore implements SummaryStore {
   private queue: Promise<void> = Promise.resolve();
 
-  constructor(private readonly filePath: string) {}
+  constructor(
+    private readonly filePath: string,
+    private readonly observabilitySink?: SummaryObservabilitySink
+  ) {}
 
   private withLock<T>(fn: () => Promise<T>): Promise<T> {
     const run = this.queue.then(fn, fn);
@@ -215,18 +248,22 @@ class FileSummaryStore implements SummaryStore {
 
   async getByMessageId(messageId: string): Promise<PersistedEmailSummary | null> {
     return this.withLock(async () => {
-      const document = await readDocument(this.filePath);
+      const document = await readDocument(this.filePath, this.observabilitySink);
       return document.summariesByMessageId[messageId] ?? null;
     });
   }
 
   async upsert(record: PersistedEmailSummary): Promise<void> {
     if (!isValidPersistedSummary(record)) {
+      emitSummaryObservabilityEvent(this.observabilitySink, {
+        event: 'summary_store_invalid_record_rejected',
+        messageIdHint: typeof record.messageId === 'string' ? redactMessageId(record.messageId) : undefined
+      });
       throw new Error('Invalid summary record');
     }
 
     await this.withLock(async () => {
-      const document = await readDocument(this.filePath);
+      const document = await readDocument(this.filePath, this.observabilitySink);
       const nextDocument: SummaryStoreDocument = {
         ...document,
         summariesByMessageId: {
@@ -239,6 +276,9 @@ class FileSummaryStore implements SummaryStore {
   }
 }
 
-export function createSummaryStore(filePath = DEFAULT_SUMMARY_STORE_PATH): SummaryStore {
-  return new FileSummaryStore(filePath);
+export function createSummaryStore(
+  filePath = DEFAULT_SUMMARY_STORE_PATH,
+  options: { observabilitySink?: SummaryObservabilitySink } = {}
+): SummaryStore {
+  return new FileSummaryStore(filePath, options.observabilitySink);
 }

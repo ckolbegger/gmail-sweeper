@@ -11,6 +11,7 @@ import type {
   PersistedEmailSummary,
   SummaryStore
 } from '@/adapters/storage/summary_store.js';
+import type { SummaryObservabilityEvent } from '@/core/summary_observability.js';
 import {
   createEmailSummaryService,
   normalizeActionItems,
@@ -143,6 +144,53 @@ describe('email summary service', () => {
       'Summary sentence is required'
     );
     expect(store.upsert).not.toHaveBeenCalled();
+  });
+
+  it('should emit structured observability events with redacted message id hints', async () => {
+    const events: SummaryObservabilityEvent[] = [];
+    const store = createStoreMock(null);
+    const provider: SummaryProvider = {
+      summarizeEmail: vi.fn().mockResolvedValue(createSummaryResponseFixture())
+    };
+    const service = createEmailSummaryService({
+      provider,
+      providerName: 'openai',
+      model: 'gpt-4o-mini',
+      store,
+      observabilitySink: (event) => events.push(event)
+    });
+
+    await service.getOrGenerateSummary(createSummaryRequestFixture({ messageId: 'abcd1234efgh5678' }));
+
+    expect(events.map((event) => event.event)).toEqual([
+      'summary_cache_miss',
+      'summary_generation_success'
+    ]);
+    for (const event of events) {
+      expect(event.messageIdHint).toBe('abcd...5678');
+      expect(event.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    }
+  });
+
+  it('should emit generation failure observability event', async () => {
+    const events: SummaryObservabilityEvent[] = [];
+    const store = createStoreMock(null);
+    const provider: SummaryProvider = {
+      summarizeEmail: vi.fn().mockRejectedValue(new Error('provider offline'))
+    };
+    const service = createEmailSummaryService({
+      provider,
+      providerName: 'openai',
+      model: 'gpt-4o-mini',
+      store,
+      observabilitySink: (event) => events.push(event)
+    });
+
+    await expect(service.getOrGenerateSummary(createSummaryRequestFixture())).rejects.toThrow('provider offline');
+    expect(events.map((event) => event.event)).toEqual([
+      'summary_cache_miss',
+      'summary_generation_failure'
+    ]);
   });
 });
 
