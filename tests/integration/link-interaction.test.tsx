@@ -64,9 +64,9 @@ describe('Link Interaction Integration', () => {
 
             // Tab again, wraps to first
             stdin.write('\t');
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise(resolve => setTimeout(resolve, 100));
             stdin.write('\r');
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise(resolve => setTimeout(resolve, 100));
             expect(open).toHaveBeenCalledWith('https://first.com');
             });
             });

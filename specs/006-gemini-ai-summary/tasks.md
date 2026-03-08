@@ -139,7 +139,7 @@ description: "Task list template for feature implementation"
 ### High Priority (Reliability & Bug Prevention)
 
 - [x] R001 [Refactor] Add an early return to `generateSummary` in `src/hooks/useSummary.ts` to prevent concurrent API calls if `isSummarizing` is true (write/update unit tests first).
-- [ ] R002 [Refactor] Implement an in-memory queue/mutex for atomic file writes in `src/services/storage/summaryStore.ts`. Ensure file writes write to a temporary file and use `fs.rename` to prevent corruption during concurrent accesses. Add unit tests in `tests/unit/services/storage/summaryStore.test.ts`.
+- [x] R002 [Refactor] Implement an in-memory queue/mutex for atomic file writes in `src/services/storage/summaryStore.ts`. Ensure file writes write to a temporary file and use `fs.rename` to prevent corruption during concurrent accesses. Add unit tests in `tests/unit/services/storage/summaryStore.test.ts`.
 
 ### Medium Priority (Refactoring & Robustness)
 
