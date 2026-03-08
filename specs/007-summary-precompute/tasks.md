@@ -26,7 +26,7 @@
 
 **⚠️ CRITICAL**: Phases 3–6 cannot begin until this phase is complete.
 
-- [ ] T002 Implement `readPrecomputeConfig(): PrecomputeConfig` in `src/core/summary/precompute-worker.ts` reading `SUMMARY_PRECOMPUTE_LIMIT` and `SUMMARY_PRECOMPUTE_MAX_DEPTH` from `process.env`, defaulting both to 500, treating invalid/missing values as 500; implement the derived `effectiveDepth = Math.min(coverageLimit, maxDepth)` helper; write and pass unit tests in `tests/unit/summary/precompute-worker.test.ts` covering: both defaults return 500, each env var overrides its respective field, invalid string falls back to 500, negative integer falls back to 500, effectiveDepth = min when maxDepth < coverageLimit, effectiveDepth = coverageLimit when maxDepth >= coverageLimit
+- [x] T002 Implement `readPrecomputeConfig(): PrecomputeConfig` in `src/core/summary/precompute-worker.ts` reading `SUMMARY_PRECOMPUTE_LIMIT` and `SUMMARY_PRECOMPUTE_MAX_DEPTH` from `process.env`, defaulting both to 500, treating invalid/missing values as 500; implement the derived `effectiveDepth = Math.min(coverageLimit, maxDepth)` helper; write and pass unit tests in `tests/unit/summary/precompute-worker.test.ts` covering: both defaults return 500, each env var overrides its respective field, invalid string falls back to 500, negative integer falls back to 500, effectiveDepth = min when maxDepth < coverageLimit, effectiveDepth = coverageLimit when maxDepth >= coverageLimit
 
 **Checkpoint**: `PrecomputeConfig` type importable; `readPrecomputeConfig()` verified by tests.
 

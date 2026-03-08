@@ -8,8 +8,21 @@ export interface PrecomputeConfig {
   maxDepth: number;
 }
 
+function parseEnvPositiveInt(value: string | undefined): number | null {
+  if (value === undefined) return null;
+  const n = Number(value);
+  if (!Number.isInteger(n) || n <= 0) return null;
+  return n;
+}
+
 export function readPrecomputeConfig(): PrecomputeConfig {
-  return { coverageLimit: 500, maxDepth: 500 };
+  const coverageLimit = parseEnvPositiveInt(process.env['SUMMARY_PRECOMPUTE_LIMIT']) ?? 500;
+  const maxDepth = parseEnvPositiveInt(process.env['SUMMARY_PRECOMPUTE_MAX_DEPTH']) ?? 500;
+  return { coverageLimit, maxDepth };
+}
+
+export function effectiveDepth(config: PrecomputeConfig): number {
+  return Math.min(config.coverageLimit, config.maxDepth);
 }
 
 export class PrecomputeWorker {
