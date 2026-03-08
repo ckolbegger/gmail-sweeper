@@ -1,10 +1,16 @@
+// @vitest-environment jsdom
 /**
  * T040: Unit tests for useGmail hook.
  * Tests data fetching, caching, error handling, and pagination.
+ * T005: Tests for onEmailsFetched callback.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
 import type { Email, EmailAddress, Label } from '../../../src/core/models/index.js';
+import type { GmailClient } from '../../../src/core/gmail/client.js';
+import type { EmailCache } from '../../../src/core/cache/db.js';
+import { useGmail } from '../../../src/tui/hooks/useGmail.js';
 
 // Mock email helper
 function createTestEmail(id: string): Email {
@@ -127,6 +133,83 @@ describe('useGmail', () => {
       const result2 = result1; // Simulate cache hit
       expect(fetchFn).toHaveBeenCalledTimes(1); // Still 1
       expect(result1).toEqual(result2);
+    });
+  });
+
+  describe('T005: onEmailsFetched callback', () => {
+    function makeCache(emails: Email[] = []): EmailCache {
+      return {
+        getEmails: vi.fn(() => emails),
+        upsertEmails: vi.fn(),
+        getSummary: vi.fn(() => null),
+        setSummary: vi.fn(),
+        removeEmail: vi.fn(),
+      } as unknown as EmailCache;
+    }
+
+    it('onEmailsFetched is called after loadMore() succeeds', async () => {
+      const initialEmails = [createTestEmail('1'), createTestEmail('2')];
+      const moreEmails = [createTestEmail('3')];
+      // Empty cache so initial load goes to client (which returns nextPageToken → hasMore=true)
+      const cache = makeCache([]);
+      const client = {
+        listMessages: vi.fn()
+          .mockResolvedValueOnce({ messages: initialEmails, nextPageToken: 'page2' })
+          .mockResolvedValueOnce({ messages: moreEmails, nextPageToken: undefined }),
+        getMessage: vi.fn(async (id: string) => createTestEmail(id)),
+      } as unknown as GmailClient;
+      const onEmailsFetched = vi.fn();
+
+      const { result } = renderHook(() =>
+        useGmail({ client, cache, onEmailsFetched }),
+      );
+
+      // Wait for initial load to complete
+      await act(async () => {
+        await new Promise(r => setTimeout(r, 20));
+      });
+
+      // hasMore should be true due to nextPageToken from initial load
+      expect(result.current.hasMore).toBe(true);
+
+      // Trigger loadMore
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(onEmailsFetched).toHaveBeenCalledTimes(1);
+    });
+
+    it('onEmailsFetched is NOT called if loadMore() throws', async () => {
+      const initialEmails = [createTestEmail('1')];
+      // Empty cache so initial load goes to client (returns nextPageToken → hasMore=true)
+      const cache = makeCache([]);
+      const client = {
+        listMessages: vi.fn()
+          .mockResolvedValueOnce({ messages: initialEmails, nextPageToken: 'tok' })
+          .mockRejectedValueOnce(new Error('Network failure')),
+        getMessage: vi.fn(),
+      } as unknown as GmailClient;
+      const onEmailsFetched = vi.fn();
+
+      const { result } = renderHook(() =>
+        useGmail({ client, cache, onEmailsFetched }),
+      );
+
+      // Wait for initial load
+      await act(async () => {
+        await new Promise(r => setTimeout(r, 20));
+      });
+
+      // hasMore should be true due to nextPageToken
+      expect(result.current.hasMore).toBe(true);
+
+      // Trigger loadMore (will throw)
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(onEmailsFetched).not.toHaveBeenCalled();
     });
   });
 });

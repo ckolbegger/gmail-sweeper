@@ -26,11 +26,12 @@ interface AppProps {
   maxContextTokens?: number;
 }
 
-export function InboxApp({ client, cache, worker: _worker, maxEmails, maxContextTokens: _maxContextTokens }: AppProps) {
+export function InboxApp({ client, cache, worker, maxEmails, maxContextTokens: _maxContextTokens }: AppProps) {
   const { emails, isLoading, error, fetchEmailDetail, refresh, loadMore, removeEmail, restoreEmail } = useGmail({
     client,
     cache,
     ...(maxEmails !== undefined ? { initialLoadSize: maxEmails } : {}),
+    ...(worker ? { onEmailsFetched: () => worker.restart() } : {}),
   });
   const smartFilter = useSmartFilter({ emails });
   const lastFetchedId = useRef<string | null>(null);

@@ -325,4 +325,48 @@ describe('PrecomputeWorker', () => {
       worker.stop();
     }).not.toThrow();
   });
+
+  it('restart() when running cancels current pass and starts a new one', async () => {
+    // e2 summarise will take 200ms — keeps the first pass alive
+    const emails = [makeEmail('e1'), makeEmail('e2'), makeEmail('e3')];
+    const cache = makeCache(emails);
+    let e2Started = false;
+    const service = makeService(async (email) => {
+      if (email.id === 'e2') {
+        e2Started = true;
+        await new Promise(r => setTimeout(r, 200));
+      }
+      return makeSummary(email.id);
+    });
+    const worker = new PrecomputeWorker(cache as any, service as any, defaultConfig);
+
+    worker.start();
+    // Wait until e2 starts (first pass is in progress)
+    await new Promise(r => setTimeout(r, 30));
+    expect(e2Started).toBe(true);
+
+    // Restart: should abort current pass and start a new one
+    worker.restart();
+    // Give the new pass time to run
+    await new Promise(r => setTimeout(r, 100));
+    worker.stop();
+
+    // getEmails called at least twice — once for original pass, once for new pass
+    expect(cache.getEmails).toHaveBeenCalledTimes(2);
+  });
+
+  it('restart() when idle acts like start()', async () => {
+    const emails = [makeEmail('e1')];
+    const cache = makeCache(emails);
+    const service = makeService();
+    const worker = new PrecomputeWorker(cache as any, service as any, defaultConfig);
+
+    // Worker has never been started — should be idle
+    worker.restart();
+    await new Promise(r => setTimeout(r, 50));
+    worker.stop();
+
+    expect(cache.getEmails).toHaveBeenCalledTimes(1);
+    expect(service.summarize).toHaveBeenCalledWith(emails[0]);
+  });
 });

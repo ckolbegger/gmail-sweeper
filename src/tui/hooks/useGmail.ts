@@ -11,6 +11,7 @@ interface UseGmailOptions {
   client?: GmailClient;
   cache: EmailCache;
   initialLoadSize?: number;
+  onEmailsFetched?: () => void;
 }
 
 interface UseGmailState {
@@ -46,6 +47,7 @@ export function useGmail({
   client,
   cache,
   initialLoadSize = 50,
+  onEmailsFetched,
 }: UseGmailOptions): UseGmailResult {
   const [state, setState] = useState<UseGmailState>({
     emails: [],
@@ -168,6 +170,7 @@ export function useGmail({
         pageToken: result.nextPageToken,
         isLoading: false,
       }));
+      onEmailsFetched?.();
     } catch (err) {
       setState(prev => ({
         ...prev,
@@ -175,7 +178,7 @@ export function useGmail({
         isLoading: false,
       }));
     }
-  }, [state.hasMore, state.pageToken, cache, client, initialLoadSize]);
+  }, [state.hasMore, state.pageToken, cache, client, initialLoadSize, onEmailsFetched]);
 
   const fetchEmailDetail = useCallback(async (emailId: string): Promise<Email | null> => {
     if (!client) return null;
