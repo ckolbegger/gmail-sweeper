@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildClassificationPrompt } from '@/adapters/ai/prompt.js';
+import { buildClassificationPrompt, buildSummaryPrompt } from '@/adapters/ai/prompt.js';
 
 describe('classification prompt template', () => {
   it('should build prompt with filter description and email metadata array', () => {
@@ -31,5 +31,23 @@ describe('classification prompt template', () => {
     const prompt = buildClassificationPrompt('receipts', []);
 
     expect(prompt.user).toContain('[]');
+  });
+});
+
+describe('summary prompt template', () => {
+  it('should include message metadata and body', () => {
+    const prompt = buildSummaryPrompt({
+      messageId: 'msg-1',
+      subject: 'Project update',
+      sender: 'pm@example.com',
+      body: 'Please send the final plan by Friday.'
+    });
+
+    expect(prompt.system).toContain('summarySentence');
+    expect(prompt.system).toContain('actionItems');
+    expect(prompt.user).toContain('msg-1');
+    expect(prompt.user).toContain('Project update');
+    expect(prompt.user).toContain('pm@example.com');
+    expect(prompt.user).toContain('final plan');
   });
 });

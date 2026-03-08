@@ -132,4 +132,93 @@ describe('CLI inbox workflow', () => {
     expect(preview.join('\n')).toContain('Second body');
     expect(getEmailDetail).toHaveBeenCalledWith(expect.anything(), 'msg-2', { userId: 'me' });
   });
+
+  it('should pass archive/delete actions into interactive session', async () => {
+    const runInkSession = vi.fn().mockResolvedValue(undefined);
+    const modify = vi.fn().mockResolvedValue(undefined);
+    const trash = vi.fn().mockResolvedValue(undefined);
+
+    const code = await runInboxCli(['--interactive'], {
+      loadConfig: () => baseConfig,
+      readAuthTokens: async () => ({
+        accessToken: 'cached-access',
+        refreshToken: 'cached-refresh'
+      }),
+      createGmailClient: () => ({ users: { messages: { modify, trash } } }),
+      listInboxEmails: async () => [
+        createEmail({
+          message_id: 'msg-1',
+          subject: 'First',
+          sender: 'first@example.com',
+          received_at: Date.parse('2026-02-09T08:00:00Z')
+        }),
+        createEmail({
+          message_id: 'msg-2',
+          subject: 'Second',
+          sender: 'second@example.com',
+          received_at: Date.parse('2026-02-08T08:00:00Z')
+        })
+      ],
+      runInkSession
+    });
+
+    expect(code).toBe(0);
+    expect(runInkSession).toHaveBeenCalledOnce();
+
+    const session = runInkSession.mock.calls[0]?.[0];
+    await session.archiveEmail('msg-1');
+    await session.deleteEmail('msg-2');
+
+    expect(modify).toHaveBeenCalledWith({
+      userId: 'me',
+      id: 'msg-1',
+      removeLabelIds: ['INBOX']
+    });
+    expect(trash).toHaveBeenCalledWith({
+      userId: 'me',
+      id: 'msg-2'
+    });
+  });
+
+  it('should wire summary service into interactive session when provider supports summaries', async () => {
+    const runInkSession = vi.fn().mockResolvedValue(undefined);
+
+    const code = await runInboxCli(['--interactive'], {
+      loadConfig: () => ({
+        ...baseConfig,
+        aiConfig: {
+          provider: 'openai' as const,
+          model: 'gpt-4o-mini',
+          apiKey: 'test-key',
+          maxContextTokens: 32000
+        }
+      }),
+      readAuthTokens: async () => ({
+        accessToken: 'cached-access',
+        refreshToken: 'cached-refresh'
+      }),
+      createAiProvider: () => ({
+          classifyEmails: vi.fn().mockResolvedValue({ results: [] }),
+          summarizeEmail: vi.fn().mockResolvedValue({
+            summarySentence: 'Summary sentence.',
+            actionItems: ['None']
+          })
+        }),
+      createGmailClient: () => ({ users: { messages: {} } }),
+      listInboxEmails: async () => [
+        createEmail({
+          message_id: 'msg-1',
+          subject: 'First',
+          sender: 'first@example.com',
+          received_at: Date.parse('2026-02-09T08:00:00Z')
+        })
+      ],
+      runInkSession
+    });
+
+    expect(code).toBe(0);
+    expect(runInkSession).toHaveBeenCalledOnce();
+    const session = runInkSession.mock.calls[0]?.[0];
+    expect(session.summaryService).toBeTruthy();
+  });
 });

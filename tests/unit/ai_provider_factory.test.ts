@@ -14,6 +14,7 @@ describe('ai provider factory', () => {
     });
 
     expect(provider).toBeInstanceOf(AnthropicProvider);
+    expect(typeof (provider as { summarizeEmail?: unknown }).summarizeEmail).toBe('function');
   });
 
   it('should create OpenAiProvider for openai config', () => {
@@ -25,6 +26,7 @@ describe('ai provider factory', () => {
     });
 
     expect(provider).toBeInstanceOf(OpenAiProvider);
+    expect(typeof (provider as { summarizeEmail?: unknown }).summarizeEmail).toBe('function');
   });
 
   it('should throw for unsupported provider', () => {

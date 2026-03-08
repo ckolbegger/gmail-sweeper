@@ -33,6 +33,7 @@ describe('smart filter configured env flow', () => {
       ],
       runInkSession: async (options) => {
         expect(options.provider).toBeTruthy();
+        expect(options.summaryService).toBeTruthy();
         expect(options.emails).toHaveLength(1);
         expect(options.emails?.[0]?.message_id).toBe('msg-1');
       }

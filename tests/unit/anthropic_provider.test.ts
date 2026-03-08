@@ -4,6 +4,11 @@ import { join } from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
 
+import {
+  createSummaryRequestFixture,
+  createSummaryResponseFixture
+} from './fixtures/ai_summary.fixtures.js';
+
 import { AnthropicProvider } from '@/adapters/ai/anthropic.js';
 import { AiProviderError } from '@/core/errors.js';
 
@@ -276,5 +281,57 @@ describe('AnthropicProvider', () => {
     expect(response).toEqual({
       results: [{ emailId: 'msg-7', matches: true, confidence: 0.73, reasoning: undefined }]
     });
+  });
+
+  it('should summarize emails and parse structured JSON responses', async () => {
+    const create = vi.fn().mockResolvedValue({
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(createSummaryResponseFixture())
+        }
+      ]
+    });
+    const provider = createProvider(create);
+
+    const response = await provider.summarizeEmail(createSummaryRequestFixture());
+    expect(response).toEqual(createSummaryResponseFixture());
+  });
+
+  it('should recover summary JSON from prose-wrapped payloads', async () => {
+    const create = vi.fn().mockResolvedValue({
+      content: [
+        {
+          type: 'text',
+          text: [
+            'Summary payload:',
+            JSON.stringify(createSummaryResponseFixture({ actionItems: [] })),
+            'Done.'
+          ].join('\n')
+        }
+      ]
+    });
+    const provider = createProvider(create);
+
+    const response = await provider.summarizeEmail(createSummaryRequestFixture());
+    expect(response).toEqual(createSummaryResponseFixture({ actionItems: [] }));
+  });
+
+  it('should throw AiProviderError for malformed summary payloads', async () => {
+    const create = vi.fn().mockResolvedValue({
+      content: [
+        {
+          type: 'text',
+          text: '{"summarySentence":"","actionItems":["Follow up"]}'
+        }
+      ]
+    });
+    const provider = createProvider(create);
+
+    await expect(provider.summarizeEmail(createSummaryRequestFixture())).rejects.toMatchObject(
+      ({
+        message: expect.stringContaining('Invalid summary sentence')
+      } satisfies Partial<AiProviderError>)
+    );
   });
 });

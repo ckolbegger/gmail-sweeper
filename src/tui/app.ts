@@ -4,6 +4,10 @@ import { createElement, useCallback, useMemo, useState } from 'react';
 import type { AiProvider } from '@/adapters/ai/provider.js';
 import type { Email } from '@/core/entities.js';
 import { mapError } from '@/core/errors.js';
+import {
+  renderSummaryDetailLines,
+  type EmailSummaryService
+} from '@/services/email_summary_service.js';
 import { runSmartFilter as runSmartFilterService } from '@/services/smart_filter_service.js';
 import { buildFilterInputLines } from '@/tui/filter_input.js';
 import { formatConfidenceIndicator } from '@/tui/inbox_list.js';
@@ -22,8 +26,11 @@ const DEFAULT_VIEWPORT_ROWS = 25;
 export interface TuiCommandDeps {
   messageIds: string[];
   fetchDetailLines: (messageId: string) => Promise<string[]>;
+  archiveEmail?: (messageId: string) => Promise<void>;
+  deleteEmail?: (messageId: string) => Promise<void>;
   emails?: Email[];
   provider?: AiProvider | null;
+  summaryService?: EmailSummaryService;
   runSmartFilter?: typeof runSmartFilterService;
   onStateUpdate?: (state: TuiAppState) => void;
 }
@@ -39,13 +46,24 @@ interface SmartFilterUiState {
   requestId: number;
 }
 
+interface DetailSummaryUiState {
+  mode: 'full' | 'loading_summary' | 'summary';
+  messageId?: string;
+  fullLines: string[];
+  summaryLines: string[];
+  requestId: number;
+  errorMessage?: string;
+}
+
 export interface TuiAppState {
   navigation: NavigationState;
   viewportRows: number;
   detailLines: string[];
   statusLine: string;
   shouldExit: boolean;
+  hiddenSourceIndexes: Record<number, true>;
   smartFilter: SmartFilterUiState;
+  detailSummary: DetailSummaryUiState;
 }
 
 export interface InkInboxAppProps extends TuiCommandDeps {
@@ -101,6 +119,34 @@ function createSmartFilterUiState(): SmartFilterUiState {
   };
 }
 
+function createDetailSummaryUiState(): DetailSummaryUiState {
+  return {
+    mode: 'full',
+    messageId: undefined,
+    fullLines: [],
+    summaryLines: [],
+    requestId: 0,
+    errorMessage: undefined
+  };
+}
+
+function parseSummaryInputFromDetailLines(detailLines: string[]): {
+  subject: string;
+  sender: string;
+  body: string;
+} {
+  const subjectLine = detailLines.find((line) => line.startsWith('Subject: ')) ?? '';
+  const senderLine = detailLines.find((line) => line.startsWith('From: ')) ?? '';
+  const bodyStart = detailLines.findIndex((line) => line.length === 0);
+  const bodyLines = bodyStart >= 0 ? detailLines.slice(bodyStart + 1) : detailLines;
+
+  return {
+    subject: subjectLine.replace(/^Subject:\s*/, '').trim(),
+    sender: senderLine.replace(/^From:\s*/, '').trim(),
+    body: bodyLines.join('\n').trim()
+  };
+}
+
 function withNavigationListSize(navigation: NavigationState, listSize: number): NavigationState {
   const maxIndex = Math.max(0, listSize - 1);
   return {
@@ -111,17 +157,26 @@ function withNavigationListSize(navigation: NavigationState, listSize: number): 
   };
 }
 
-function getVisibleIndexes(state: TuiAppState, deps: TuiCommandDeps): number[] {
-  if (state.smartFilter.visibleIndexes) {
-    return state.smartFilter.visibleIndexes;
-  }
+function getAllSourceIndexes(messageIds: string[]): number[] {
+  return messageIds.map((_messageId, index) => index);
+}
 
-  return deps.messageIds.map((_messageId, index) => index);
+function excludeHiddenIndexes(indexes: number[], hiddenSourceIndexes: Record<number, true>): number[] {
+  return indexes.filter((index) => hiddenSourceIndexes[index] !== true);
+}
+
+function getVisibleIndexes(state: TuiAppState, deps: TuiCommandDeps): number[] {
+  const baseIndexes = state.smartFilter.visibleIndexes ?? getAllSourceIndexes(deps.messageIds);
+  return excludeHiddenIndexes(baseIndexes, state.hiddenSourceIndexes);
+}
+
+function getSelectedSourceIndex(state: TuiAppState, deps: TuiCommandDeps): number | undefined {
+  const visibleIndexes = getVisibleIndexes(state, deps);
+  return visibleIndexes[state.navigation.selectedIndex];
 }
 
 function getSelectedMessageId(state: TuiAppState, deps: TuiCommandDeps): string | undefined {
-  const visibleIndexes = getVisibleIndexes(state, deps);
-  const selectedSourceIndex = visibleIndexes[state.navigation.selectedIndex];
+  const selectedSourceIndex = getSelectedSourceIndex(state, deps);
   if (selectedSourceIndex === undefined) {
     return undefined;
   }
@@ -171,9 +226,10 @@ function isEnterInput(rawInput: string): boolean {
 }
 
 function clearSmartFilter(state: TuiAppState, deps: TuiCommandDeps): TuiAppState {
+  const visibleIndexes = excludeHiddenIndexes(getAllSourceIndexes(deps.messageIds), state.hiddenSourceIndexes);
   return {
     ...state,
-    navigation: withNavigationListSize(state.navigation, deps.messageIds.length),
+    navigation: withNavigationListSize(state.navigation, visibleIndexes.length),
     statusLine: 'Smart filter cleared.',
     smartFilter: {
       ...createSmartFilterUiState(),
@@ -249,6 +305,7 @@ async function submitSmartFilter(state: TuiAppState, deps: TuiCommandDeps): Prom
     const visibleIndexes = sortedMatches
       .map((entry) => indexById.get(entry.emailId))
       .filter((index): index is number => index !== undefined);
+    const unhiddenVisibleIndexes = excludeHiddenIndexes(visibleIndexes, state.hiddenSourceIndexes);
     const confidenceBySourceIndex: Record<number, number> = {};
     for (const entry of sortedMatches) {
       const sourceIndex = indexById.get(entry.emailId);
@@ -256,11 +313,11 @@ async function submitSmartFilter(state: TuiAppState, deps: TuiCommandDeps): Prom
         confidenceBySourceIndex[sourceIndex] = entry.confidence;
       }
     }
-    const summaryLine = `Filtered: ${visibleIndexes.length}/${deps.messageIds.length} emails`;
+    const summaryLine = `Filtered: ${unhiddenVisibleIndexes.length}/${deps.messageIds.length} emails`;
 
     return {
       ...loadingState,
-      navigation: withNavigationListSize(state.navigation, visibleIndexes.length),
+      navigation: withNavigationListSize(state.navigation, unhiddenVisibleIndexes.length),
       statusLine: summaryLine,
       smartFilter: {
         ...loadingState.smartFilter,
@@ -268,7 +325,7 @@ async function submitSmartFilter(state: TuiAppState, deps: TuiCommandDeps): Prom
         draft: '',
         description,
         summaryLine,
-        visibleIndexes,
+        visibleIndexes: unhiddenVisibleIndexes,
         confidenceBySourceIndex
       }
     };
@@ -289,6 +346,182 @@ async function submitSmartFilter(state: TuiAppState, deps: TuiCommandDeps): Prom
   }
 }
 
+function removeVisibleMessageFromState(
+  state: TuiAppState,
+  deps: TuiCommandDeps,
+  sourceIndex: number,
+  actionLabel: string
+): TuiAppState {
+  const hiddenSourceIndexes: Record<number, true> = {
+    ...state.hiddenSourceIndexes,
+    [sourceIndex]: true
+  };
+  const visibleIndexesAfterAction =
+    state.smartFilter.visibleIndexes?.filter((index) => index !== sourceIndex) ?? null;
+  const confidenceBySourceIndex = { ...state.smartFilter.confidenceBySourceIndex };
+  delete confidenceBySourceIndex[sourceIndex];
+  const listViewNavigation =
+    state.navigation.viewMode === 'detail' ? closeDetailView(state.navigation) : state.navigation;
+  const displayedSourceIndexes = excludeHiddenIndexes(
+    visibleIndexesAfterAction ?? getAllSourceIndexes(deps.messageIds),
+    hiddenSourceIndexes
+  );
+  const summaryLine =
+    state.smartFilter.status === 'filtered' && visibleIndexesAfterAction !== null
+      ? `Filtered: ${displayedSourceIndexes.length}/${deps.messageIds.length} emails`
+      : state.smartFilter.summaryLine;
+
+  return {
+    ...state,
+    navigation: withNavigationListSize(listViewNavigation, displayedSourceIndexes.length),
+    detailLines: state.navigation.viewMode === 'detail' ? [] : state.detailLines,
+    statusLine: `${actionLabel} selected email.`,
+    hiddenSourceIndexes,
+    smartFilter: {
+      ...state.smartFilter,
+      summaryLine,
+      visibleIndexes: visibleIndexesAfterAction,
+      confidenceBySourceIndex
+    },
+    detailSummary:
+      state.navigation.viewMode === 'detail'
+        ? {
+            ...createDetailSummaryUiState(),
+            requestId: state.detailSummary.requestId + 1
+          }
+        : state.detailSummary
+  };
+}
+
+async function applyMessageAction(
+  state: TuiAppState,
+  deps: TuiCommandDeps,
+  action: 'archive' | 'delete'
+): Promise<TuiAppState> {
+  const sourceIndex = getSelectedSourceIndex(state, deps);
+  if (sourceIndex === undefined) {
+    return {
+      ...state,
+      statusLine: '(error) No message selected'
+    };
+  }
+
+  const messageId = deps.messageIds[sourceIndex];
+  if (!messageId) {
+    return {
+      ...state,
+      statusLine: '(error) No message selected'
+    };
+  }
+
+  const actionFn = action === 'archive' ? deps.archiveEmail : deps.deleteEmail;
+  const actionLabel = action === 'archive' ? 'Archived' : 'Deleted';
+
+  if (!actionFn) {
+    return {
+      ...state,
+      statusLine: `(error) ${actionLabel} action is unavailable`
+    };
+  }
+
+  try {
+    await actionFn(messageId);
+    return removeVisibleMessageFromState(state, deps, sourceIndex, actionLabel);
+  } catch (error) {
+    const mapped = mapError(error);
+    return {
+      ...state,
+      statusLine: `(error) ${mapped.message}`
+    };
+  }
+}
+
+async function applySummaryToggle(state: TuiAppState, deps: TuiCommandDeps): Promise<TuiAppState> {
+  if (state.navigation.viewMode !== 'detail') {
+    return state;
+  }
+
+  const messageId = state.navigation.detailMessageId ?? getSelectedMessageId(state, deps);
+  if (!messageId) {
+    return {
+      ...state,
+      statusLine: '(error) No message selected'
+    };
+  }
+
+  if (state.detailSummary.mode === 'loading_summary') {
+    return state;
+  }
+
+  if (state.detailSummary.mode === 'summary' && state.detailSummary.messageId === messageId) {
+    return {
+      ...state,
+      detailSummary: {
+        ...state.detailSummary,
+        mode: 'full',
+        errorMessage: undefined
+      },
+      statusLine: ''
+    };
+  }
+
+  if (!deps.summaryService) {
+    return {
+      ...state,
+      statusLine: '(error) AI summary requires AI_PROVIDER, AI_MODEL, and AI_API_KEY.'
+    };
+  }
+
+  const requestId = state.detailSummary.requestId + 1;
+  const fullLines = state.detailSummary.messageId === messageId ? state.detailSummary.fullLines : state.detailLines;
+  const loadingState: TuiAppState = {
+    ...state,
+    statusLine: 'Generating AI summary...',
+    detailSummary: {
+      mode: 'loading_summary',
+      messageId,
+      fullLines,
+      summaryLines: [],
+      requestId,
+      errorMessage: undefined
+    }
+  };
+  deps.onStateUpdate?.(loadingState);
+
+  try {
+    const summaryInput = parseSummaryInputFromDetailLines(fullLines);
+    const result = await deps.summaryService.getOrGenerateSummary({
+      messageId,
+      subject: summaryInput.subject,
+      sender: summaryInput.sender,
+      body: summaryInput.body
+    });
+
+    return {
+      ...loadingState,
+      statusLine: result.cacheHit ? 'Loaded cached AI summary.' : 'Generated AI summary.',
+      detailSummary: {
+        ...loadingState.detailSummary,
+        mode: 'summary',
+        summaryLines: renderSummaryDetailLines(result.record),
+        errorMessage: undefined
+      }
+    };
+  } catch (error) {
+    const mapped = mapError(error);
+    return {
+      ...loadingState,
+      statusLine: `(error) ${mapped.message}`,
+      detailSummary: {
+        ...loadingState.detailSummary,
+        mode: 'full',
+        summaryLines: [],
+        errorMessage: mapped.message
+      }
+    };
+  }
+}
+
 export function createTuiAppState(listSize: number, viewportRows = DEFAULT_VIEWPORT_ROWS): TuiAppState {
   return {
     navigation: createNavigationState(listSize),
@@ -296,7 +529,9 @@ export function createTuiAppState(listSize: number, viewportRows = DEFAULT_VIEWP
     detailLines: [],
     statusLine: '',
     shouldExit: false,
-    smartFilter: createSmartFilterUiState()
+    hiddenSourceIndexes: {},
+    smartFilter: createSmartFilterUiState(),
+    detailSummary: createDetailSummaryUiState()
   };
 }
 
@@ -342,6 +577,10 @@ export async function applyTuiCommand(
       shouldExit: true,
       statusLine: 'Exited interactive mode.'
     };
+  }
+
+  if (command === 'archive' || command === 'delete') {
+    return applyMessageAction(state, deps, command);
   }
 
   if (state.navigation.viewMode === 'list') {
@@ -397,7 +636,15 @@ export async function applyTuiCommand(
           ...state,
           navigation: openDetailView(state.navigation, messageId),
           detailLines,
-          statusLine: ''
+          statusLine: '',
+          detailSummary: {
+            mode: 'full',
+            messageId,
+            fullLines: detailLines,
+            summaryLines: [],
+            requestId: state.detailSummary.requestId + 1,
+            errorMessage: undefined
+          }
         };
       } catch (error) {
         const mapped = mapError(error);
@@ -411,12 +658,20 @@ export async function applyTuiCommand(
     return state;
   }
 
+  if (command === 'summary') {
+    return applySummaryToggle(state, deps);
+  }
+
   if (command === 'back' || command === 'escape') {
     return {
       ...state,
       navigation: closeDetailView(state.navigation),
       detailLines: [],
-      statusLine: 'Returned to inbox list'
+      statusLine: 'Returned to inbox list',
+      detailSummary: {
+        ...createDetailSummaryUiState(),
+        requestId: state.detailSummary.requestId + 1
+      }
     };
   }
 
@@ -427,10 +682,14 @@ export async function applyTuiCommand(
 export function renderTuiScreen(listLines: string[], state: TuiAppState): string[] {
   const modeLine = `Mode: ${state.navigation.viewMode}`;
   const viewportRows = state.viewportRows;
+  const displayedSourceIndexes = excludeHiddenIndexes(
+    state.smartFilter.visibleIndexes ?? listLines.map((_line, index) => index),
+    state.hiddenSourceIndexes
+  );
   const activeListLines =
-    state.smartFilter.visibleIndexes === null
-      ? listLines
-      : state.smartFilter.visibleIndexes.map((index) => {
+    displayedSourceIndexes.length === 0
+      ? []
+      : displayedSourceIndexes.map((index) => {
           const line = listLines[index] ?? '(unknown message)';
           const confidence = state.smartFilter.confidenceBySourceIndex[index];
           if (confidence === undefined) {
@@ -445,7 +704,11 @@ export function renderTuiScreen(listLines: string[], state: TuiAppState): string
           state.navigation.selectedIndex,
           viewportRows
         )
-      : state.detailLines;
+      : state.detailSummary.mode === 'summary'
+        ? ['AI Summary', ...state.detailSummary.summaryLines]
+        : state.detailSummary.mode === 'loading_summary'
+          ? [...state.detailSummary.fullLines, '', 'Generating AI summary...']
+          : state.detailSummary.fullLines;
   const viewport = padViewport(body.length > 0 ? body : ['(no messages)'], viewportRows);
   const status = state.statusLine.length > 0 ? state.statusLine : '';
   const filterLines =
@@ -461,10 +724,20 @@ export function renderTuiScreen(listLines: string[], state: TuiAppState): string
     state.navigation.viewMode === 'list' ? `Selected #${state.navigation.selectedIndex + 1}` : '';
   const helpLine =
     state.navigation.viewMode === 'list'
-      ? 'Keys: j/k or arrows move, enter opens/applies, f filters, Esc clears filter, q quits'
-      : 'Keys: b or Esc returns to list, q quits';
+      ? 'Keys: j/k or arrows move, enter opens/applies, e archives, # deletes, f filters, Esc clears filter, q quits'
+      : 'Keys: s toggles summary/full, b or Esc returns to list, e archives, # deletes, q quits';
 
   return [modeLine, status, ...filterLines, ...viewport, selectedLine, helpLine];
+}
+
+function shouldAcceptStateUpdate(currentState: TuiAppState, nextState: TuiAppState): boolean {
+  if (nextState.smartFilter.requestId < currentState.smartFilter.requestId) {
+    return false;
+  }
+  if (nextState.detailSummary.requestId < currentState.detailSummary.requestId) {
+    return false;
+  }
+  return true;
 }
 
 export function InkInboxApp(props: InkInboxAppProps): unknown {
@@ -476,23 +749,35 @@ export function InkInboxApp(props: InkInboxAppProps): unknown {
     () => ({
       messageIds: props.messageIds,
       fetchDetailLines: props.fetchDetailLines,
+      archiveEmail: props.archiveEmail,
+      deleteEmail: props.deleteEmail,
       emails: props.emails,
       provider: props.provider,
+      summaryService: props.summaryService,
       runSmartFilter: props.runSmartFilter,
       onStateUpdate: (nextState) => {
         setState((currentState) =>
-          nextState.smartFilter.requestId < currentState.smartFilter.requestId ? currentState : nextState
+          shouldAcceptStateUpdate(currentState, nextState) ? nextState : currentState
         );
       }
     }),
-    [props.emails, props.fetchDetailLines, props.messageIds, props.provider, props.runSmartFilter]
+    [
+      props.archiveEmail,
+      props.deleteEmail,
+      props.emails,
+      props.fetchDetailLines,
+      props.messageIds,
+      props.provider,
+      props.summaryService,
+      props.runSmartFilter
+    ]
   );
 
   const dispatchCommand = useCallback(
     (command: TuiCommand, rawInput = '') => {
       void applyTuiCommand(state, command, commandDeps, rawInput).then((nextState) => {
         setState((currentState) =>
-          nextState.smartFilter.requestId < currentState.smartFilter.requestId ? currentState : nextState
+          shouldAcceptStateUpdate(currentState, nextState) ? nextState : currentState
         );
         if (nextState.shouldExit) {
           props.onExit?.();

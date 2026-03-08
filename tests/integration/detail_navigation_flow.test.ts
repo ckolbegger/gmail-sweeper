@@ -1,5 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { createSummaryStore } from '@/adapters/storage/summary_store.js';
 import { runInboxCli } from '@/cli/app.js';
 import { createEmail } from '@/core/entities.js';
 
@@ -10,6 +15,15 @@ const baseConfig = {
   logLevel: 'info' as const,
   dbPath: 'data/local.db'
 };
+
+const tempDirs: string[] = [];
+
+afterEach(async () => {
+  for (const dir of tempDirs) {
+    await rm(dir, { recursive: true, force: true });
+  }
+  tempDirs.length = 0;
+});
 
 describe('detail navigation flow integration', () => {
   it('should open detail for the selected inbox row', async () => {
@@ -220,5 +234,159 @@ describe('detail navigation flow integration', () => {
     const output = lines.join('\n');
     expect(output).not.toContain(longUrl);
     expect(output).toContain('...');
+  });
+
+  it('should generate and show summary content from detail mode on s key', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'gmail-sweeper-summary-flow-'));
+    tempDirs.push(dir);
+    const lines: string[] = [];
+    const summarizeEmail = vi.fn().mockResolvedValue({
+      summarySentence: 'The email requests a confirmation response.',
+      actionItems: ['Reply with confirmation']
+    });
+
+    const status = await runInboxCli(['--interactive'], {
+      loadConfig: () => ({
+        ...baseConfig,
+        aiConfig: {
+          provider: 'openai' as const,
+          model: 'gpt-4o-mini',
+          apiKey: 'test-key',
+          maxContextTokens: 32000
+        }
+      }),
+      createAiProvider: () => ({
+        classifyEmails: vi.fn().mockResolvedValue({ results: [] }),
+        summarizeEmail
+      }),
+      createSummaryStore: () => createSummaryStore(join(dir, 'email-summaries.json')),
+      readAuthTokens: async () => ({ refreshToken: 'refresh' }),
+      createGmailClient: () => ({ users: { messages: {} } }),
+      listInboxEmails: async () => [
+        createEmail({
+          message_id: 'msg-1',
+          subject: 'Need confirmation',
+          sender: 'lead@work.com',
+          received_at: Date.parse('2026-02-08T10:00:00Z')
+        })
+      ],
+      getEmailDetail: async () => ({
+        message_id: 'msg-1',
+        subject: 'Need confirmation',
+        sender: 'lead@work.com',
+        received_at: Date.parse('2026-02-08T10:00:00Z'),
+        body: 'Please confirm by EOD.',
+        headers: { subject: 'Need confirmation', from: 'lead@work.com' },
+        labels: ['INBOX'],
+        is_read: true
+      }),
+      navigationInputs: ['enter', 's', 'quit'],
+      writeLine: (line) => lines.push(line)
+    });
+
+    expect(status).toBe(0);
+    expect(summarizeEmail).toHaveBeenCalledTimes(1);
+    const output = lines.join('\n');
+    expect(output).toContain('AI Summary');
+    expect(output).toContain('The email requests a confirmation response.');
+    expect(output).toContain('- Reply with confirmation');
+  });
+
+  it('should reuse persisted summary across restarts without a second provider call', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'gmail-sweeper-summary-flow-'));
+    tempDirs.push(dir);
+    const summaryPath = join(dir, 'email-summaries.json');
+
+    const providerFirst = {
+      classifyEmails: vi.fn().mockResolvedValue({ results: [] }),
+      summarizeEmail: vi.fn().mockResolvedValue({
+        summarySentence: 'Persisted summary sentence.',
+        actionItems: ['None']
+      })
+    };
+
+    const firstStatus = await runInboxCli(['--interactive'], {
+      loadConfig: () => ({
+        ...baseConfig,
+        aiConfig: {
+          provider: 'openai' as const,
+          model: 'gpt-4o-mini',
+          apiKey: 'test-key',
+          maxContextTokens: 32000
+        }
+      }),
+      createAiProvider: () => providerFirst,
+      createSummaryStore: () => createSummaryStore(summaryPath),
+      readAuthTokens: async () => ({ refreshToken: 'refresh' }),
+      createGmailClient: () => ({ users: { messages: {} } }),
+      listInboxEmails: async () => [
+        createEmail({
+          message_id: 'msg-1',
+          subject: 'Persist me',
+          sender: 'lead@work.com',
+          received_at: Date.parse('2026-02-08T10:00:00Z')
+        })
+      ],
+      getEmailDetail: async () => ({
+        message_id: 'msg-1',
+        subject: 'Persist me',
+        sender: 'lead@work.com',
+        received_at: Date.parse('2026-02-08T10:00:00Z'),
+        body: 'First session body.',
+        headers: { subject: 'Persist me', from: 'lead@work.com' },
+        labels: ['INBOX'],
+        is_read: true
+      }),
+      navigationInputs: ['enter', 's', 'quit'],
+      writeLine: () => undefined
+    });
+    expect(firstStatus).toBe(0);
+    expect(providerFirst.summarizeEmail).toHaveBeenCalledTimes(1);
+
+    const providerSecond = {
+      classifyEmails: vi.fn().mockResolvedValue({ results: [] }),
+      summarizeEmail: vi.fn().mockResolvedValue({
+        summarySentence: 'Should not be used.',
+        actionItems: ['None']
+      })
+    };
+    const secondStatus = await runInboxCli(['--interactive'], {
+      loadConfig: () => ({
+        ...baseConfig,
+        aiConfig: {
+          provider: 'openai' as const,
+          model: 'gpt-4o-mini',
+          apiKey: 'test-key',
+          maxContextTokens: 32000
+        }
+      }),
+      createAiProvider: () => providerSecond,
+      createSummaryStore: () => createSummaryStore(summaryPath),
+      readAuthTokens: async () => ({ refreshToken: 'refresh' }),
+      createGmailClient: () => ({ users: { messages: {} } }),
+      listInboxEmails: async () => [
+        createEmail({
+          message_id: 'msg-1',
+          subject: 'Persist me',
+          sender: 'lead@work.com',
+          received_at: Date.parse('2026-02-08T10:00:00Z')
+        })
+      ],
+      getEmailDetail: async () => ({
+        message_id: 'msg-1',
+        subject: 'Persist me',
+        sender: 'lead@work.com',
+        received_at: Date.parse('2026-02-08T10:00:00Z'),
+        body: 'Second session body.',
+        headers: { subject: 'Persist me', from: 'lead@work.com' },
+        labels: ['INBOX'],
+        is_read: true
+      }),
+      navigationInputs: ['enter', 's', 'quit'],
+      writeLine: () => undefined
+    });
+
+    expect(secondStatus).toBe(0);
+    expect(providerSecond.summarizeEmail).not.toHaveBeenCalled();
   });
 });

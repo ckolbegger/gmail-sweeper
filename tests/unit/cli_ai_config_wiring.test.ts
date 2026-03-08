@@ -20,7 +20,11 @@ const baseConfig = {
 describe('cli AI config wiring', () => {
   it('should create AI provider from config and pass it to interactive Ink session', async () => {
     const createAiProvider = vi.fn().mockReturnValue({
-      classifyEmails: vi.fn().mockResolvedValue({ results: [] })
+      classifyEmails: vi.fn().mockResolvedValue({ results: [] }),
+      summarizeEmail: vi.fn().mockResolvedValue({
+        summarySentence: 'Summary sentence.',
+        actionItems: ['None']
+      })
     });
     const runInkSession = vi.fn().mockResolvedValue(undefined);
 
@@ -50,6 +54,7 @@ describe('cli AI config wiring', () => {
 
     const session = runInkSession.mock.calls[0]?.[0];
     expect(session.provider).toBeTruthy();
+    expect(session.summaryService).toBeTruthy();
     expect(session.emails).toHaveLength(1);
     expect(session.emails[0]?.message_id).toBe('msg-1');
   });

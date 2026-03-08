@@ -3,6 +3,7 @@ import { createElement } from 'react';
 
 import type { AiProvider } from '@/adapters/ai/provider.js';
 import type { Email } from '@/core/entities.js';
+import type { EmailSummaryService } from '@/services/email_summary_service.js';
 import { applyTuiCommand, createTuiAppState, InkInboxApp, renderTuiScreen } from '@/tui/app.js';
 import { parseCommandToken } from '@/tui/input_controller.js';
 
@@ -10,8 +11,11 @@ export interface RunInkSessionOptions {
   listLines: string[];
   messageIds: string[];
   fetchDetailLines: (messageId: string) => Promise<string[]>;
+  archiveEmail?: (messageId: string) => Promise<void>;
+  deleteEmail?: (messageId: string) => Promise<void>;
   emails?: Email[];
   provider?: AiProvider | null;
+  summaryService?: EmailSummaryService;
   viewportRows?: number;
   scriptedCommands?: string[];
   onFrame?: (frame: string[]) => void;
@@ -52,8 +56,11 @@ function defaultCreateRenderer(options: RunInkSessionOptions): InkRendererInstan
       listLines: options.listLines,
       messageIds: options.messageIds,
       fetchDetailLines: options.fetchDetailLines,
+      archiveEmail: options.archiveEmail,
+      deleteEmail: options.deleteEmail,
       emails: options.emails,
       provider: options.provider,
+      summaryService: options.summaryService,
       viewportRows: options.viewportRows ?? inferViewportRows(),
       onExit: () => resolveExit?.()
     }),
@@ -83,8 +90,15 @@ async function runScriptedInkSession(options: RunInkSessionOptions): Promise<voi
     state = await applyTuiCommand(state, parseCommandToken(token), {
       messageIds: options.messageIds,
       fetchDetailLines: options.fetchDetailLines,
+      archiveEmail: options.archiveEmail,
+      deleteEmail: options.deleteEmail,
       emails: options.emails,
-      provider: options.provider
+      provider: options.provider,
+      summaryService: options.summaryService,
+      onStateUpdate: (nextState) => {
+        state = nextState;
+        emitFrame(renderTuiScreen(options.listLines, state));
+      }
     });
     emitFrame(renderTuiScreen(options.listLines, state));
 

@@ -2,13 +2,15 @@ import { appendFileSync } from 'node:fs';
 
 import Anthropic from '@anthropic-ai/sdk';
 
-import { buildClassificationPrompt } from '@/adapters/ai/prompt.js';
+import { buildClassificationPrompt, buildSummaryPrompt } from '@/adapters/ai/prompt.js';
 import type {
   AiProvider,
   AiProviderConfig,
   EmailClassification,
   ClassifyEmailsRequest,
-  ClassifyEmailsResponse
+  ClassifyEmailsResponse,
+  SummarizeEmailRequest,
+  SummarizeEmailResponse
 } from '@/adapters/ai/provider.js';
 import { AiProviderError } from '@/core/errors.js';
 
@@ -198,6 +200,38 @@ function parseCandidate(candidate: string): EmailClassification[] | null {
   });
 }
 
+function parseSummaryCandidate(candidate: string): SummarizeEmailResponse | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(candidate);
+  } catch {
+    return null;
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return null;
+  }
+
+  const record = parsed as {
+    summarySentence?: unknown;
+    actionItems?: unknown;
+  };
+  if (typeof record.summarySentence !== 'string' || record.summarySentence.trim().length === 0) {
+    throw new AiProviderError('Invalid summary sentence from Anthropic provider');
+  }
+
+  const rawActionItems = Array.isArray(record.actionItems) ? record.actionItems : [];
+  const actionItems = rawActionItems
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
+  return {
+    summarySentence: record.summarySentence.trim(),
+    actionItems
+  };
+}
+
 function maybeLogRawResponse(payload: string): void {
   if (process.env.AI_DEBUG_RESPONSES !== '1') {
     return;
@@ -221,6 +255,24 @@ function parseResults(payload: string): EmailClassification[] {
 
   const debugLogFile = appendDebugLog('invalid-json-response', payload);
   throw new AiProviderError('Invalid JSON response from Anthropic provider', {
+    payloadPreview: createPayloadPreview(payload),
+    debugLogFile
+  });
+}
+
+function parseSummary(payload: string): SummarizeEmailResponse {
+  maybeLogRawResponse(payload);
+  const candidates = extractJsonCandidates(payload);
+
+  for (const candidate of candidates) {
+    const parsed = parseSummaryCandidate(candidate);
+    if (parsed) {
+      return parsed;
+    }
+  }
+
+  const debugLogFile = appendDebugLog('invalid-summary-json-response', payload);
+  throw new AiProviderError('Invalid JSON summary response from Anthropic provider', {
     payloadPreview: createPayloadPreview(payload),
     debugLogFile
   });
@@ -278,6 +330,35 @@ export class AnthropicProvider implements AiProvider {
       }
 
       throw new AiProviderError('Failed to classify emails with Anthropic provider', {
+        cause: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  async summarizeEmail(request: SummarizeEmailRequest): Promise<SummarizeEmailResponse> {
+    const prompt = buildSummaryPrompt(request);
+
+    try {
+      const response = await this.client.messages.create({
+        model: this.config.model,
+        system: `${prompt.system} Use compact/minified JSON only.`,
+        messages: [{ role: 'user', content: prompt.user }],
+        max_tokens: MIN_RESPONSE_TOKENS,
+        temperature: 0
+      });
+
+      const payload = response.content?.map((chunk) => chunk.text ?? '').join('').trim() ?? '';
+      if (payload.length === 0) {
+        throw new AiProviderError('Invalid empty response from Anthropic summary provider');
+      }
+
+      return parseSummary(payload);
+    } catch (error) {
+      if (error instanceof AiProviderError) {
+        throw error;
+      }
+
+      throw new AiProviderError('Failed to summarize email with Anthropic provider', {
         cause: error instanceof Error ? error.message : String(error)
       });
     }

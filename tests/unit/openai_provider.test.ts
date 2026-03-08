@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import {
+  createSummaryRequestFixture,
+  createSummaryResponseFixture
+} from './fixtures/ai_summary.fixtures.js';
+
 import { OpenAiProvider } from '@/adapters/ai/openai.js';
 import { AiProviderError } from '@/core/errors.js';
 
@@ -112,5 +117,46 @@ describe('OpenAiProvider', () => {
 
     expect(response).toEqual({ results: [] });
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it('should summarize email with structured JSON response', async () => {
+    const create = vi.fn().mockResolvedValue({
+      output_text: JSON.stringify(createSummaryResponseFixture())
+    });
+    const provider = createProvider(create);
+
+    const response = await provider.summarizeEmail(createSummaryRequestFixture());
+
+    expect(response).toEqual(createSummaryResponseFixture());
+    expect(create).toHaveBeenCalledOnce();
+  });
+
+  it('should throw AiProviderError for malformed summary payloads', async () => {
+    const create = vi.fn().mockResolvedValue({
+      output_text: JSON.stringify({
+        summarySentence: '',
+        actionItems: ['Follow up']
+      })
+    });
+    const provider = createProvider(create);
+
+    await expect(provider.summarizeEmail(createSummaryRequestFixture())).rejects.toMatchObject({
+      message: expect.stringContaining('Invalid summary sentence')
+    } satisfies Partial<AiProviderError>);
+  });
+
+  it('should fall back to empty summary action items when payload omits list', async () => {
+    const create = vi.fn().mockResolvedValue({
+      output_text: JSON.stringify({
+        summarySentence: 'A valid one sentence summary.'
+      })
+    });
+    const provider = createProvider(create);
+
+    const response = await provider.summarizeEmail(createSummaryRequestFixture());
+    expect(response).toEqual({
+      summarySentence: 'A valid one sentence summary.',
+      actionItems: []
+    });
   });
 });

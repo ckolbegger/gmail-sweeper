@@ -1,14 +1,21 @@
 import { google } from 'googleapis';
 
-import { createAiProvider } from '@/adapters/ai/provider.js';
+import { createAiProvider, isSummaryProvider } from '@/adapters/ai/provider.js';
 import { createAuthUrl, createGmailClient } from '@/adapters/gmail/client.js';
 import { getEmailDetail, type GmailDetailClientLike } from '@/adapters/gmail/get_email.js';
 import { listInboxEmails, type GmailReadClientLike } from '@/adapters/gmail/list_emails.js';
+import {
+  archiveEmail as archiveGmailEmail,
+  deleteEmail as deleteGmailEmail,
+  type GmailMutationClientLike
+} from '@/adapters/gmail/mutate_email.js';
+import { createSummaryStore } from '@/adapters/storage/summary_store.js';
 import { readAuthTokens, type AuthTokens, writeAuthTokens } from '@/adapters/storage/token_store.js';
 import { parseCliArgs } from '@/cli/args.js';
 import type { AppConfig } from '@/core/config.js';
 import { loadConfig } from '@/core/config.js';
 import { listEmails } from '@/services/email_list_service.js';
+import { createEmailSummaryService } from '@/services/email_summary_service.js';
 import { renderEmailPreview } from '@/tui/email_preview.js';
 import { renderInboxList } from '@/tui/inbox_list.js';
 import { runInkSession, type RunInkSessionOptions } from '@/tui/ink_runtime.js';
@@ -21,6 +28,7 @@ export interface CliDeps {
   exchangeAuthCode?: (config: AppConfig, code: string) => Promise<AuthTokens>;
   createGmailClient?: typeof createGmailClient;
   createAiProvider?: typeof createAiProvider;
+  createSummaryStore?: typeof createSummaryStore;
   listInboxEmails?: typeof listInboxEmails;
   getEmailDetail?: typeof getEmailDetail;
   navigationInputs?: string[];
@@ -106,6 +114,7 @@ export async function runInboxCli(argv: string[], deps: CliDeps = {}): Promise<n
   const launchInkSession = deps.runInkSession ?? runInkSession;
   const createClient = deps.createGmailClient ?? createGmailClient;
   const createProvider = deps.createAiProvider ?? createAiProvider;
+  const buildSummaryStore = deps.createSummaryStore ?? createSummaryStore;
 
   const config = load();
 
@@ -135,7 +144,7 @@ export async function runInboxCli(argv: string[], deps: CliDeps = {}): Promise<n
     redirectUri: config.gmailRedirectUri,
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken
-  }) as GmailReadClientLike & GmailDetailClientLike;
+  }) as GmailReadClientLike & GmailDetailClientLike & GmailMutationClientLike;
 
   const emails = await listEmailRecords(gmail, {
     pageLimit: options.pageLimit,
@@ -152,6 +161,15 @@ export async function runInboxCli(argv: string[], deps: CliDeps = {}): Promise<n
   const lines = renderInboxList(visible);
   const messageIds = visible.map((email) => email.message_id);
   const aiProvider = config.aiConfig ? createProvider(config.aiConfig) : null;
+  const summaryService =
+    config.aiConfig && aiProvider && isSummaryProvider(aiProvider)
+      ? createEmailSummaryService({
+          provider: aiProvider,
+          providerName: config.aiConfig.provider,
+          model: config.aiConfig.model,
+          store: buildSummaryStore()
+        })
+      : undefined;
 
   writeLine(`Loaded ${emails.length} emails, showing ${visible.length}.`);
   if (options.interactive) {
@@ -162,8 +180,15 @@ export async function runInboxCli(argv: string[], deps: CliDeps = {}): Promise<n
         const detail = await fetchEmailDetail(gmail, messageId, { userId: 'me' });
         return renderEmailPreview(detail, inferDetailPaneWidth());
       },
+      archiveEmail: async (messageId) => {
+        await archiveGmailEmail(gmail, messageId, { userId: 'me' });
+      },
+      deleteEmail: async (messageId) => {
+        await deleteGmailEmail(gmail, messageId, { userId: 'me' });
+      },
       emails: visible,
       provider: aiProvider,
+      summaryService,
       scriptedCommands: deps.navigationInputs ?? options.commands,
       writeFrame: (frame) => {
         for (const line of frame) {

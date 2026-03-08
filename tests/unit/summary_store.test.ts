@@ -1,0 +1,107 @@
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { afterEach, describe, expect, it } from 'vitest';
+
+import { createPersistedSummaryFixture } from './fixtures/ai_summary.fixtures.js';
+
+import { createSummaryStore } from '@/adapters/storage/summary_store.js';
+
+const tempDirs: string[] = [];
+
+afterEach(async () => {
+  for (const dir of tempDirs) {
+    await rm(dir, { recursive: true, force: true });
+  }
+  tempDirs.length = 0;
+});
+
+describe('summary store adapter', () => {
+  it('should return null when summary file does not exist', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'gmail-sweeper-summary-'));
+    tempDirs.push(dir);
+
+    const store = createSummaryStore(join(dir, 'missing/email-summaries.json'));
+    await expect(store.getByMessageId('msg-1')).resolves.toBeNull();
+  });
+
+  it('should upsert and retrieve summary records keyed by message id', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'gmail-sweeper-summary-'));
+    tempDirs.push(dir);
+    const filePath = join(dir, 'session/email-summaries.json');
+    const store = createSummaryStore(filePath);
+
+    const first = createPersistedSummaryFixture({ messageId: 'msg-1' });
+    const second = createPersistedSummaryFixture({
+      messageId: 'msg-1',
+      summarySentence: 'Updated summary sentence.'
+    });
+
+    await store.upsert(first);
+    await store.upsert(second);
+
+    await expect(store.getByMessageId('msg-1')).resolves.toEqual(second);
+
+    const raw = await readFile(filePath, 'utf8');
+    expect(raw).toContain('"version": 1');
+    expect(raw).toContain('"msg-1"');
+  });
+
+  it('should auto-heal malformed persisted payloads by dropping invalid entries', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'gmail-sweeper-summary-'));
+    tempDirs.push(dir);
+    const filePath = join(dir, 'email-summaries.json');
+    const valid = createPersistedSummaryFixture({ messageId: 'msg-good' });
+
+    await writeFile(
+      filePath,
+      JSON.stringify({ version: 1, summariesByMessageId: { 'msg-good': valid, 'msg-bad': 42 } }),
+      'utf8'
+    );
+    const store = createSummaryStore(filePath);
+
+    await expect(store.getByMessageId('msg-good')).resolves.toEqual(valid);
+    await expect(store.getByMessageId('msg-bad')).resolves.toBeNull();
+
+    const healed = JSON.parse(await readFile(filePath, 'utf8')) as {
+      summariesByMessageId?: Record<string, unknown>;
+    };
+    expect(Object.keys(healed.summariesByMessageId ?? {})).toEqual(['msg-good']);
+  });
+
+  it('should auto-heal invalid JSON by backing it up and resetting the store file', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'gmail-sweeper-summary-'));
+    tempDirs.push(dir);
+    const filePath = join(dir, 'email-summaries.json');
+
+    await writeFile(filePath, '{invalid-json', 'utf8');
+    const store = createSummaryStore(filePath);
+
+    await expect(store.getByMessageId('msg-1')).resolves.toBeNull();
+
+    const healed = JSON.parse(await readFile(filePath, 'utf8')) as {
+      version?: number;
+      summariesByMessageId?: Record<string, unknown>;
+    };
+    expect(healed.version).toBe(1);
+    expect(healed.summariesByMessageId).toEqual({});
+
+    const files = await readdir(dir);
+    expect(files.some((name) => name.startsWith('email-summaries.json.corrupt-'))).toBe(true);
+  });
+
+  it('should reject malformed records before writing', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'gmail-sweeper-summary-'));
+    tempDirs.push(dir);
+    const store = createSummaryStore(join(dir, 'email-summaries.json'));
+
+    await expect(
+      store.upsert(
+        createPersistedSummaryFixture({
+          actionItems: []
+        })
+      )
+    ).rejects.toThrow('Invalid summary record');
+  });
+});

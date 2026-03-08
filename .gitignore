@@ -1,11 +1,17 @@
 .env
+.env.*
 
 # Build and dependencies
 node_modules/
 dist/
+build/
 
 # Local runtime/debug artifacts
 debug.log
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
 .gmail-sweeper/tokens.json
 
 # Codex local state (keep project skills tracked under .codex/skills/)

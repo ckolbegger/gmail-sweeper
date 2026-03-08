@@ -25,4 +25,13 @@ describe('ink input controller', () => {
     expect(parseCommandToken('f')).toBe('filter');
     expect(mapInputToCommand('', { escape: true })).toBe('escape');
   });
+
+  it('should map e and # to archive/delete actions', () => {
+    expect(parseCommandToken('e')).toBe('archive');
+    expect(parseCommandToken('#')).toBe('delete');
+  });
+
+  it('should map s to summary toggle action', () => {
+    expect(parseCommandToken('s')).toBe('summary');
+  });
 });

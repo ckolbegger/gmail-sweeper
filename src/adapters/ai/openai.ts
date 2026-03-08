@@ -1,12 +1,14 @@
 import OpenAI from 'openai';
 
-import { buildClassificationPrompt } from '@/adapters/ai/prompt.js';
+import { buildClassificationPrompt, buildSummaryPrompt } from '@/adapters/ai/prompt.js';
 import type {
   AiProvider,
   AiProviderConfig,
   EmailClassification,
   ClassifyEmailsRequest,
-  ClassifyEmailsResponse
+  ClassifyEmailsResponse,
+  SummarizeEmailRequest,
+  SummarizeEmailResponse
 } from '@/adapters/ai/provider.js';
 import { AiProviderError } from '@/core/errors.js';
 
@@ -75,6 +77,38 @@ function parseResults(payload: string): EmailClassification[] {
   });
 }
 
+function parseSummary(payload: string): SummarizeEmailResponse {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(payload);
+  } catch {
+    throw new AiProviderError('Invalid JSON response from OpenAI summary provider');
+  }
+
+  if (!parsed || typeof parsed !== 'object') {
+    throw new AiProviderError('Invalid summary payload from OpenAI provider');
+  }
+
+  const record = parsed as {
+    summarySentence?: unknown;
+    actionItems?: unknown;
+  };
+  if (typeof record.summarySentence !== 'string' || record.summarySentence.trim().length === 0) {
+    throw new AiProviderError('Invalid summary sentence from OpenAI provider');
+  }
+
+  const rawActionItems = Array.isArray(record.actionItems) ? record.actionItems : [];
+  const actionItems = rawActionItems
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+
+  return {
+    summarySentence: record.summarySentence.trim(),
+    actionItems
+  };
+}
+
 function extractPayload(response: OpenAiResponse): string {
   if (typeof response.output_text === 'string' && response.output_text.trim().length > 0) {
     return response.output_text.trim();
@@ -135,6 +169,35 @@ export class OpenAiProvider implements AiProvider {
       }
 
       throw new AiProviderError('Failed to classify emails with OpenAI provider', {
+        cause: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  async summarizeEmail(request: SummarizeEmailRequest): Promise<SummarizeEmailResponse> {
+    const prompt = buildSummaryPrompt(request);
+
+    try {
+      const response = await this.client.responses.create({
+        model: this.config.model,
+        temperature: 0,
+        input: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user }
+        ]
+      });
+      const payload = extractPayload(response);
+      if (payload.length === 0) {
+        throw new AiProviderError('Invalid empty response from OpenAI summary provider');
+      }
+
+      return parseSummary(payload);
+    } catch (error) {
+      if (error instanceof AiProviderError) {
+        throw error;
+      }
+
+      throw new AiProviderError('Failed to summarize email with OpenAI provider', {
         cause: error instanceof Error ? error.message : String(error)
       });
     }
