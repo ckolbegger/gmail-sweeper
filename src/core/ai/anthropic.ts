@@ -3,9 +3,14 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import type { AiProvider, EmailMetadata, EmailClassification } from './provider.js';
+import type {
+  AiProvider,
+  EmailMetadata,
+  EmailClassification,
+  EmailSummaryResult,
+} from './provider.js';
 import { toConfidenceLevel } from './provider.js';
-import { buildClassificationPrompt } from './prompt.js';
+import { buildClassificationPrompt, buildSummaryPrompt } from './prompt.js';
 
 export interface AnthropicConfig {
   model: string;
@@ -108,6 +113,65 @@ export class AnthropicProvider implements AiProvider {
     } catch (error) {
       throw new Error(
         `Failed to parse AI response: ${error instanceof Error ? error.message : 'Invalid JSON'}`
+      );
+    }
+  }
+
+  async generateSummary(
+    emailId: string,
+    subject: string,
+    sender: string,
+    body: string,
+    signal?: AbortSignal
+  ): Promise<EmailSummaryResult> {
+    const prompt = buildSummaryPrompt({ id: emailId, subject, sender, body });
+
+    const response = await this.client.messages.create(
+      {
+        model: this.model,
+        max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      { signal }
+    );
+
+    let textContent = '';
+    for (const block of response.content) {
+      if (block.type === 'text') {
+        textContent = block.text;
+        break;
+      }
+    }
+
+    if (!textContent) {
+      throw new Error('Invalid response from Anthropic API: no text content');
+    }
+
+    return this.parseSummaryResponse(emailId, textContent);
+  }
+
+  private parseSummaryResponse(emailId: string, text: string): EmailSummaryResult {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('Failed to parse JSON response from AI');
+    }
+
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+
+      const summary = parsed.summary || '';
+      const actionItems = Array.isArray(parsed.action_items) ? parsed.action_items : [];
+      const generatedAt = parsed.generated_at ? new Date(parsed.generated_at) : new Date();
+
+      return {
+        emailId,
+        summary,
+        actionItems,
+        generatedAt,
+      };
+    } catch (error) {
+      throw new Error(
+        `Failed to parse AI summary response: ${error instanceof Error ? error.message : 'Invalid JSON'}`
       );
     }
   }

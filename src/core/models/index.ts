@@ -42,6 +42,17 @@ export interface Label {
 export type Category = 'primary' | 'social' | 'promotions' | 'updates' | 'forums';
 
 /**
+ * T007: EmailSummary interface
+ * Represents an AI-generated summary of an email.
+ */
+export interface EmailSummary {
+  /** Summary text (1-3 sentences) */
+  summary: string;
+  /** When the summary was generated */
+  generatedAt: Date;
+}
+
+/**
  * T007: Email interface
  * Represents a Gmail message with metadata for display and actions.
  */
@@ -74,6 +85,8 @@ export interface Email {
   isStarred: boolean;
   /** Has attachments */
   hasAttachments: boolean;
+  /** AI-generated summary */
+  summary?: EmailSummary | null;
 }
 
 /**

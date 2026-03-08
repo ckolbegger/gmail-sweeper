@@ -112,6 +112,7 @@ export class EmailCache {
         has_attachments INTEGER NOT NULL DEFAULT 0,
         category TEXT,
         labels_json TEXT,
+        summary_json TEXT,
         cached_at TEXT NOT NULL
       );
 
@@ -119,6 +120,13 @@ export class EmailCache {
       CREATE INDEX IF NOT EXISTS idx_emails_sender ON emails(sender_email);
       CREATE INDEX IF NOT EXISTS idx_emails_thread ON emails(thread_id);
     `);
+
+    // Migration: Add summary_json column if it doesn't exist
+    try {
+      this.db.run(`ALTER TABLE emails ADD COLUMN summary_json TEXT`);
+    } catch {
+      // Column already exists, ignore
+    }
 
     // Create sync_state table
     this.db.run(`
@@ -144,9 +152,9 @@ export class EmailCache {
       INSERT OR REPLACE INTO emails (
         id, thread_id, subject, sender_email, sender_name, recipients_json,
         date, snippet, body_text, body_html, is_read, is_starred,
-        has_attachments, category, labels_json, cached_at
+        has_attachments, category, labels_json, summary_json, cached_at
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
     `);
 
@@ -169,6 +177,7 @@ export class EmailCache {
         email.hasAttachments ? 1 : 0,
         email.category ?? null,
         email.labels ? JSON.stringify(email.labels) : null,
+        email.summary ? JSON.stringify(email.summary) : null,
         now,
       ]);
       stmt.step();
@@ -244,6 +253,7 @@ export class EmailCache {
         hasAttachments: row.has_attachments === 1,
         category: row.category,
         labels: row.labels_json ? JSON.parse(row.labels_json) : [],
+        summary: row.summary_json ? JSON.parse(row.summary_json) : null,
       });
     }
 

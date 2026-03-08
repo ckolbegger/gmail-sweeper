@@ -42,3 +42,38 @@ Respond with JSON array of classifications.`;
 
   return `System: ${systemPrompt}\n\nUser: ${userPrompt}`;
 }
+
+export interface EmailForSummary {
+  id: string;
+  subject: string;
+  sender: string;
+  body: string;
+}
+
+/**
+ * Build summary prompt for AI to generate email summaries
+ * @param email - Email to summarize
+ * @returns Full prompt string
+ */
+export function buildSummaryPrompt(email: EmailForSummary): string {
+  const systemPrompt = `You are an email summarization assistant. Your task is to generate concise summaries of emails.
+
+The summary MUST follow this exact format:
+1. One sentence describing the content of the email
+2. A bullet list of action items (if any) identified in the email
+
+Respond with a JSON object containing:
+- "summary": string - the one sentence description
+- "action_items": string[] - array of action items found (can be empty array if none)
+- "generated_at": string - current timestamp in ISO format
+
+Return ONLY the JSON object, no other text.`;
+
+  const userPrompt = `Email to summarize:
+Subject: ${email.subject}
+From: ${email.sender}
+Body:
+${email.body}`;
+
+  return `System: ${systemPrompt}\n\nUser: ${userPrompt}`;
+}

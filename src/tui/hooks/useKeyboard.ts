@@ -20,6 +20,7 @@ interface UseKeyboardOptions {
   onCancelDelete?: () => void;
   getSelectedEmailId?: () => string | undefined;
   confirmationState?: 'idle' | 'confirming';
+  onToggleSummary?: () => void;
 }
 
 interface UseKeyboardResult {
@@ -43,6 +44,7 @@ export function useKeyboard({
   onCancelDelete,
   getSelectedEmailId,
   confirmationState = 'idle',
+  onToggleSummary,
 }: UseKeyboardOptions): UseKeyboardResult {
   const [index, setIndex] = useState(selectedIndex);
   const [previewScrollOffset, setPreviewScrollOffset] = useState(0);
@@ -139,6 +141,12 @@ export function useKeyboard({
     // '#' to delete selected email
     if (input === '#' && selectedEmailId && confirmationState !== 'confirming') {
       onDelete?.(selectedEmailId);
+      return;
+    }
+
+    // 's' to toggle summary view
+    if (input === 's') {
+      onToggleSummary?.();
       return;
     }
 

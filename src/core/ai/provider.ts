@@ -24,12 +24,27 @@ export interface EmailClassification {
   reasoning?: string;
 }
 
+export interface EmailSummaryResult {
+  emailId: string;
+  summary: string;
+  actionItems: string[];
+  generatedAt: Date;
+}
+
 export interface AiProvider {
   classifyEmails(
     filterDescription: string,
     emails: EmailMetadata[],
     signal?: AbortSignal
   ): Promise<EmailClassification[]>;
+
+  generateSummary(
+    emailId: string,
+    subject: string,
+    sender: string,
+    body: string,
+    signal?: AbortSignal
+  ): Promise<EmailSummaryResult>;
 }
 
 export function createAiProvider(config: {
