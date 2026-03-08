@@ -254,10 +254,13 @@ class FileSummaryStore implements SummaryStore {
   }
 
   async upsert(record: PersistedEmailSummary): Promise<void> {
-    if (!isValidPersistedSummary(record)) {
+    const uncheckedRecord: unknown = record;
+    if (!isValidPersistedSummary(uncheckedRecord)) {
+      const candidate = uncheckedRecord as { messageId?: unknown };
       emitSummaryObservabilityEvent(this.observabilitySink, {
         event: 'summary_store_invalid_record_rejected',
-        messageIdHint: typeof record.messageId === 'string' ? redactMessageId(record.messageId) : undefined
+        messageIdHint:
+          typeof candidate.messageId === 'string' ? redactMessageId(candidate.messageId) : undefined
       });
       throw new Error('Invalid summary record');
     }

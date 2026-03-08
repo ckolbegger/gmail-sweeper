@@ -4,10 +4,10 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { SummaryObservabilityEvent } from '@/core/summary_observability.js';
 import { createPersistedSummaryFixture } from './fixtures/ai_summary.fixtures.js';
 
 import { createSummaryStore } from '@/adapters/storage/summary_store.js';
+import type { SummaryObservabilityEvent } from '@/core/summary_observability.js';
 
 const tempDirs: string[] = [];
 
