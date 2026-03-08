@@ -16,15 +16,17 @@ import { useSmartFilter } from './hooks/useSmartFilter.js';
 import { useEmailActions } from './hooks/useEmailActions.js';
 import { useEmailSummary } from './hooks/useEmailSummary.js';
 import { resolveAiConfig } from '../core/ai/config.js';
+import type { PrecomputeWorker } from '../core/summary/precompute-worker.js';
 
 interface AppProps {
   client: GmailClient;
   cache: EmailCache;
+  worker: PrecomputeWorker | null;
   maxEmails?: number;
   maxContextTokens?: number;
 }
 
-export function InboxApp({ client, cache, maxEmails, maxContextTokens: _maxContextTokens }: AppProps) {
+export function InboxApp({ client, cache, worker: _worker, maxEmails, maxContextTokens: _maxContextTokens }: AppProps) {
   const { emails, isLoading, error, fetchEmailDetail, refresh, loadMore, removeEmail, restoreEmail } = useGmail({
     client,
     cache,

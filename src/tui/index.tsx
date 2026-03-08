@@ -6,6 +6,9 @@ import { render } from 'ink';
 import type { GmailClient } from '../core/gmail/client.js';
 import type { EmailCache } from '../core/cache/db.js';
 import { InboxApp } from './app.js';
+import { SummaryService } from '../core/summary/service.js';
+import { PrecomputeWorker, readPrecomputeConfig } from '../core/summary/precompute-worker.js';
+import { resolveAiConfig } from '../core/ai/config.js';
 
 export interface LaunchTUIOptions {
   client: GmailClient;
@@ -23,11 +26,20 @@ export async function launchTUI(options: LaunchTUIOptions): Promise<void> {
   // Initialize cache
   await cache.initialize();
 
+  // Bootstrap precompute worker (only when AI is configured)
+  const aiConfig = resolveAiConfig();
+  const worker = aiConfig
+    ? new PrecomputeWorker(cache, new SummaryService(aiConfig), readPrecomputeConfig())
+    : null;
+  worker?.start();
+
   // Render Ink app
   const { waitUntilExit } = render(
-    <InboxApp client={client} cache={cache} {...(maxEmails !== undefined ? { maxEmails } : {})} {...(maxContextTokens !== undefined ? { maxContextTokens } : {})} />
+    <InboxApp client={client} cache={cache} worker={worker} {...(maxEmails !== undefined ? { maxEmails } : {})} {...(maxContextTokens !== undefined ? { maxContextTokens } : {})} />
   );
 
   // Wait for app to exit
   await waitUntilExit();
+
+  worker?.stop();
 }
