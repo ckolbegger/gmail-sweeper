@@ -38,13 +38,19 @@ export function InboxApp({ client, cache }: AppProps) {
 
   const toggleSummary = useCallback(async () => {
     const currentEmail = selectedEmailRef.current;
-    if (!showSummary && currentEmail && !summaries.has(currentEmail.id)) {
-      const summary = await generateSummary(currentEmail);
-      if (summary) {
-        setSummaries((prev) => new Map(prev).set(currentEmail.id, summary));
+    if (!showSummary && currentEmail) {
+      if (!summaries.has(currentEmail.id)) {
+        const summary = await generateSummary(currentEmail);
+        if (summary) {
+          setSummaries((prev) => new Map(prev).set(currentEmail.id, summary));
+          setShowSummary(true);
+        }
+      } else {
+        setShowSummary(true);
       }
+    } else {
+      setShowSummary(false);
     }
-    setShowSummary((prev) => !prev);
   }, [showSummary, summaries, generateSummary]);
 
   // Filter out removed emails from display
