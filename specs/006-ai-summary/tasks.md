@@ -240,7 +240,7 @@ Refactoring tasks to improve the AI Summary feature after initial implementation
 ## Completion Criteria
 
 - [x] R001: Summaries persist across app restarts
-- [ ] R002: Loading indicator shows during generation
+- [x] R002: Loading indicator shows during generation
 - [ ] R003: HTML emails are properly summarized
 - [ ] R004: No race conditions on email navigation
 - [ ] R005: Summary view only shows after generation

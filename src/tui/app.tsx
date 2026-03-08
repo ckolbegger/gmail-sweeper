@@ -32,7 +32,7 @@ export function InboxApp({ client, cache }: AppProps) {
   const { stdout } = useStdout();
   const terminalHeight = stdout?.rows ?? 24;
 
-  const { generateSummary } = useAISummary({ cache });
+  const { generateSummary, summaryState } = useAISummary({ cache });
 
   const selectedEmailRef = useRef<import('../core/models/index.js').Email | null>(null);
 
@@ -183,6 +183,7 @@ export function InboxApp({ client, cache }: AppProps) {
             maxHeight={contentHeight}
             scrollOffset={keyboard.previewScrollOffset}
             showSummary={showSummary}
+            summaryState={summaryState}
           />
         </Box>
       </Box>

@@ -18,6 +18,8 @@ interface EmailPreviewProps {
   maxHeight: number;
   scrollOffset?: number;
   terminalWidth?: number; // Used for URL truncation in Phase 4
+  showSummary?: boolean;
+  summaryState?: 'idle' | 'loading' | 'success' | 'error';
 }
 
 /**
@@ -32,6 +34,8 @@ export function EmailPreview({
   maxHeight = 20,
   scrollOffset = 0,
   terminalWidth: providedWidth,
+  showSummary = false,
+  summaryState = 'idle',
 }: EmailPreviewProps) {
   const terminalWidth = providedWidth ?? getTerminalWidth();
 
@@ -106,24 +110,46 @@ export function EmailPreview({
       {email.hasAttachments && <Text>📎 Has attachments</Text>}
       <Text dimColor>{'─'.repeat(40)}</Text>
 
-      {/* Body */}
-      {displayedLines.length > 0 ? (
-        displayedLines.map((line, idx) => {
-          const actualLineIdx = clampedOffset + idx;
-          return renderLineWithUrls(line, actualLineIdx);
-        })
+      {/* Summary View or Full Body */}
+      {showSummary && summaryState === 'loading' ? (
+        <Box flexDirection="column">
+          <Text bold>📝 Summary</Text>
+          <Text>Generating summary...</Text>
+        </Box>
+      ) : showSummary && email.summary ? (
+        <Box flexDirection="column">
+          <Text bold>📝 Summary</Text>
+          <Text>{email.summary.summary}</Text>
+          <Text dimColor>Generated: {email.summary.generatedAt.toLocaleString()}</Text>
+        </Box>
+      ) : showSummary ? (
+        <Box flexDirection="column">
+          <Text bold>📝 Summary</Text>
+          <Text dimColor>No summary available for this email.</Text>
+          <Text dimColor>Summary generation coming in a future update.</Text>
+        </Box>
       ) : (
-        <Text dimColor>(No body)</Text>
-      )}
+        <>
+          {/* Body */}
+          {displayedLines.length > 0 ? (
+            displayedLines.map((line, idx) => {
+              const actualLineIdx = clampedOffset + idx;
+              return renderLineWithUrls(line, actualLineIdx);
+            })
+          ) : (
+            <Text dimColor>(No body)</Text>
+          )}
 
-      {/* Scroll indicator */}
-      <Text dimColor>
-        {hasScrolledDown ? '↑ ' : '  '}
-        Lines {clampedOffset + 1}-{Math.min(clampedOffset + bodyMaxLines, totalLines)} of{' '}
-        {totalLines}
-        {hasMore ? ' ↓' : ''}
-        {hasMore || hasScrolledDown ? '  [/] scroll' : ''}
-      </Text>
+          {/* Scroll indicator */}
+          <Text dimColor>
+            {hasScrolledDown ? '↑ ' : '  '}
+            Lines {clampedOffset + 1}-{Math.min(clampedOffset + bodyMaxLines, totalLines)} of{' '}
+            {totalLines}
+            {hasMore ? ' ↓' : ''}
+            {hasMore || hasScrolledDown ? '  [/] scroll' : ''}
+          </Text>
+        </>
+      )}
     </Box>
   );
 }
